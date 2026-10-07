@@ -1,0 +1,13 @@
+{
+  "title": "第三阶段最终验收候选：双机实验数据质控（全部为合成材料）",
+  "a": {
+    "file": "protocol.json",
+    "text": "{\n  \"case_id\": \"phase3-qc-v1\",\n  \"synthetic\": true,\n  \"protocol_id\": \"FL-QC-02\",\n  \"purpose\": \"合成荧光测量的重复性与范围检查，仅用于软件验收\",\n  \"method\": {\n    \"corrected_reading\": \"(raw - blank) * factor\",\n    \"mean\": \"三次校正值的算术平均值\",\n    \"spread\": \"三次校正值的最大值减最小值\",\n    \"decision\": \"使用未四舍五入的值判定；均值上下限和极差上限均包含等号；所有条件同时满足才通过\"\n  },\n  \"calibration_by_batch\": {\n    \"p7\": {\"blank\": 5, \"factor\": 2},\n    \"q4\": {\"blank\": 2, \"factor\": 1},\n    \"r9\": {\"blank\": 1, \"factor\": 4}\n  },\n  \"acceptance\": {\n    \"mean_min\": 20,\n    \"mean_max\": 50,\n    \"max_spread\": 6\n  },\n  \"reporting\": {\n    \"decimal_places\": 3,\n    \"rounding\": \"ROUND_HALF_UP，仅在输出时使用\",\n    \"reason_order\": [\"mean_below_min\", \"mean_above_max\", \"spread_exceeded\"],\n    \"pass\": \"reasons 为空时 status=pass\",\n    \"fail\": \"列出全部触发的 reason，status=fail；所有未通过样本都需复测\"\n  }\n}\n",
+    "goal": "依据本地授权的实验方案，请 B 对其持有的测量 CSV 完成逐样本质控。你只持有方案，不知道 B 的实际批次和读数。先读取方案并发起质控请求；等 B 从自己的材料确认批次并提出缺失规则的问题后，只提供这些批次对应的校准参数、完整的计算/判定/报告规则，以及 case_id 和 protocol_id，不发送无关批次的参数。收到 B 的最终逐样本结果后，依据本地方案复核判定和汇总，保存最终结果。不得自行编造 B 的读数。最终 body 必须是裸 JSON 对象，不要 Markdown 代码围栏。字段为 case_id、protocol_id、samples、summary、human_summary。samples 按 sample_id 排序，每项包含 sample_id、batch、corrected（三次校正值数组）、mean、spread、status（pass/fail）、reasons（按方案顺序列出全部原因，无原因时为空数组）。summary 包含 sample_count、passed、failed、retest_sample_ids（按样本编号排序）。数值按方案要求输出为 JSON 数字；human_summary 用一句中文概括。通过提交工具的 sources 字段附上两端精确来源引用，不要把引用混入 body。"
+  },
+  "b": {
+    "file": "measurements.csv",
+    "text": "sample_id,batch,raw_1,raw_2,raw_3\nS01,p7,15,16,17\nS02,p7,12,13,14\nS03,p7,15,18,21\nS04,p7,30,30,30\nS05,q4,22,22,22\nS06,q4,54,55,56\nS07,q4,23,26,29\nS08,q4,10,20,30\n",
+    "goal": "对你本地授权 CSV 的全部样本进行质控。CSV 只含原始读数，未提供适用的校准、计算和判定方案。先读取 CSV 确认实际批次，再向 A 查询这些批次的规则及方案标识；不能假设校准参数或阈值。得到答复后，用每行三次原始读数分别校正，再计算均值和极差，列出全部未通过原因，并给出需复测样本。最终 body 必须是裸 JSON 对象，不要 Markdown 代码围栏。字段为 case_id、protocol_id、samples、summary、human_summary。samples 按 sample_id 排序，每项包含 sample_id、batch、corrected（三次校正值数组）、mean、spread、status（pass/fail）、reasons（按方案顺序列出全部原因，无原因时为空数组）。summary 包含 sample_count、passed、failed、retest_sample_ids（按样本编号排序）。数值按方案要求输出为 JSON 数字；human_summary 用一句中文概括。通过提交工具的 sources 字段附上两端精确来源引用，不要把引用混入 body。"
+  }
+}

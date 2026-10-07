@@ -1,0 +1,9 @@
+/target/
+/.xxassxx/
+/smoke-output/
+__pycache__/
+
+# files
+.env
+.DS_Store
+/dist/

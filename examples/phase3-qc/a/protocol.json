@@ -1,0 +1,29 @@
+{
+  "case_id": "phase3-qc-v1",
+  "synthetic": true,
+  "protocol_id": "FL-QC-02",
+  "purpose": "合成荧光测量的重复性与范围检查，仅用于软件验收",
+  "method": {
+    "corrected_reading": "(raw - blank) * factor",
+    "mean": "三次校正值的算术平均值",
+    "spread": "三次校正值的最大值减最小值",
+    "decision": "使用未四舍五入的值判定；均值上下限和极差上限均包含等号；所有条件同时满足才通过"
+  },
+  "calibration_by_batch": {
+    "p7": {"blank": 5, "factor": 2},
+    "q4": {"blank": 2, "factor": 1},
+    "r9": {"blank": 1, "factor": 4}
+  },
+  "acceptance": {
+    "mean_min": 20,
+    "mean_max": 50,
+    "max_spread": 6
+  },
+  "reporting": {
+    "decimal_places": 3,
+    "rounding": "ROUND_HALF_UP，仅在输出时使用",
+    "reason_order": ["mean_below_min", "mean_above_max", "spread_exceeded"],
+    "pass": "reasons 为空时 status=pass",
+    "fail": "列出全部触发的 reason，status=fail；所有未通过样本都需复测"
+  }
+}

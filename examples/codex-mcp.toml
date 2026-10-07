@@ -1,0 +1,10 @@
+# Copy/adapt this stanza yourself. xXASSXx never edits global Codex config.
+# This process has the local owner's collaboration capability; it cannot submit
+# task results. run-once separately injects its task/run-bound MCP automatically.
+[mcp_servers.xxassxx_butler]
+command = "/absolute/path/to/xXASSXx/target/debug/xxassxx"
+args = ["--db", "/absolute/path/to/a/tasks.sqlite3", "butler", "mcp-serve"]
+env_vars = ["TEAM_A_TOKEN"]
+required = true
+startup_timeout_sec = 10
+tool_timeout_sec = 30

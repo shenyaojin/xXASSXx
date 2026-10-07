@@ -1,0 +1,11 @@
+team_id = "lab"
+
+[[members]]
+member_id = "a"
+display_name = "Alice"
+credential_env = "TEAM_A_TOKEN"
+
+[[members]]
+member_id = "b"
+display_name = "Bob"
+credential_env = "TEAM_B_TOKEN"

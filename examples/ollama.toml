@@ -1,0 +1,10 @@
+# Merge this section into your member configuration and run member configure again.
+# Select an exact model you already have installed; no model download is automatic.
+[model]
+provider = "ollama"
+base_url = "http://127.0.0.1:11434/v1"
+model = "REPLACE_WITH_INSTALLED_MODEL"
+api_key_env = ""
+timeout_secs = 120
+max_model_calls = 4
+max_tool_rounds = 3

@@ -1,0 +1,28 @@
+[package]
+name = "xxassxx"
+version = "0.1.0-alpha"
+edition = "2024"
+rust-version = "1.85"
+description = "Local versioned knowledge and personal butler collaboration with task-scoped Codex execution"
+publish = false
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+libc = "0.2"
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "io-util", "io-std", "time", "signal", "sync", "net"] }
+axum = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+toml = "0.8"
+uuid = { version = "1", features = ["v4"] }
+
+ratatui = "=0.29.0"
+crossterm = "=0.28.1"
+unicode-segmentation = "=1.12.0"
+unicode-width = "=0.2.0"
+
+tempfile = "3"

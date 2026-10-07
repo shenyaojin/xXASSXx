@@ -1,0 +1,130 @@
+{
+  "case_id": "phase3-qc-v1",
+  "protocol_id": "FL-QC-02",
+  "samples": [
+    {
+      "sample_id": "S01",
+      "batch": "p7",
+      "corrected": [
+        20.0,
+        22.0,
+        24.0
+      ],
+      "mean": 22.0,
+      "spread": 4.0,
+      "status": "pass",
+      "reasons": []
+    },
+    {
+      "sample_id": "S02",
+      "batch": "p7",
+      "corrected": [
+        14.0,
+        16.0,
+        18.0
+      ],
+      "mean": 16.0,
+      "spread": 4.0,
+      "status": "fail",
+      "reasons": [
+        "mean_below_min"
+      ]
+    },
+    {
+      "sample_id": "S03",
+      "batch": "p7",
+      "corrected": [
+        20.0,
+        26.0,
+        32.0
+      ],
+      "mean": 26.0,
+      "spread": 12.0,
+      "status": "fail",
+      "reasons": [
+        "spread_exceeded"
+      ]
+    },
+    {
+      "sample_id": "S04",
+      "batch": "p7",
+      "corrected": [
+        50.0,
+        50.0,
+        50.0
+      ],
+      "mean": 50.0,
+      "spread": 0.0,
+      "status": "pass",
+      "reasons": []
+    },
+    {
+      "sample_id": "S05",
+      "batch": "q4",
+      "corrected": [
+        20.0,
+        20.0,
+        20.0
+      ],
+      "mean": 20.0,
+      "spread": 0.0,
+      "status": "pass",
+      "reasons": []
+    },
+    {
+      "sample_id": "S06",
+      "batch": "q4",
+      "corrected": [
+        52.0,
+        53.0,
+        54.0
+      ],
+      "mean": 53.0,
+      "spread": 2.0,
+      "status": "fail",
+      "reasons": [
+        "mean_above_max"
+      ]
+    },
+    {
+      "sample_id": "S07",
+      "batch": "q4",
+      "corrected": [
+        21.0,
+        24.0,
+        27.0
+      ],
+      "mean": 24.0,
+      "spread": 6.0,
+      "status": "pass",
+      "reasons": []
+    },
+    {
+      "sample_id": "S08",
+      "batch": "q4",
+      "corrected": [
+        8.0,
+        18.0,
+        28.0
+      ],
+      "mean": 18.0,
+      "spread": 20.0,
+      "status": "fail",
+      "reasons": [
+        "mean_below_min",
+        "spread_exceeded"
+      ]
+    }
+  ],
+  "summary": {
+    "sample_count": 8,
+    "passed": 4,
+    "failed": 4,
+    "retest_sample_ids": [
+      "S02",
+      "S03",
+      "S06",
+      "S08"
+    ]
+  }
+}

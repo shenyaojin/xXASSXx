@@ -1,0 +1,16 @@
+mailbox_url = "http://127.0.0.1:7788"
+credential_env = "TEAM_A_TOKEN"
+
+[[contacts]]
+member_id = "b"
+display_name = "Bob"
+
+[executor]
+mode = "queue"
+codex = "codex"
+# Relative workdir is resolved once against this configuration file's directory.
+workdir = "work"
+timeout_secs = 180
+
+[model]
+provider = "off"

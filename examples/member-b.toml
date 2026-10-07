@@ -1,0 +1,29 @@
+mailbox_url = "http://127.0.0.1:7788"
+credential_env = "TEAM_B_TOKEN"
+
+[[contacts]]
+member_id = "a"
+display_name = "Alice"
+
+[executor]
+mode = "queue"
+codex = "codex"
+workdir = "work"
+timeout_secs = 180
+# model = "YOUR_CODEX_MODEL"  # Independent of the butler model below.
+
+[model]
+provider = "off"
+# To enable cloud coordination, change provider to "deepseek" and set:
+# base_url = "https://api.deepseek.com"
+# model = "deepseek-flash"
+# api_key_env = "DEEPSEEK_API_KEY"
+# timeout_secs = 30
+# max_model_calls = 4
+# max_tool_rounds = 3
+# max_tool_calls = 12
+# max_tokens = 2048
+# thinking = false
+
+# A local service can use provider="compatible", its base_url and model name,
+# and api_key_env="" if that loopback service does not require authentication.

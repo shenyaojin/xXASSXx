@@ -1,0 +1,16 @@
+BEGIN IMMEDIATE;
+CREATE TABLE app_projects(id TEXT PRIMARY KEY,path TEXT NOT NULL UNIQUE,name TEXT NOT NULL);
+CREATE TABLE app_sessions(id TEXT PRIMARY KEY,project_id TEXT NOT NULL REFERENCES app_projects(id),recipient TEXT NOT NULL,title TEXT NOT NULL,read_cursor INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,UNIQUE(project_id,recipient));
+CREATE TABLE app_commands(id TEXT PRIMARY KEY,actor TEXT NOT NULL,channel TEXT NOT NULL,session_id TEXT NOT NULL REFERENCES app_sessions(id),task_id TEXT,recipient TEXT NOT NULL,body TEXT NOT NULL,action TEXT NOT NULL,payload TEXT NOT NULL,state TEXT NOT NULL DEFAULT 'pending',error TEXT,created_at INTEGER NOT NULL);
+CREATE TABLE app_messages(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES app_sessions(id),task_id TEXT,sender TEXT NOT NULL,recipient TEXT NOT NULL,kind TEXT NOT NULL,body TEXT NOT NULL,command_id TEXT,wire_id TEXT UNIQUE,created_at INTEGER NOT NULL);
+CREATE TABLE app_events(seq INTEGER PRIMARY KEY AUTOINCREMENT,event_key TEXT NOT NULL UNIQUE,session_id TEXT NOT NULL REFERENCES app_sessions(id),task_id TEXT,kind TEXT NOT NULL,payload TEXT NOT NULL,created_at INTEGER NOT NULL);
+CREATE TABLE app_tasks(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES app_sessions(id),project_id TEXT NOT NULL REFERENCES app_projects(id),title TEXT NOT NULL,goal TEXT NOT NULL,peer TEXT,state TEXT NOT NULL,workflow_id TEXT UNIQUE,remote_workflow TEXT,request_id TEXT,conversation_id TEXT,question_id TEXT,origin_request TEXT UNIQUE,result TEXT,error TEXT,created_at INTEGER NOT NULL);
+CREATE TABLE app_links(wire_id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES app_sessions(id),task_id TEXT);
+CREATE TABLE app_effects(command_id TEXT NOT NULL,tool TEXT NOT NULL,args TEXT NOT NULL,result TEXT NOT NULL,PRIMARY KEY(command_id,tool));
+CREATE TABLE app_model_runs(id TEXT PRIMARY KEY,command_id TEXT NOT NULL,state TEXT NOT NULL,calls INTEGER NOT NULL DEFAULT 0,trace TEXT NOT NULL DEFAULT '[]',error TEXT,created_at INTEGER NOT NULL);
+CREATE TABLE app_network(singleton INTEGER PRIMARY KEY CHECK(singleton=1),state TEXT NOT NULL,last_success INTEGER,error TEXT,presence_supported INTEGER NOT NULL DEFAULT 0);
+INSERT INTO app_network(singleton,state) VALUES(1,'connecting');
+CREATE TABLE app_presence(member_id TEXT PRIMARY KEY,busy INTEGER NOT NULL,server_age INTEGER NOT NULL,ttl INTEGER NOT NULL,fetched_at INTEGER NOT NULL);
+CREATE TABLE app_amendments(command_id TEXT PRIMARY KEY,task_id TEXT NOT NULL,body TEXT NOT NULL);
+PRAGMA user_version=5;
+COMMIT;
