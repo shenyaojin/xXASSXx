@@ -1,0 +1,85 @@
+name: Build release installers
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify release version
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, tomllib
+          version = tomllib.loads(pathlib.Path('Cargo.toml').read_text())['package']['version']
+          tag = f'v{version}'
+          if os.environ['GITHUB_REF_TYPE'] == 'tag' and os.environ['GITHUB_REF_NAME'] != tag:
+              raise SystemExit(f'Release tag must match Cargo.toml: {tag}')
+          if not pathlib.Path(f'docs/releases/{tag}.md').is_file():
+              raise SystemExit(f'Missing release notes for {tag}')
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write(f'RELEASE_VERSION={version}\n')
+          PY
+      - name: Build and test
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup default 1.99.0
+          rustup target add "$TARGET"
+          if [[ "$TARGET" == *linux-musl ]]; then
+            sudo apt-get update
+            sudo apt-get install -y musl-tools
+          fi
+          cargo test --locked --target "$TARGET"
+          cargo build --release --locked --target "$TARGET"
+          test "$("target/$TARGET/release/xxassxx" --version)" = "xxassxx $RELEASE_VERSION"
+          bash scripts/package.sh "target/$TARGET/release/xxassxx" "$TARGET" dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Prepare draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          cat dist/*.sha256 > dist/SHA256SUMS
+          flags=(--verify-tag --draft)
+          if [[ "$RELEASE_TAG" == *-* ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "$RELEASE_TAG" "${flags[@]}" --title "$RELEASE_TAG" \
+            --notes-file "docs/releases/$RELEASE_TAG.md" \
+            dist/*.tar.gz dist/SHA256SUMS scripts/install.sh

@@ -1,0 +1,20 @@
+# User service: ~/.config/systemd/user/xxassxx-mailbox.service
+# Persistent user services require lingering to remain active after logout/reboot.
+[Unit]
+Description=xXASSXx team mailbox
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=TOKIO_WORKER_THREADS=2
+ExecStart=%h/.local/bin/xxassxx server --directory %h/.local/share/xxassxx/server serve
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

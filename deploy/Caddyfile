@@ -1,0 +1,5 @@
+# Set XXASSXX_DOMAIN, or use the proposed team subdomain below.
+# Requires its DNS to point to this host and public TCP 80/443 to be reachable.
+{$XXASSXX_DOMAIN:xxassxx.shenyaojin.com} {
+    reverse_proxy 127.0.0.1:7788
+}
