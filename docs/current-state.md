@@ -58,15 +58,16 @@
 ## 当前团队和交付
 
 - 团队 `xxassxx`，信箱 `https://xxassxx.shenyaojin.com`，Trader 托管。SSH 别名 `trader`、`lakota` 已配置。
-- 现有成员只有 `owner`、`pengchao`、`test`。a/b 已退出当前团队，历史与备份保留。
+- 现有成员为 `owner`、`pengchao`、`test`、`mba`。a/b 已退出当前团队，历史与备份保留。
+- 2026-10-07 为用户的 MacBook Air 新增独立身份 `mba`，显示名 `Shenyao "Keith" Jin (MacBook Air)`。邀请位于 `/Users/shenyaojin/Downloads/xXASSXx-MacBook-Air/mba.json`，权限 600，另有 Git 忽略的 `smoke-output/phase4-private/mba.json` 副本；凭据不在文档中。Trader 配置和在线成员登记已更新，其他成员凭据保持不变，无需重启信箱。Mac owner 与 Lakota test 的实际联系人及配置文件已加入 mba，其余运行配置未改；服务器邀请和本地 pengchao 邀请副本的联系人也已同步。HTTPS 身份校验与隔离个人端导入通过，未调用模型、发送任务或在 MBA 本机安装；见本地 `smoke-output/mba-invitation-check.json`。若 pengchao 已使用旧邀请安装，仍需在其电脑更新联系人，本次没有操作该电脑。
 - `owner` 显示名 `Shenyao "Keith" Jin`，本机 Mac；升级前实际白名单为 `/Users/shenyaojin`，此次原样保留。新版界面工作目录选为 `/Users/shenyaojin`。
 - `test` 显示名 `test (Lakota)`，Lakota 常驻。唯一白名单是 `/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts`，此次原样保留。旧 executor.workdir 在该范围外；升级时通过新版 TUI 明确选择此 scripts 目录作为当前工作位置，不修改模型配置或授权范围。
 - 原先的 `friend` 已统一改为 `pengchao`（用户名和显示名相同），服务器、Mac/Lakota 联系人、现有邀请与安装提示词已同步。改名之前该身份没有消息或心跳使用记录；改名后邀请鉴权已验证。
 - 朋友安装提示词：`docs/codex-setup-prompt.md`。
-- 最新离线包：`dist/xxassxx-pengchao-macos-arm64-20261006.zip`，仅 Apple 芯片 Mac。包内有安装提示词和安装器，不含邀请或密钥；Intel Mac 包尚未准备。朋友的 CPU 架构尚未确认。
+- 此前单独交付朋友的离线包：`dist/xxassxx-pengchao-macos-arm64-20261006.zip`，仅 Apple 芯片 Mac。包内有安装提示词和安装器，不含邀请或密钥；Intel Mac 包尚未准备。朋友的 CPU 架构尚未确认。通用 0.2.0-alpha 包现已覆盖两种 Mac 和 Linux x86_64，见文末 Release 链接。
 - 私人邀请：`smoke-output/phase4-private/pengchao.json`，权限 600、Git 忽略，不打印正文。
 - 给用户的两个文件已经放在 `/Users/shenyaojin/Downloads/xXASSXx-发给朋友/`，分别是上述 ZIP 和 `pengchao.json`。旧 friend 文件已归档。
-- 启动更新检查、开机自动启动、TG 接入仍待实现。此前尚未发布包含本轮任务协作实现的 GitHub Release；当前正在按用户要求发布 0.2.0-alpha，见文末发布记录。
+- 启动更新检查、开机自动启动、TG 接入仍待实现。此前尚未发布包含本轮任务协作实现的 GitHub Release；本轮已发布 0.2.0-alpha，见文末发布记录。
 
 ## 开发接续要点
 
@@ -157,10 +158,12 @@
 - 本次答复另有措辞问题：发起方把 x 方向自行解释成东西方向，缺少地理依据；数值与文件正确，但表述忠实性仍需继续改进。本次两个缺陷完成不等于已消除此类模型表述问题。
 
 
-## 0.2.0-alpha 发布准备（2026-10-07）
+## 0.2.0-alpha 已发布（2026-10-07）
 
 用户明确要求提交本轮代码、补充必要时亲自操作终端的调试流程，并同时提供 Linux 与 macOS 安装包。版本清单与锁文件更新为 `0.2.0-alpha`，发布标签 `v0.2.0-alpha`；运行行为沿用上节已在三端实际验证的实现。发布前检查及产物见 [发布流程](releasing.md)，用户可读变化见 [0.2.0-alpha 说明](releases/v0.2.0-alpha.md)。
 
 [调试与终端验收流程](debugging.md) 已设为仓库开发入口要求：相关故障必须亲自操作终端，必要时进入执行方终端，并看到有意义的最终答复、核对实际文件；不能凭自动测试或后台状态宣称已经修好。
 
-发布构建要求覆盖 Apple Silicon macOS、Intel macOS、Linux x86_64 musl。发布状态、平台验证与提交记录将在实际完成后补入；不得将之前 0.1.0-alpha 的分发包误认为本版。
+发布构建要求覆盖 Apple Silicon macOS、Intel macOS、Linux x86_64 musl。版本已于 2026-10-07 22:25:43 UTC 发布为 prerelease，非草稿。代码提交为 `fdeae034b1979ec8ac206e326ebebfb5e19a4e3d`，标签为 `v0.2.0-alpha`。[下载本版](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.2.0-alpha)；[三平台构建与验证](https://github.com/shenyaojin/xXASSXx/actions/runs/37694798545)。三个目标各通过 111 项测试、安装与版本核对；三份压缩包、SHA256SUMS 和安装器均可匿名下载。Mac 发布包本机安装通过，Linux 发布包在 Lakota 的独立测试位置安装启动通过。详见 [发布验证记录](releases/v0.2.0-alpha-evidence.json)。
+
+本次发布没有再次替换三端常驻程序，常驻程序仍为前文记录的已验证构建；下载本版安装包输出为 `0.2.0-alpha`。前文的“当时未提交/推送/更新分发包”为对应阶段历史状态，不代表本次发布状态。

@@ -1,0 +1,116 @@
+{
+  "version": "0.2.0-alpha",
+  "tag": "v0.2.0-alpha",
+  "commit": "fdeae034b1979ec8ac206e326ebebfb5e19a4e3d",
+  "release": {
+    "url": "https://github.com/shenyaojin/xXASSXx/releases/tag/v0.2.0-alpha",
+    "tag": "v0.2.0-alpha",
+    "published_at": "2026-10-07T22:25:43Z",
+    "draft": false,
+    "prerelease": true,
+    "anonymous_downloads": [
+      {
+        "name": "install.sh",
+        "url": "https://github.com/shenyaojin/xXASSXx/releases/download/v0.2.0-alpha/install.sh",
+        "bytes": 3067,
+        "download_http_status": 200
+      },
+      {
+        "name": "SHA256SUMS",
+        "url": "https://github.com/shenyaojin/xXASSXx/releases/download/v0.2.0-alpha/SHA256SUMS",
+        "bytes": 310,
+        "download_http_status": 200
+      },
+      {
+        "name": "xxassxx-aarch64-apple-darwin.tar.gz",
+        "url": "https://github.com/shenyaojin/xXASSXx/releases/download/v0.2.0-alpha/xxassxx-aarch64-apple-darwin.tar.gz",
+        "bytes": 5361781,
+        "download_http_status": 200
+      },
+      {
+        "name": "xxassxx-x86_64-apple-darwin.tar.gz",
+        "url": "https://github.com/shenyaojin/xXASSXx/releases/download/v0.2.0-alpha/xxassxx-x86_64-apple-darwin.tar.gz",
+        "bytes": 5640630,
+        "download_http_status": 200
+      },
+      {
+        "name": "xxassxx-x86_64-unknown-linux-musl.tar.gz",
+        "url": "https://github.com/shenyaojin/xXASSXx/releases/download/v0.2.0-alpha/xxassxx-x86_64-unknown-linux-musl.tar.gz",
+        "bytes": 6198824,
+        "download_http_status": 200
+      }
+    ]
+  },
+  "workflow": {
+    "url": "https://github.com/shenyaojin/xXASSXx/actions/runs/37694798545",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "build (ubuntu-22.04, x86_64-unknown-linux-musl)",
+        "id": 113043764563,
+        "conclusion": "success",
+        "url": "https://github.com/shenyaojin/xXASSXx/actions/runs/37694798545/job/113043764563"
+      },
+      {
+        "name": "build (macos-15-intel, x86_64-apple-darwin)",
+        "id": 113043764838,
+        "conclusion": "success",
+        "url": "https://github.com/shenyaojin/xXASSXx/actions/runs/37694798545/job/113043764838"
+      },
+      {
+        "name": "build (macos-15, aarch64-apple-darwin)",
+        "id": 113043764853,
+        "conclusion": "success",
+        "url": "https://github.com/shenyaojin/xXASSXx/actions/runs/37694798545/job/113043764853"
+      },
+      {
+        "name": "release",
+        "id": 113047374925,
+        "conclusion": "success",
+        "url": "https://github.com/shenyaojin/xXASSXx/actions/runs/37694798545/job/113047374925"
+      }
+    ]
+  },
+  "assets": [
+    {
+      "name": "xxassxx-aarch64-apple-darwin.tar.gz",
+      "archive_sha256": "a3ad5fe68c15e8f13e1ddf62f9539be538fd46133c50af273c4804c201c42bb8",
+      "bytes": 5361781,
+      "binary_sha256": "8c51a9caa9ac9096bfe8dd0e9fc138f9a6c8a734385aaa7e52007d95c60399cf",
+      "architecture": "dist/v0.2.0-alpha/github-release/xxassxx-aarch64-apple-darwin/xxassxx: Mach-O 64-bit executable arm64"
+    },
+    {
+      "name": "xxassxx-x86_64-apple-darwin.tar.gz",
+      "archive_sha256": "e8d1d5a1de9f97e1c09bf5959fcf359e2ed397f63ca25e9a718c4c237f796011",
+      "bytes": 5640630,
+      "binary_sha256": "56ac0fccec3ae33bb0f868a795873c44b1766bd58d74bdfff94d82de6d743d42",
+      "architecture": "dist/v0.2.0-alpha/github-release/xxassxx-x86_64-apple-darwin/xxassxx: Mach-O 64-bit executable x86_64"
+    },
+    {
+      "name": "xxassxx-x86_64-unknown-linux-musl.tar.gz",
+      "archive_sha256": "f2542f787c177751cb3d1b6636c45ebbb60a92db6f599183f7f68145b9fcf96f",
+      "bytes": 6198824,
+      "binary_sha256": "2741c022f80dff0471071b8cf363bfa0508bedb75e2090d9b5c16476f797f73d",
+      "architecture": "dist/v0.2.0-alpha/github-release/xxassxx-x86_64-unknown-linux-musl/xxassxx: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), static-pie linked, BuildID[sha1]=566b6fd6c618007ae29bbf0dc9b05f05472361bc, not stripped"
+    }
+  ],
+  "verification": {
+    "local_tests_passed": 111,
+    "local_legacy_tests_ignored": 2,
+    "format": "passed",
+    "clippy": "passed",
+    "release_build": "passed",
+    "ci_tests_per_platform": 111,
+    "ci_legacy_tests_ignored_per_platform": 2,
+    "mac_release_installed_version": "xxassxx 0.2.0-alpha",
+    "linux_release_installed_on": "Lakota",
+    "linux_release_installed_version": "xxassxx 0.2.0-alpha",
+    "mac_pty": "smoke-output/terminal-020-release",
+    "note": "The release package was opened in a real local PTY and the task card/history inspected. Scientific workflow and remote authorization evidence comes from the preceding build; this release adds version/documentation/install verification and a semantics-preserving lint fix, without rerunning the scientific calculation."
+  },
+  "previous_real_evidence": [
+    "docs/task-routing-fix-evidence.json",
+    "docs/task-execution-evidence.json",
+    "docs/task-permission-ui-evidence.json"
+  ]
+}

@@ -1,6 +1,6 @@
 # 版本构建与发布
 
-当前发布目标为 `0.2.0-alpha`，对应 Git 标签 `v0.2.0-alpha`。版本来源是 `Cargo.toml`；`Cargo.lock` 中本包版本保持一致，CLI 和 MCP 自动使用该版本。
+当前已发布版本为 `0.2.0-alpha`，对应 Git 标签 `v0.2.0-alpha`。版本来源是 `Cargo.toml`；`Cargo.lock` 中本包版本保持一致，CLI 和 MCP 自动使用该版本。
 
 ## 发布前验收
 
@@ -54,6 +54,17 @@ sh scripts/install.sh --from dist/v0.2.0-alpha --prefix /tmp/xxassxx-020-check
 6. 确认 Release 已公开、不是 draft、保持 prerelease，并验证公开下载可用，记录提交、标签、CI 和 Release 链接。
 
 手动触发只生成 Actions 产物。标签推送成功不等于 Release 已发布；单个平台成功也不等于发布完成。Alpha 安装显式传入 `--version v0.2.0-alpha`，不依赖稳定版 latest。
+
+## 0.2.0-alpha 发布结果
+
+2026-10-07 22:25:43 UTC，[v0.2.0-alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.2.0-alpha) 已公开发布，标记为 prerelease，非 draft。标签指向代码提交 `fdeae034b1979ec8ac206e326ebebfb5e19a4e3d`。
+
+- [GitHub Actions](https://github.com/shenyaojin/xXASSXx/actions/runs/37694798545) 三个平台全部成功，各 111 项测试通过，两项旧真实模型测试按默认配置跳过；安装后版本均为 `xxassxx 0.2.0-alpha`。
+- 三份最终安装包的 SHA-256、文件内容与二进制架构核对通过；公开下载的三个包、校验文件和安装器均返回成功。
+- 最终 Mac 发布包在本机独立目录安装通过；Linux musl 发布包在 Lakota 独立目录安装启动通过。此次没有替换日常个人端或信箱服务。
+- 本机发布前格式、Clippy、完整测试、优化构建和实际 PTY 入口检查通过。此前真实任务及科研计算的证据按各自二进制保留，没有把本次版本号调整说成重新跑过科研计算。
+
+精简证据见 [发布验证记录](releases/v0.2.0-alpha-evidence.json)。下载产物和完整检查日志保存在被忽略的 `dist/v0.2.0-alpha/`，不提交个人数据。
 
 ## 历史构建记录
 
