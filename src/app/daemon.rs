@@ -41,6 +41,18 @@ pub async fn run(
         };
         wire.conn.execute("UPDATE app_model_runs SET state='interrupted',error='service_interrupted' WHERE command_id=?1 AND state='running'",[&i.request_id])?;
         wire.conn.execute("UPDATE app_commands SET state='needs_attention',error='服务中断；请检查已有操作记录，不会自动重放不确定指令' WHERE id=?1",[&i.request_id])?;
+        let command = crate::app::command(&wire, &i.request_id)?;
+        if let Some(id) = command["task_id"]
+            .as_str()
+            .filter(|id| crate::task_coordinator::is_task(&wire.conn, id).unwrap_or(false))
+        {
+            crate::task_coordinator::attention(
+                &wire,
+                &crate::task_coordinator::get(&wire, id)?,
+                &i.request_id,
+                "服务中断；请检查任务证据后显式重试",
+            )?;
+        }
         respond(
             &wire,
             &i,
@@ -114,6 +126,7 @@ pub async fn run(
             for r in worker.messages(None)?.into_iter().filter(|r| {
                 r.direction == "in"
                     && r.message.kind == "request"
+                    && r.message.operation != "task_v2"
                     && r.message.workflow.is_none()
                     && bridge::envelope(&r.message).is_none()
                     && matches!(r.state.as_str(), "waiting" | "delegated")
@@ -131,11 +144,21 @@ pub async fn run(
                     eprintln!("peer request: {e}");
                 }
             }
+            if let Err(e) = crate::task_coordinator::tick(&worker, exe).await {
+                eprintln!("task coordinator: {e}");
+            }
             worker.ingest_workflows()?;
             if let Err(e) = crate::native_tasks::run_local(&mut worker, exe).await {
                 eprintln!("local Codex intent: {e}");
             }
             for id in worker.workflow_ids()? {
+                if worker.conn.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM legacy_holds WHERE kind='workflow' AND id=?1)",
+                    [&id],
+                    |r| r.get::<_, bool>(0),
+                )? {
+                    continue;
+                }
                 if stopping.load(Ordering::Relaxed) {
                     break;
                 }

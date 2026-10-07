@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-07",
+  "scope": [
+    "task state and executor location presentation",
+    "executor local TUI grant with automatic continuation"
+  ],
+  "task_id": "9e3f7c4a-cda3-515e-a9b8-ff750ec59690",
+  "revision": 1,
+  "real_terminal": {
+    "origin": "Mac installed xXASSXx PTY",
+    "executor": "Lakota installed xXASSXx through SSH PTY",
+    "user_actions": [
+      "Mac new task and CtrlS confirmation",
+      "Lakota CtrlT, Enter to inspect scope, Enter on allow and start"
+    ],
+    "grant_via_cli": false,
+    "initiator_retry_commands": 0,
+    "origin_physical_executions": 0,
+    "screens": [
+      "smoke-output/terminal-permission-mac",
+      "smoke-output/terminal-permission-lakota"
+    ]
+  },
+  "result": {
+    "initiator_state": "completed",
+    "executor_state": "completed",
+    "run": {
+      "id": "195745cb-92f2-411f-93ce-370960c9683f",
+      "state": "succeeded",
+      "session_id": "01a11861-2748-7fd2-a096-c46b43881fdc",
+      "submissions": 1,
+      "turn_completed": 1,
+      "exit_code": 0,
+      "error_code": null
+    },
+    "workspace": "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts/xxassxx-task-9e3f7c4a-cda3-515e-a9b8-ff750ec59690-r1",
+    "grant_to_result_seconds": 95,
+    "changed_points": 1,
+    "displacements_m": [
+      0.0,
+      2.0,
+      0.0
+    ],
+    "artifact_references": 5,
+    "all_reference_hashes_independently_verified": true
+  },
+  "regressions": {
+    "mac_full_passed": 111,
+    "legacy_opt_in_ignored": 2,
+    "linux_focused_passed": 27,
+    "final_display_test_passed": 1,
+    "note": "Full regressions precede the last header/input-label-only changes. The final display test and real cross-machine test use the deployed source."
+  },
+  "deployment": {
+    "name": "task-v7-upgrade-fcc861d8-8be9-4a50-8949-a5819e5893d1",
+    "directory": "/Users/shenyaojin/Documents/gitproject/xXASSXx/smoke-output/task-v7-upgrade-fcc861d8-8be9-4a50-8949-a5819e5893d1",
+    "source_sha256": "bc15826c9cd589982109de2acb1d0bd2c86284554fb322a0b9e1666f54a57df9",
+    "lakota_root": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/task-v7-upgrade-fcc861d8-8be9-4a50-8949-a5819e5893d1",
+    "trader_root": "/home/ubuntu/xxassxx-tests/task-v7-upgrade-fcc861d8-8be9-4a50-8949-a5819e5893d1",
+    "backups_requested": false,
+    "linux_build": {
+      "linux_build": "passed",
+      "binary": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/task-v7-upgrade-fcc861d8-8be9-4a50-8949-a5819e5893d1/bin/xxassxx",
+      "sha256": "ceedf63a42692fda4e2f4782aba8337f2452bef24c3531730c6bf52f051a6680"
+    },
+    "mac_sha256": "c5704d66aab92c546d894990ed95f5296381a595992784e1fd3c31d1f8a28561"
+  },
+  "limits": [
+    "Original data remains read-only; grants remain executor-local and revision-bound.",
+    "Only never-started tasks automatically continue after grant; uncertain completed operations are not replayed.",
+    "The originating model described x as east-west without geographical evidence. Numerical files are correct; wording reliability remains a separate follow-up."
+  ]
+}

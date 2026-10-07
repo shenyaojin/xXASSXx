@@ -17,10 +17,16 @@ pub mod service;
 pub mod setup;
 pub mod store;
 pub mod supervisor;
+pub mod task_coordinator;
 pub mod task_files;
+pub mod task_materials;
+pub mod task_schedule;
+pub mod task_workspace;
 pub mod team;
 pub mod tui;
 pub mod workflow;
 pub mod workflow_cli;
 pub mod workflow_model;
 pub mod workflow_scheduler;
+
+pub mod task_prose;

@@ -62,7 +62,7 @@ fn count(t: &Team, m: &str, sql: &str) -> i64 {
 fn trusted_actor_idempotent_queue_second_channel_and_events() {
     let t = Team::new();
     let mut i = instruction(&t, "a", "a", "只读分析");
-    i.action = "create_task".into();
+    i.action = "legacy_create_task".into();
     submit(&t, "a", &i);
     submit(&t, "a", &i);
     process(&t, "a");
@@ -210,7 +210,7 @@ fn authorized_local_task_uses_real_rust_mcp_fixed_snapshot_and_one_execution() {
     let file = t.dir.path().join("a/work/sample.csv");
     std::fs::write(&file, "x,value\na,4\n").unwrap();
     let mut i = instruction(&t, "a", "a", "只读分析样本");
-    i.action = "create_task".into();
+    i.action = "legacy_create_task".into();
     submit(&t, "a", &i);
     process(&t, "a");
     let card = task(&t, "a", &i);
@@ -255,7 +255,7 @@ fn remote_owner_authorization_clarification_resume_and_result_share_task_history
     let file = t.dir.path().join("b/work/sample.csv");
     std::fs::write(&file, "item,amount\nx,4\ny,5\n").unwrap();
     let mut i = instruction(&t, "a", "a", "请分析对方的样本");
-    i.action = "create_task".into();
+    i.action = "legacy_create_task".into();
     i.payload = json!({"peer":"b"});
     submit(&t, "a", &i);
     process(&t, "a");
@@ -405,9 +405,12 @@ fn presence_offline_old_clients_and_expiry_do_not_call_models() {
     assert_eq!(view["members"][1]["presence"]["state"], "unknown");
     let i = instruction(&t, "a", "b", "offline queued");
     submit(&t, "a", &i);
+    assert_eq!(task(&t, "a", &i)["state"], "draft");
     process(&t, "a");
     assert_eq!(count(&t, "a", "SELECT count(*) FROM app_model_runs"), 0);
-    assert_eq!(s.messages(None).unwrap().len(), 1);
+    assert_eq!(s.messages(None).unwrap().len(), 0);
+    // No configured model: preserve the card and report its actual blocker.
+    assert_eq!(task(&t, "a", &i)["state"], "needs_attention");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
@@ -542,13 +545,15 @@ fn tui_file_picker_authorizes_without_pasting_ids_and_stop_is_real() {
         ui.key(s, KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL))
             .unwrap()
     };
-    key(&mut ui, &mut s, 'n');
-    ui.input.insert("仅读取样本");
-    ui.key(&mut s, KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
-        .unwrap();
+    // This test retains the historical per-file-grant entry explicitly. New
+    // CtrlN drafts and CtrlS intent confirmation are covered by task_workflow.
+    let mut legacy = instruction(&t, "a", "a", "仅读取样本");
+    legacy.action = "legacy_create_task".into();
+    submit(&t, "a", &legacy);
     process(&t, "a");
+    let id = task(&t, "a", &legacy)["id"].as_str().unwrap().to_owned();
+    ui.selected_task = Some(id.clone());
     ui.refresh(&s).unwrap();
-    let id = ui.selected_task.clone().unwrap();
     assert_eq!(
         app::tasks::get(&s, &id).unwrap()["state"],
         "awaiting_authorization"

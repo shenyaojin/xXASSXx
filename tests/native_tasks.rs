@@ -41,7 +41,7 @@ fn instruction(t: &Team) -> Instruction {
     }
 }
 #[tokio::test]
-async fn owner_intent_runs_native_codex_and_returns_once_to_original_chat() {
+async fn owner_native_delegation_requires_confirmation_and_is_idempotent() {
     let t = Team::new();
     setup(&t, "a");
     let i = instruction(&t);
@@ -59,21 +59,15 @@ async fn owner_intent_runs_native_codex_and_returns_once_to_original_chat() {
     native_tasks::run_local(&mut s, Path::new(BIN))
         .await
         .unwrap();
-    let id = one["task_id"].as_str().unwrap();
-    assert_eq!(s.task(id).unwrap().state, "succeeded", "{:?}", s.runs(id));
-    let history = app::history(&s, &i.session_id).unwrap();
-    let results = history
-        .iter()
-        .filter(|v| v["kind"] == "native_result")
-        .collect::<Vec<_>>();
-    assert_eq!(results.len(), 1);
-    assert!(results[0]["body"].as_str().unwrap().contains("found.txt"));
+    let id = one["id"].as_str().unwrap();
+    assert_eq!(app::tasks::get(&s, id).unwrap()["state"], "draft");
     assert!(
-        !results[0]["body"]
-            .as_str()
-            .unwrap()
-            .contains(t.dir.path().to_str().unwrap())
+        s.list().unwrap().is_empty(),
+        "Codex must not start before intent confirmation"
     );
+    assert!(s.messages(None).unwrap().is_empty());
+    let history = app::history(&s, &i.session_id).unwrap();
+    assert!(!history.iter().any(|v| v["kind"] == "native_result"));
 }
 #[tokio::test]
 async fn peer_delegation_returns_readable_file_list_and_preserves_original_intent() {
@@ -137,11 +131,24 @@ fn native_capability_is_kernel_owned_and_references_are_validated() {
         .unwrap();
     let conn = rusqlite::Connection::open(t.db("a")).unwrap();
     assert!(native_tasks::roots(&conn, &fake.id).unwrap().is_none());
-    let i = instruction(&t);
-    let actor = Actor::local(&s).unwrap();
-    app::submit(&mut s, &actor, &i).unwrap();
-    let d = native_tasks::create_local(&mut s, &i).unwrap();
-    let id = d["task_id"].as_str().unwrap();
+    // Historical direct peer capability still has the same filesystem checks.
+    let request = t
+        .store("b")
+        .new_request(
+            "a",
+            "找文件",
+            "auto",
+            (None, None),
+            None,
+            &uuid::Uuid::new_v4().to_string(),
+        )
+        .unwrap()
+        .message;
+    s.save_message(&request, true).unwrap();
+    let d = s
+        .create_delegation_with_access(&request.message_id, true)
+        .unwrap();
+    let id = d["task"]["id"].as_str().unwrap();
     let good = json!({"body":"找到文件","files":[{"root":0,"path":"found.txt","reason":"相关"}]})
         .to_string();
     native_tasks::validate(&conn, id, &good).unwrap();

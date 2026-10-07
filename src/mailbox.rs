@@ -1,6 +1,6 @@
 //! A small single-team relay; authenticates sender and never opens member databases.
 use crate::{store::now, team::Message};
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 use axum::{
     Json, Router,
     extract::{DefaultBodyLimit, Path, State},
@@ -28,6 +28,8 @@ pub struct RelayMember {
 #[serde(deny_unknown_fields)]
 pub struct RelayConfig {
     pub team_id: String,
+    #[serde(default)]
+    pub schedule: crate::task_schedule::Config,
     pub members: Vec<RelayMember>,
     #[serde(default)]
     pub secrets_file: Option<PathBuf>,
@@ -76,6 +78,7 @@ pub fn router(db: &FsPath, cfg: &RelayConfig) -> Result<Router> {
     c.pragma_update(None, "journal_mode", "WAL")?;
     c.execute_batch("CREATE TABLE IF NOT EXISTS relay_team(id TEXT PRIMARY KEY); CREATE TABLE IF NOT EXISTS relay_members(id TEXT PRIMARY KEY,name TEXT NOT NULL,token_hash TEXT NOT NULL UNIQUE); CREATE TABLE IF NOT EXISTS relay_messages(id TEXT PRIMARY KEY,sender TEXT NOT NULL,recipient TEXT NOT NULL,payload TEXT NOT NULL,received INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL);")?;
     c.execute_batch("CREATE TABLE IF NOT EXISTS relay_presence(member_id TEXT PRIMARY KEY,busy INTEGER NOT NULL,seen_at INTEGER NOT NULL)")?;
+    crate::task_schedule::migrate(&c, &cfg.schedule)?;
     let tx = c.transaction()?;
     let team: Option<String> = tx
         .query_row("SELECT id FROM relay_team", [], |r| r.get(0))
@@ -108,18 +111,39 @@ pub fn router(db: &FsPath, cfg: &RelayConfig) -> Result<Router> {
         )?;
     }
     tx.commit()?;
+    let relay = Arc::new(Relay {
+        db: db.canonicalize()?,
+        team: cfg.team_id.clone(),
+    });
+    let weak = Arc::downgrade(&relay);
+    tokio::spawn(async move {
+        loop {
+            {
+                let Some(relay) = weak.upgrade() else {
+                    break;
+                };
+                if let Ok(c) = connection(&relay.db) {
+                    if let Err(e) = crate::task_schedule::tick(&c, now()) {
+                        eprintln!("task schedule: {e}");
+                    }
+                }
+            }
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    });
     Ok(Router::new()
         .route("/v1/whoami", get(whoami))
+        .route("/v2/events", get(system_events))
+        .route("/v2/events/{id}/ack", post(system_ack))
+        .route("/v2/meeting-report", post(meeting_report))
+        .route("/v2/task-facts", post(local_task_facts))
         .route("/v1/presence", get(presence_get).post(presence_post))
         .route("/v1/messages", post(send))
         .route("/v1/inbox", get(inbox))
         .route("/v1/ack/{id}", post(ack))
         .route("/v1/status/{id}", get(status))
         .layer(DefaultBodyLimit::max(65536))
-        .with_state(Arc::new(Relay {
-            db: db.canonicalize()?,
-            team: cfg.team_id.clone(),
-        })))
+        .with_state(relay))
 }
 async fn send(
     State(relay): State<Arc<Relay>>,
@@ -164,6 +188,8 @@ async fn send(
             return Err(problem(StatusCode::CONFLICT, "message_id conflict"));
         }
     } else {
+        crate::task_schedule::accept(&tx, &msg, now())
+            .map_err(|e| problem(StatusCode::BAD_REQUEST, &e.to_string()))?;
         tx.execute("INSERT INTO relay_messages(id,sender,recipient,payload,created_at) VALUES(?1,?2,?3,?4,?5)",params![msg.message_id,sender,msg.recipient,payload,now()]).map_err(|_|problem(StatusCode::INTERNAL_SERVER_ERROR,"storage unavailable"))?;
     }
     tx.commit()
@@ -234,7 +260,9 @@ async fn whoami(
     let c = connection(&relay.db)
         .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "storage unavailable"))?;
     let me = auth(&c, &headers)?;
-    Ok(Json(json!({"team_id":relay.team,"member_id":me})))
+    Ok(Json(
+        json!({"team_id":relay.team,"member_id":me,"task_protocol":2}),
+    ))
 }
 
 #[derive(Deserialize)]
@@ -270,4 +298,111 @@ async fn presence_get(
     Ok(Json(
         json!({"server_time":now(),"members":query().map_err(|_|problem(StatusCode::INTERNAL_SERVER_ERROR,"storage unavailable"))?}),
     ))
+}
+
+async fn system_events(
+    State(relay): State<Arc<Relay>>,
+    headers: HeaderMap,
+) -> std::result::Result<Json<Value>, ApiError> {
+    let c = connection(&relay.db)
+        .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "storage unavailable"))?;
+    let me = auth(&c, &headers)?;
+    let events = crate::task_schedule::pending(&c, &me)
+        .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "events unavailable"))?;
+    Ok(Json(
+        json!({"team_id":relay.team,"source":"system","events":events}),
+    ))
+}
+async fn system_ack(
+    State(relay): State<Arc<Relay>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> std::result::Result<Json<Value>, ApiError> {
+    let c = connection(&relay.db)
+        .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "storage unavailable"))?;
+    let me = auth(&c, &headers)?;
+    c.execute(
+        "UPDATE relay_system_events SET received=1 WHERE id=?1 AND recipient=?2",
+        params![id, me],
+    )
+    .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "ack unavailable"))?;
+    Ok(Json(json!({"received":true})))
+}
+async fn meeting_report(
+    State(relay): State<Arc<Relay>>,
+    headers: HeaderMap,
+    Json(p): Json<Value>,
+) -> std::result::Result<Json<Value>, ApiError> {
+    let c = connection(&relay.db)
+        .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "storage unavailable"))?;
+    let me = auth(&c, &headers)?;
+    crate::task_schedule::report(&c, &me, &p, now())
+        .map_err(|e| problem(StatusCode::BAD_REQUEST, &e.to_string()))?;
+    Ok(Json(json!({"accepted":true})))
+}
+
+async fn local_task_facts(
+    State(relay): State<Arc<Relay>>,
+    headers: HeaderMap,
+    Json(p): Json<Value>,
+) -> std::result::Result<Json<Value>, ApiError> {
+    let mut c = connection(&relay.db)
+        .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "storage unavailable"))?;
+    let me = auth(&c, &headers)?;
+    let apply = || -> Result<()> {
+        let id = p["id"].as_str().context("missing fact ID")?;
+        uuid::Uuid::parse_str(id)?;
+        let w: crate::task_coordinator::Wire = serde_json::from_value(p["event"].clone())?;
+        ensure!(p.to_string().len() <= 32768, "fact too large");
+        let tx = c.transaction()?;
+        let raw = p["event"].to_string();
+        let old: Option<(String, String)> = tx
+            .query_row(
+                "SELECT member,payload FROM relay_local_facts WHERE id=?1",
+                [id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .optional()?;
+        if let Some((member, previous)) = old {
+            ensure!(member == me && previous == raw, "conflicting fact ID");
+            return Ok(());
+        }
+        if w.event == "proposal" {
+            ensure!(
+                w.data["participants"] == json!([me]),
+                "local task must have only its owner"
+            );
+        } else {
+            let owner: String = tx.query_row(
+                "SELECT initiator FROM relay_tasks WHERE id=?1",
+                [&w.task_id],
+                |r| r.get(0),
+            )?;
+            ensure!(owner == me, "only the owner can publish local task facts");
+        }
+        let m = Message {
+            message_id: id.into(),
+            conversation_id: crate::team::stable_id(&w.task_id, "facts"),
+            sender: me.clone(),
+            recipient: me.clone(),
+            kind: "request".into(),
+            operation: "task_v2".into(),
+            body: raw.clone(),
+            created_at: now(),
+            reply_to: None,
+            object_id: None,
+            version_id: None,
+            workflow: None,
+        };
+        crate::task_schedule::accept(&tx, &m, now())?;
+        tx.execute(
+            "INSERT INTO relay_local_facts VALUES(?1,?2,?3)",
+            params![id, me, raw],
+        )?;
+        tx.commit()?;
+        Ok(())
+    };
+    let mut apply = apply;
+    apply().map_err(|e| problem(StatusCode::BAD_REQUEST, &e.to_string()))?;
+    Ok(Json(json!({"persisted":true})))
 }

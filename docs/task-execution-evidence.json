@@ -1,0 +1,187 @@
+{
+  "date": "2026-10-07",
+  "task_id": "c5f3a8d9-5327-5c45-bb43-e9e3c630df8d",
+  "revision": 1,
+  "status": "completed_and_archived_on_both_members",
+  "real_execution": {
+    "origin": "Mac PTY running installed xxassxx",
+    "transport": "Trader HTTPS mailbox",
+    "executor": "Lakota official Codex",
+    "mac_file_executions": 0,
+    "native_commands": 18,
+    "run": {
+      "id": "1743f69f-0026-4837-a8db-c9a645dd1382",
+      "state": "succeeded",
+      "session_id": "01a11842-fd80-76c3-b7e4-6a901ed26304",
+      "exit_code": 0,
+      "turn_completed": 1,
+      "submissions": 1,
+      "sandbox": "task-workspace",
+      "started_at": 1791408404
+    },
+    "confirmed_to_result_seconds": 279,
+    "execution_binary_sha256": {
+      "Mac": "e81face7bd5011e60bb3c5a6cb130e221c8c7d7a02f1392162ceb8f246d6473b",
+      "Lakota": "094ded0ded933fb9c7f20f6b6a0208746bc9cecf08be7a2c6f4b1be256a8ee60"
+    }
+  },
+  "scope": {
+    "workspace": "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts/tensile_fault/xxassxx-task-c5f3a8d9-5327-5c45-bb43-e9e3c630df8d-r1",
+    "changed_region": "srv_outer",
+    "translation_m": 1.524,
+    "direction": "model +y, not a geographical direction",
+    "mesh_elements": 28160,
+    "end_time_s": 61200,
+    "original_files_unchanged": true,
+    "final_pair_input_diff": "--- baseline\n+++ shifted\n@@ -69,8 +69,8 @@\n     type = SubdomainBoundingBoxGenerator\n     input = 'final_stitch_0'\n     block_id = 1\n-    bottom_left = '299.61839999999995 -14.407896000000134 0'\n-    top_right = '1894.9416 14.407896000000134 0'\n+    bottom_left = '299.61839999999995 -12.883896000000134 0'\n+    top_right = '1894.9416 15.931896000000134 0'\n   []\n   [srv_wide_bbox]\n     type = SubdomainBoundingBoxGenerator\n",
+    "local_grant": "task and revision specific; original sources/runtime dependencies read-only; only task workspace writable; no network"
+  },
+  "verification": {
+    "case_runs": [
+      {
+        "case": "baseline",
+        "exit_code": 0,
+        "wall_seconds": 23.873161866911687,
+        "single_process": true,
+        "command": [
+          "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/moose_env/moose/modules/porous_flow/porous_flow-opt",
+          "-i",
+          "model.i",
+          "--n-threads=1"
+        ]
+      },
+      {
+        "case": "shifted",
+        "exit_code": 0,
+        "wall_seconds": 20.967543075908907,
+        "single_process": true,
+        "command": [
+          "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/moose_env/moose/modules/porous_flow/porous_flow-opt",
+          "-i",
+          "model.i",
+          "--n-threads=1"
+        ]
+      }
+    ],
+    "independent_csv_check": {
+      "pressure_peak_difference_pa": 10.111166000366211,
+      "pressure_max_pointwise_difference_pa": 5247.1656900011,
+      "strain_yy_max_pointwise_difference": 4.0788283183541004e-08
+    },
+    "baseline": {
+      "time_records": 5,
+      "final_time_s": 61200.0,
+      "log_sha256": "4c3cae46661385ba58a920f3375f230d04ce61ee443afcef6c0d7d0baef909db"
+    },
+    "shifted": {
+      "time_records": 5,
+      "final_time_s": 61200.0,
+      "log_sha256": "eb0fa677a13036bd096e8d0df689d8e36cf64df1108bfa24aa8deec055de3764"
+    },
+    "returned_file_count": 22,
+    "returned_hashes_verified": true,
+    "original_file_hashes": {
+      "scripts/tensile_fault/inversion/run_v11_srv_extended.py": {
+        "bytes": 5591,
+        "sha256": "b0647d572e11dbf98841e82b7ee55214eef3766b7bc1907f9e695495737bc0bf"
+      },
+      "scripts/tensile_fault/inversion/fault_geometry.py": {
+        "bytes": 3273,
+        "sha256": "8f7fe7b8f9465ca54010f4b74fc5c7f46082152f3a13353ef9755f5b410a2d2c"
+      },
+      "fibeRIS/src/fiberis/moose/templates/baseline_model_generator_fervo.py": {
+        "bytes": 24973,
+        "sha256": "623e28a4a1a65fbebdd81027bd007667f284a9dab36766c412321a0f94978bc4"
+      },
+      "output/v11_srv_extended/v11_srv_extended_input.i": {
+        "bytes": 13559,
+        "sha256": "50123c9af0b38192f05fdb99ea4829c51444f376580f9b01d4b92bdf5a50c1bf"
+      }
+    },
+    "first_attempt": "archived by executing Codex after discovering a loading-point shift; not used for final comparison",
+    "limits": "small mesh and short time window; no mesh/tolerance convergence or field validation; raw outputs remain on Lakota"
+  },
+  "user_facing_followup": "真的改了文件也真跑完了：在执行方自己的任务目录里复制了一份输入，只把外层那块区域沿模型横向挪了 5 英尺，然后跑了两个算例，一个是挪过的，一个是不挪的对照，原来的文件和旧结果都没动。\n\n挪过之后结果整体几乎没变，只是原来上下对称的压力分布被打破了，局部压力最多差了五千多帕，还出现了非常小的横向位移；最大压力、伸缩量这些总体数字基本一致。\n\n所以这次能说明的是：在这个小范围测试里，挪动位置确实会引起局部变化，而且整套流程能跑通、能对照；但网格很粗、时间窗也短，没做网格或误差收敛检查，所以还不能拿来判断现场真实情况，也不能当作精度依据。",
+  "terminal_record": "smoke-output/terminal-srv-execution/screen-19.txt",
+  "full_audit": "smoke-output/srv-execution-audit.json",
+  "report_copy": "smoke-output/srv-test-report.md",
+  "final_release": {
+    "source_sha256": "d5d4239d3bee26d681c57b2ccbd91ed7c55b3d99c5fad274131cd00103f973b6",
+    "hosts": [
+      {
+        "host": "mac",
+        "sha256": "ce9623bde921268c151c3c0da6cd4b5753384182160968366f9abc76ad89994f",
+        "preserved": true
+      },
+      {
+        "host": "lakota",
+        "sha256": "e0a544b0805733c75e45d5279907957405a5541470cedfbb1348cf2037aee8ee",
+        "preserved": true
+      },
+      {
+        "host": "trader",
+        "sha256": "e0a544b0805733c75e45d5279907957405a5541470cedfbb1348cf2037aee8ee",
+        "preserved": true
+      }
+    ],
+    "health": {
+      "Mac": {
+        "status": {
+          "alive": true,
+          "error": null,
+          "instance": "afc16f48-b442-4779-aa04-7709bfc0f876",
+          "log_path": "/Users/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+          "pid": 22157,
+          "state": "running",
+          "updated_at": 1791409239
+        },
+        "network": "connected",
+        "schema": 8,
+        "sha256": "ce9623bde921268c151c3c0da6cd4b5753384182160968366f9abc76ad89994f"
+      },
+      "Lakota": {
+        "status": {
+          "alive": true,
+          "error": null,
+          "instance": "f5ad55f6-6a35-40b4-8923-d282753a3576",
+          "log_path": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+          "pid": 2416563,
+          "state": "running",
+          "updated_at": 1791409239
+        },
+        "network": "connected",
+        "schema": 8,
+        "sha256": "e0a544b0805733c75e45d5279907957405a5541470cedfbb1348cf2037aee8ee"
+      },
+      "Trader": {
+        "mailbox": "active",
+        "https": "active",
+        "sha256": "e0a544b0805733c75e45d5279907957405a5541470cedfbb1348cf2037aee8ee"
+      }
+    },
+    "changes_after_real_forward_test": [
+      "display execution-start progress",
+      "remove read-only-only labels",
+      "shorten default reports and remove unnecessary runtime terminology"
+    ],
+    "terminal_reopened_and_completed_task_visible": true
+  },
+  "regression": {
+    "mac_full_passed": 109,
+    "ignored_legacy_opt_in": 2,
+    "linux_focused_passed": 25,
+    "coverage": [
+      "read roots never grant writes",
+      "local task/revision grant required",
+      "remote retry stays on executor",
+      "real MCP write/run fixture and artifact hashes",
+      "symlink escape rejected",
+      "revocation kills running program before later writes",
+      "existing read-only workflows",
+      "schema migration preserves history"
+    ],
+    "real_os_sandbox_probe": "smoke-output/execute-sandbox-probe.json"
+  },
+  "backup_created": false,
+  "committed_or_pushed": false
+}

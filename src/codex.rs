@@ -199,10 +199,9 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
         crate::native_tasks::context(&store.conn, &lease.task_id)
             .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
     }
-    let cwd = native
-        .as_ref()
-        .and_then(|r| r.first())
-        .unwrap_or(&options.workdir);
+    let bound_cwd = crate::native_tasks::working_directory(&store.conn, &lease.task_id)
+        .map_err(|e| Failure::new("working_directory", e.to_string()))?;
+    let cwd = bound_cwd.as_ref().unwrap_or(&options.workdir);
     let mut c = command(&options.codex, cwd);
     c.arg("exec");
     if let Some(id) = &lease.resume_id {
@@ -216,13 +215,26 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
     ]);
     c.env("NO_COLOR", "1");
     config(&mut c, "approval_policy", string("never"));
+    let access = crate::task_workspace::for_execution(&store.conn, &lease.task_id)
+        .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
     if let Some(roots) = &native {
         c.arg("--strict-config");
-        config(&mut c, "default_permissions", string("xxassxx_read"));
+        let profile = if access.is_some() {
+            "xxassxx_execute"
+        } else {
+            "xxassxx_read"
+        };
+        config(&mut c, "default_permissions", string(profile));
         let mut fs = toml::map::Map::new();
         fs.insert(":minimal".into(), string("read"));
         for root in roots {
             fs.insert(root.to_string_lossy().into_owned(), string("read"));
+        }
+        if let Some(access) = &access {
+            fs.insert(
+                access.directory.to_string_lossy().into_owned(),
+                string("write"),
+            );
         }
         // NVM installs the sandbox helper outside the OS's minimal runtime paths.
         // Permit only its package, never the home directory containing it.
@@ -236,8 +248,25 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
             }
         }
         // These remain private even if the owner selected a broad source root.
-        if let Some(parent) = store.path.parent() {
-            fs.insert(parent.to_string_lossy().into_owned(), string("deny"));
+        // Deny the actual private files, not the whole parent: an explicitly
+        // selected working directory may be a sibling below that parent. A broad
+        // parent denial also prevents Codex from resolving its authorized cwd.
+        for path in [store.path.clone(), store.content_root()] {
+            fs.insert(path.to_string_lossy().into_owned(), string("deny"));
+        }
+        for suffix in ["-wal", "-shm", ".service", ".run-locks"] {
+            fs.insert(
+                format!("{}{suffix}", store.path.to_string_lossy()),
+                string("deny"),
+            );
+        }
+        if let Ok(cfg) = store.member_config() {
+            if let Some(path) = cfg.secrets_file {
+                fs.insert(path.to_string_lossy().into_owned(), string("deny"));
+            }
+            if let Some(path) = cfg.model["secrets_file"].as_str() {
+                fs.insert(path.into(), string("deny"));
+            }
         }
         for var in ["HOME", "CODEX_HOME"] {
             if let Some(path) = std::env::var_os(var) {
@@ -254,31 +283,49 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
                 }
             }
         }
+        remove_redundant_denials(&mut fs);
         config(
             &mut c,
-            "permissions.xxassxx_read.filesystem",
+            &format!("permissions.{profile}.filesystem"),
             toml::Value::Table(fs),
         );
         config(
             &mut c,
-            "permissions.xxassxx_read.network.enabled",
+            &format!("permissions.{profile}.network.enabled"),
             false.into(),
         );
         config(&mut c, "shell_environment_policy.inherit", string("none"));
+        let mut env = toml::map::Map::from_iter([
+            (
+                "PATH".into(),
+                string("/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin"),
+            ),
+            ("LC_ALL".into(), string("C")),
+        ]);
+        if let Some(access) = &access {
+            for name in ["TMPDIR", "TMP", "TEMP", "XDG_CACHE_HOME", "MPLCONFIGDIR"] {
+                env.insert(
+                    name.into(),
+                    string(access.directory.join(".tmp").to_string_lossy()),
+                );
+            }
+            env.insert("PYTHONDONTWRITEBYTECODE".into(), string("1"));
+            for name in ["OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"] {
+                env.insert(name.into(), string("1"));
+            }
+        }
         config(
             &mut c,
             "shell_environment_policy.set",
-            toml::Value::Table(toml::map::Map::from_iter([
-                (
-                    "PATH".into(),
-                    string("/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin"),
-                ),
-                ("LC_ALL".into(), string("C")),
-            ])),
+            toml::Value::Table(env),
         );
     } else {
         config(&mut c, "sandbox_mode", string("read-only"));
     }
+    // Automatic tasks receive explicit versioned instructions via get_task.
+    // Do not load mutable project AGENTS files outside the task's read scope.
+    // Codex >=0.149 reads these through its filesystem sandbox at startup.
+    config(&mut c, "project_doc_max_bytes", 0.into());
     config(&mut c, "features.shell_tool", native.is_some().into());
     config(&mut c, "features.unified_exec", false.into());
     config(&mut c, "features.multi_agent", false.into());
@@ -387,6 +434,35 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
     Ok(c)
 }
 
+// Linux bwrap cannot materialize a denied child inside an already masked parent.
+// The parent already protects that child, unless an intervening read grant reopens
+// a subtree. Preserve those necessary child denials and all existing read bounds.
+fn remove_redundant_denials(fs: &mut toml::map::Map<String, toml::Value>) {
+    let redundant: Vec<_> = fs
+        .iter()
+        .filter_map(|(child, access)| {
+            if access.as_str() != Some("deny") || !Path::new(child).is_absolute() {
+                return None;
+            }
+            let covered = fs.iter().any(|(parent, rule)| {
+                parent != child
+                    && rule.as_str() == Some("deny")
+                    && Path::new(parent).is_absolute()
+                    && Path::new(child).starts_with(parent)
+                    && !fs.iter().any(|(grant, rule)| {
+                        matches!(rule.as_str(), Some("read" | "write"))
+                            && Path::new(grant).starts_with(parent)
+                            && Path::new(child).starts_with(grant)
+                    })
+            });
+            covered.then(|| child.clone())
+        })
+        .collect();
+    for path in redundant {
+        fs.remove(&path);
+    }
+}
+
 async fn execute(
     store: &mut Store,
     lease: &Lease,
@@ -434,7 +510,15 @@ async fn execute(
         "xXASSXx execution event. Assigned task_id: {}. Current run_id: {}.\nCall the xxassxx MCP get_task tool with that task_id, follow its input as the task data, then call submit_task_result with that task_id, the current run_id returned by get_task, a stable idempotency_key (use the current run_id), and a nonempty result string. On retries use exactly the same key and result. This applies also after resuming: call get_task again and submit for the NEW current run_id. Do not use shell, files, or other tools to access the task database. Do not claim completion without an accepted MCP submission. Finish your turn after submission.\n",
         lease.task_id, lease.run_id
     );
-    let prompt = if crate::workflow::for_task(&store.conn, &lease.task_id)
+    let prompt = if crate::task_coordinator::check_execution(&store.conn, &lease.task_id)
+        .map_err(|e| Failure::new("business_task", e.to_string()))?
+        .is_some()
+    {
+        format!(
+            "xXASSXx business task execution. Assigned task_id: {}. Current run_id: {}. Call get_task for the current confirmed revision and physical scope. Follow execution_policy strictly. Use Codex native tools within authorized_roots. Follow business_task.phase: discover returns candidate paths for Rust to freeze; analyze reads only immutable materials; execute may write and run only in execution_access.directory, with sources/dependencies read-only. If necessary information is missing, use submit_task_question with body, reason, known and these task/run IDs and idempotency_key equal to run_id. Otherwise use submit_task_result following the result_contract. End this turn after one accepted submission. A question, MCP acceptance, exit 0, and turn.completed do not complete the business task. On resume read get_task again for answers. Never access the task database. Project programs may run only in phase execute under its explicit local grant.\n",
+            lease.task_id, lease.run_id
+        )
+    } else if crate::workflow::for_task(&store.conn, &lease.task_id)
         .map_err(|e| Failure::new("storage_error", e.to_string()))?
         .is_some()
     {
@@ -548,12 +632,24 @@ async fn execute(
     }
 }
 
+async fn watch_authorization(store: &Store, task: &str) -> Failure {
+    loop {
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        if let Err(e) = crate::native_tasks::context(&store.conn, task) {
+            return Failure::new("authorization_changed", e.to_string());
+        }
+    }
+}
+
 /// Run inside the internal worker, whose stdin is the invoking CLI's liveness pipe.
 pub async fn run(store: &mut Store, task: &str, mut options: Options) -> Result<()> {
     ensure!(
         cfg!(unix),
         "phase 1 process cleanup currently supports macOS/Linux only"
     );
+    if let Some(path) = crate::native_tasks::working_directory(&store.conn, task)? {
+        options.workdir = path;
+    }
     options.workdir = options
         .workdir
         .canonicalize()
@@ -590,10 +686,12 @@ pub async fn run(store: &mut Store, task: &str, mut options: Options) -> Result<
             "new-session"
         }
     );
+    let watcher = Store::open(&store.path)?;
     let result = tokio::select! {
         biased;
         _=parent_closed=>Err(Failure::new("interrupted","runner disconnected; stopping execution")),
         _=tokio::signal::ctrl_c()=>Err(Failure::new("interrupted","runner interrupted")),
+        failure=watch_authorization(&watcher,task)=>Err(failure),
         result=execute(store,&lease,&options,deadline)=>result,
     };
     match result {
@@ -603,5 +701,36 @@ pub async fn run(store: &mut Store, task: &str, mut options: Options) -> Result<
             failure.exit_code,
             Some((failure.code, &failure.message)),
         ),
+    }
+}
+
+#[cfg(test)]
+mod permission_tests {
+    use super::*;
+
+    #[test]
+    fn nested_denials_preserve_private_bounds_and_reopened_subtrees() {
+        let mut fs: toml::map::Map<String, toml::Value> = [
+            (":minimal", "read"),
+            ("/work", "read"),
+            ("/work/private", "deny"),
+            ("/work/private/secrets.env", "deny"),
+            ("/work/private/materials", "read"),
+            ("/work/private/materials/credential", "deny"),
+            ("/work/private-other/token", "deny"),
+        ]
+        .into_iter()
+        .map(|(p, a)| (p.into(), string(a)))
+        .collect();
+        remove_redundant_denials(&mut fs);
+        assert!(!fs.contains_key("/work/private/secrets.env"));
+        assert_eq!(fs["/work/private"].as_str(), Some("deny"));
+        assert_eq!(
+            fs["/work/private/materials/credential"].as_str(),
+            Some("deny")
+        );
+        assert_eq!(fs["/work/private-other/token"].as_str(), Some("deny"));
+        assert_eq!(fs["/work"].as_str(), Some("read"));
+        assert_eq!(fs["/work/private/materials"].as_str(), Some("read"));
     }
 }

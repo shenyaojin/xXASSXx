@@ -1,6 +1,6 @@
 # 交给 Codex 的个人端安装提示词
 
-将下面正文交给朋友自己 Mac 上的 Codex，同时提供解压后的安装包目录、friend.json 的本地路径，以及想允许读取的文件夹。当前离线包是 Apple 芯片版；Intel 不能安装此包。邀请和 DeepSeek key 不要粘贴进聊天。
+将下面正文交给朋友自己 Mac 上的 Codex，同时提供解压后的安装包目录、pengchao.json 的本地路径，以及想允许读取的文件夹。当前离线包是 Apple 芯片版；Intel 不能安装此包。邀请和 DeepSeek key 不要粘贴进聊天。
 
 ---
 
@@ -8,14 +8,14 @@
 
 我会给你这三项本地路径：
 - 解压后的 xXASSXx 安装包目录。
-- 我的私人邀请 friend.json。
+- 我的私人邀请 pengchao.json。
 - 我允许 Codex 读取的业务文件夹（可暂时留空，稍后在界面按 Ctrl+R 添加）。
 
 先确认系统和 CPU 架构。当前提供的包支持 macOS Apple 芯片（arm64），不要在 Intel 上强行安装。阅读包里的安装说明和命令帮助，使用随包 install.sh --from 安装包目录，安装到 ~/.local/bin，并校验 SHA-256；不需要 Rust 或 sudo。使用已提供的离线包，不假设 GitHub 上已经有包含最新功能的 Release。将 ~/.local/bin 加入当前会话 PATH；如果登录 shell 的 PATH 缺失，幂等地加入对应 shell 配置，保留已有内容。
 
 先检查是否已有个人端（默认 ~/.local/share/xxassxx/client）。已有个人端就检查身份并保留其数据、白名单和配置，不重新 init、不替换身份、不删除数据库；旧版升级前先确认无运行任务，停止后台并备份数据和旧二进制。当前程序数据库版本为 6，旧二进制不能直接读取升级后的数据库。
 
-邀请已绑定团队 xxassxx、用户名 friend、显示名称 Friend，服务器地址为 https://xxassxx.shenyaojin.com。用户名不能通过修改邀请自行更换。我的联系人应只有 owner（Shenyao "Keith" Jin）和 test（Lakota）；不得添加 a、b。不要输出邀请正文或其中的凭据，不把邀请打进公共安装包。
+邀请已绑定团队 xxassxx、用户名 pengchao、显示名称 pengchao，服务器地址为 https://xxassxx.shenyaojin.com。用户名不能通过修改邀请自行更换。我的联系人应只有 owner（Shenyao "Keith" Jin）和 test（Lakota）；不得添加 a、b。不要输出邀请正文或其中的凭据，不把邀请打进公共安装包。
 
 local agent 先用 DeepSeek，模型 deepseek-flash。密钥文件为 ~/.config/xxassxx/secrets.env，字段 DEEPSEEK_API_KEY，权限 600、目录权限 700。缺少密钥时，请让我在本机终端以隐藏输入的方式填入，不在聊天中询问明文，不回显、不写进命令历史，也不覆盖已有密钥文件。确认配置采用 thinking=false（这是当前默认值）。
 

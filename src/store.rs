@@ -98,7 +98,7 @@ impl Store {
 
     fn migrate(conn: &Connection, version: i64) -> Result<()> {
         ensure!(
-            (0..=6).contains(&version),
+            (0..=8).contains(&version),
             "unsupported database schema {version}"
         );
         if version == 0 {
@@ -118,6 +118,12 @@ impl Store {
         }
         if version < 6 {
             conn.execute_batch(include_str!("schema_v6.sql"))?;
+        }
+        if version < 7 {
+            conn.execute_batch(include_str!("schema_v7.sql"))?;
+        }
+        if version < 8 {
+            conn.execute_batch(include_str!("schema_v8.sql"))?;
         }
         Ok(())
     }
@@ -227,6 +233,12 @@ impl Store {
             resume_id: session,
         };
         tx.execute("INSERT INTO runs(id,task_id,token_hash,resumed_session_id,workdir,sandbox,deadline) VALUES(?1,?2,?3,?4,?5,'read-only',?6)", params![lease.run_id,id,digest(&lease.token),lease.resume_id,workdir.to_string_lossy(),now()+timeout as i64+1])?;
+        if crate::task_workspace::for_execution(&tx, id)?.is_some() {
+            tx.execute(
+                "UPDATE runs SET sandbox='task-workspace' WHERE id=?1",
+                [&lease.run_id],
+            )?;
+        }
         tx.execute(
             "UPDATE tasks SET state='running',active_run=?2,result=NULL WHERE id=?1",
             params![id, lease.run_id],

@@ -1,10 +1,24 @@
-# 版本构建
+# 版本构建与发布
 
-首版为 `0.1.0-alpha`，对应 Git 标签 `v0.1.0-alpha`。版本来源是 `Cargo.toml`；`Cargo.lock` 中本包版本保持一致，CLI 和 MCP 自动使用该版本。
+当前发布目标为 `0.2.0-alpha`，对应 Git 标签 `v0.2.0-alpha`。版本来源是 `Cargo.toml`；`Cargo.lock` 中本包版本保持一致，CLI 和 MCP 自动使用该版本。
+
+## 发布前验收
+
+先按 [调试与终端验收流程](debugging.md) 完成受本轮改动影响的真实用户操作。涉及卡住、授权、执行地点、远程接续或最终答复时，必须亲自启动真实终端，从发起任务看到最终回答，并核对实际文件/运行结果。自动测试成功、后台 completed 或一段模型自述不能代替终端验收。记录精简证据及所用二进制哈希；仅改版本号或文档时说明引用哪一轮真实验证，不冒称重新跑过业务计算。
+
+发布必须同时提供以下三个平台的安装包：
+
+| 系统 | 架构 | 安装包 |
+| --- | --- | --- |
+| macOS | Apple Silicon | `xxassxx-aarch64-apple-darwin.tar.gz` |
+| macOS | Intel | `xxassxx-x86_64-apple-darwin.tar.gz` |
+| Linux | x86_64 musl | `xxassxx-x86_64-unknown-linux-musl.tar.gz` |
+
+同时附上 `SHA256SUMS`、`install.sh` 和对应版本说明。不能将某一台机器的本地构建说成所有平台已验证。
 
 ## 本机构建
 
-需要 Rust 工具链、Python 3.11+（测试使用）及平台编译工具。在 Apple Silicon Mac 的仓库根目录执行：
+需要 Rust 工具链、Python 3.11+（测试使用）及平台编译工具。在仓库根目录执行：
 
 ```sh
 cargo fmt --all -- --check
@@ -12,21 +26,36 @@ cargo test --locked
 cargo clippy --locked --all-targets -- -D warnings
 cargo build --release --locked
 ./target/release/xxassxx --version
-sh scripts/package.sh target/release/xxassxx aarch64-apple-darwin dist/v0.1.0-alpha
-cat dist/v0.1.0-alpha/*.tar.gz.sha256 > dist/v0.1.0-alpha/SHA256SUMS
-cp scripts/install.sh dist/v0.1.0-alpha/install.sh
+sh scripts/package.sh target/release/xxassxx aarch64-apple-darwin dist/v0.2.0-alpha
+cat dist/v0.2.0-alpha/*.tar.gz.sha256 > dist/v0.2.0-alpha/SHA256SUMS
+cp scripts/install.sh dist/v0.2.0-alpha/install.sh
 ```
 
-依赖已缓存时可给 Cargo 的测试、检查和构建命令追加 `--offline`。打包目录按版本隔离，避免把旧预览包当作首版产物。
+示例打包目标为 Apple Silicon；其他平台必须使用对应目标的真实二进制。依赖已缓存时可追加 `--offline`。产物按版本隔离，`dist/` 和含私有运行数据的 `smoke-output/` 不提交。
 
-离线安装验证可指定临时前缀，不修改日常个人端：
+安装验证使用临时目录，不覆盖日常个人端：
 
 ```sh
-sh dist/v0.1.0-alpha/install.sh --from dist/v0.1.0-alpha --prefix /tmp/xxassxx-alpha-check
-/tmp/xxassxx-alpha-check/bin/xxassxx --version
+sh scripts/install.sh --from dist/v0.2.0-alpha --prefix /tmp/xxassxx-020-check
+/tmp/xxassxx-020-check/bin/xxassxx --version
 ```
 
-本次构建的检查日志保存在 `dist/v0.1.0-alpha/validation/`。该目录和所有分发包均被 Git 忽略。
+核对安装后版本、二进制哈希及终端入口。升级日常个人端或团队信箱时，先确认没有在途任务，保留已有身份、配置和数据库，停止旧后台后更换并重新启动。1.0.0 前属于小规模测试，本轮按用户要求不创建备份，不重新初始化。
+
+## GitHub 构建与预发布
+
+`.github/workflows/release.yml` 支持手动构建，以及推送 `v*` 标签触发：
+
+1. 提交所有实现、测试、文档和版本变更。检查远端状态，正常推送；标签必须指向包含完整实现的提交，不覆盖已有发布标签。
+2. 验证标签与 `Cargo.toml` 完全对应，存在 `docs/releases/<标签>.md`。
+3. 在上述三个平台测试、优化构建、核对版本，并验证对应安装包能离线安装。
+4. 三个平台均通过后，汇总包与校验值，创建带安装器和版本说明的草稿 Release；Alpha 标记为 prerelease。
+5. 检查草稿的五项产物、校验值、平台/版本对应关系以及安装结果，再发布草稿。用户已明确要求发布时无需再次索要同一项许可；权限或外部环境阻塞则准确报告状态。
+6. 确认 Release 已公开、不是 draft、保持 prerelease，并验证公开下载可用，记录提交、标签、CI 和 Release 链接。
+
+手动触发只生成 Actions 产物。标签推送成功不等于 Release 已发布；单个平台成功也不等于发布完成。Alpha 安装显式传入 `--version v0.2.0-alpha`，不依赖稳定版 latest。
+
+## 历史构建记录
 
 ### 0.1.0-alpha 本次构建结果
 
@@ -41,16 +70,3 @@ sh dist/v0.1.0-alpha/install.sh --from dist/v0.1.0-alpha --prefix /tmp/xxassxx-a
 - 发布流程沿用上一轮已验证的 Alpha 配置；本次未运行 GitHub Actions。
 
 可分发文件为 `dist/v0.1.0-alpha/xxassxx-0.1.0-alpha-macos-arm64.zip`，旁边的 `.sha256` 文件用于校验 ZIP；内部 `SHA256SUMS` 用于校验安装器读取的二进制压缩包。`validation/build-info.json` 保存产物、源码和测试文件的 SHA-256、工具链及检查结果，本次测试结果位于 `validation/tests.txt`。旧构建及其日志归档到 `dist/archive/v0.1.0-alpha-20261006T210739/`，不能与当前分发包混用。
-
-## GitHub 构建与预发布
-
-`.github/workflows/release.yml` 支持手动构建，以及推送 `v*` 标签触发：
-
-1. 验证标签与 `Cargo.toml` 完全对应，且存在 `docs/releases/<标签>.md`。
-2. 在 Apple Silicon macOS、Intel macOS、Linux x86_64 musl 上测试、优化构建并检查二进制版本。
-3. 汇总三个安装包与 `SHA256SUMS`，标签构建创建含安装器和版本说明的草稿 Release。
-4. 带 `-alpha` 等预发布后缀的标签自动标记为 prerelease；检查产物后再发布草稿。
-
-手动触发仅生成 Actions 产物。本次本地构建不代表 GitHub 工作流已运行或 Release 已发布；发布标签必须指向包含完整实现和版本配置的提交。
-
-Alpha 用户安装时显式传入 `--version v0.1.0-alpha`。后续版本同步修改清单、锁文件、版本说明及对应安装示例，再按相同流程构建。

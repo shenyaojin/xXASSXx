@@ -1,6 +1,6 @@
 [package]
 name = "xxassxx"
-version = "0.1.0-alpha"
+version = "0.2.0-alpha"
 edition = "2024"
 rust-version = "1.85"
 description = "Local versioned knowledge and personal butler collaboration with task-scoped Codex execution"
@@ -26,3 +26,5 @@ unicode-segmentation = "=1.12.0"
 unicode-width = "=0.2.0"
 
 tempfile = "3"
+chrono = "0.4"
+chrono-tz = "0.10"

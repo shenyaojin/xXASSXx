@@ -54,7 +54,11 @@ struct CollaborationArgs {
 }
 fn bound_tools(store: &Store, binding: &Binding) -> Result<Value> {
     if crate::workflow::for_task(&store.conn, &binding.task)?.is_none() {
-        return Ok(tools());
+        let mut list = tools();
+        if crate::task_coordinator::check_execution(&store.conn, &binding.task)?.is_some() {
+            list["tools"].as_array_mut().unwrap().push(json!({"name":"submit_task_question","description":"Finish only this execution turn with a structured necessary clarification. The business task remains open. Local agents try known facts before asking the user.","inputSchema":{"type":"object","properties":{"task_id":{"type":"string"},"run_id":{"type":"string"},"idempotency_key":{"type":"string"},"body":{"type":"string"},"reason":{"type":"string"},"known":{"type":"string"}},"required":["task_id","run_id","idempotency_key","body","reason","known"],"additionalProperties":false}}));
+        }
+        return Ok(list);
     }
     Ok(json!({"tools":[tools()["tools"][0].clone(),
         {"name":"list_task_files","description":"List only this task's exact owner-authorized immutable version/path grants and read limits. No contents.","inputSchema":{"type":"object","properties":{},"additionalProperties":false}},
@@ -69,6 +73,33 @@ fn call(store: &mut Store, binding: &Binding, params: &Value) -> Result<Value> {
             let args: ReadArgs = serde_json::from_value(params["arguments"].clone())?;
             ensure!(args.task_id == binding.task, "task identity mismatch");
             store.read_task(&args.task_id, &binding.run, &binding.token)
+        }
+        "submit_task_question" => {
+            #[derive(Deserialize)]
+            #[serde(deny_unknown_fields)]
+            struct Question {
+                task_id: String,
+                run_id: String,
+                idempotency_key: String,
+                body: String,
+                reason: String,
+                known: String,
+            }
+            let q: Question = serde_json::from_value(params["arguments"].clone())?;
+            ensure!(
+                q.task_id == binding.task && q.run_id == binding.run,
+                "task/run identity mismatch"
+            );
+            let value =
+                json!({"outcome":"question","body":q.body,"reason":q.reason,"known":q.known});
+            crate::task_coordinator::validate_question(&store.conn, &binding.task, &value)?;
+            store.submit_result(
+                &q.task_id,
+                &q.run_id,
+                &binding.token,
+                &q.idempotency_key,
+                &value.to_string(),
+            )
         }
         "submit_task_result" => {
             let args: SubmitArgs = serde_json::from_value(params["arguments"].clone())?;

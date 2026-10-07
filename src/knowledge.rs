@@ -237,7 +237,7 @@ impl Store {
             .join(&digest[..2])
             .join(digest))
     }
-    fn write_blob(&self, mut input: impl Read) -> Result<(u64, String)> {
+    pub(crate) fn write_blob(&self, mut input: impl Read) -> Result<(u64, String)> {
         let root = self.content_root();
         fs::create_dir_all(root.join("staging"))?;
         sync_dir(root.parent().context("content parent missing")?)?;

@@ -37,7 +37,7 @@ impl Default for ExecutorConfig {
             mode: "queue".into(),
             codex: "codex".into(),
             workdir: ".".into(),
-            timeout_secs: 180,
+            timeout_secs: 600,
             model: None,
         }
     }
@@ -160,7 +160,7 @@ impl Message {
         ensure!(
             matches!(
                 self.operation.as_str(),
-                "auto" | "metadata" | "analysis" | "workflow"
+                "auto" | "metadata" | "analysis" | "workflow" | "task_v2"
             ),
             "invalid operation"
         );
@@ -180,6 +180,9 @@ impl Message {
             (self.operation == "workflow") == self.workflow.is_some(),
             "workflow envelope/operation mismatch"
         );
+        if self.operation == "task_v2" {
+            crate::task_coordinator::Wire::parse(self)?;
+        }
         if let Some(w) = &self.workflow {
             w.validate()?;
         }
@@ -649,6 +652,37 @@ pub async fn sync(store: &mut Store) -> Result<Value> {
         "mailbox identity/team mismatch"
     );
     let records = store.messages(None)?;
+    let local_facts = {
+        let mut q = store
+            .conn
+            .prepare("SELECT id,payload FROM task_fact_outbox WHERE sent=0 ORDER BY rowid")?;
+        q.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+            .collect::<rusqlite::Result<Vec<_>>>()?
+    };
+    if records
+        .iter()
+        .any(|r| r.direction == "out" && r.state == "pending" && r.message.operation == "task_v2")
+        || !local_facts.is_empty()
+    {
+        ensure!(
+            identity["task_protocol"] == 2,
+            "信箱不支持任务协议 2，请先升级信箱；未派发任务"
+        );
+    }
+    for (id, raw) in local_facts {
+        let event: Value = serde_json::from_str(&raw)?;
+        let response = client
+            .post(format!("{base}/v2/task-facts"))
+            .bearer_auth(&credential)
+            .json(&json!({"id":id,"event":event}))
+            .send()
+            .await
+            .map_err(|_| anyhow::anyhow!("mailbox_unavailable; task facts retained"))?;
+        response_json(response).await?;
+        store
+            .conn
+            .execute("UPDATE task_fact_outbox SET sent=1 WHERE id=?1", [id])?;
+    }
     for record in records
         .iter()
         .filter(|r| r.direction == "out" && r.state == "pending")
@@ -711,6 +745,47 @@ pub async fn sync(store: &mut Store) -> Result<Value> {
                 "UPDATE messages SET state='received' WHERE id=?1 AND state='sent'",
                 [&record.message.message_id],
             )?;
+        }
+    }
+    if identity["task_protocol"] == 2 {
+        crate::app::bridge::reconcile(store)?;
+        let response = client
+            .get(format!("{base}/v2/events"))
+            .bearer_auth(&credential)
+            .send()
+            .await
+            .map_err(|_| anyhow::anyhow!("mailbox_unavailable; inbox unchanged"))?;
+        let value = response_json(response).await?;
+        ensure!(
+            value["team_id"] == store.identity()?["team_id"] && value["source"] == "system",
+            "system source mismatch"
+        );
+        for event in value["events"]
+            .as_array()
+            .context("missing system events")?
+        {
+            if let Some(report) = crate::task_schedule::local_event(store, event)? {
+                response_json(
+                    client
+                        .post(format!("{base}/v2/meeting-report"))
+                        .bearer_auth(&credential)
+                        .json(&report)
+                        .send()
+                        .await?,
+                )
+                .await?;
+            }
+            response_json(
+                client
+                    .post(format!(
+                        "{base}/v2/events/{}/ack",
+                        event["id"].as_str().context("missing event ID")?
+                    ))
+                    .bearer_auth(&credential)
+                    .send()
+                    .await?,
+            )
+            .await?;
         }
     }
     Ok(json!({"sent":sent,"received":received}))

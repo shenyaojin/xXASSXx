@@ -489,7 +489,7 @@ fn v2_migration_preserves_identity_messages_and_knowledge() {
     assert_eq!(
         conn.pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        6
+        8
     );
 }
 #[test]

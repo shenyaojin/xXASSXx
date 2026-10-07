@@ -1,0 +1,374 @@
+{
+  "date": "2026-10-07T19:46:37.559838+00:00",
+  "environment": "pre-1.0.0 small-scale testing",
+  "source_archive_sha256": "d297a973c511c33795be02e9a86feb2fd4fa99497fde8c6c8b01cecc20164bd1",
+  "logs": "/Users/shenyaojin/Documents/gitproject/xXASSXx/smoke-output/task-v7-upgrade-3e640c8e-1e19-4a81-987e-2adb4c3db01e",
+  "tests": {
+    "mac_full_passed": 104,
+    "mac_ignored_legacy_opt_in": 2,
+    "linux_targeted_passed": 20,
+    "clippy": "passed",
+    "fmt": "passed"
+  },
+  "deployment": {
+    "Mac": {
+      "sha256": "247c3ad5b59f353127567d63c0e586f4bc512c6b3fc7016a112517b852c48e69",
+      "backup_created": false,
+      "preserved": true,
+      "health": {
+        "status": {
+          "alive": true,
+          "error": null,
+          "instance": "ba3787ee-78a8-46e4-8dcf-54898b0dd10d",
+          "log_path": "/Users/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+          "pid": 94836,
+          "state": "running",
+          "updated_at": 1791402046
+        },
+        "network": "connected",
+        "schema": 7,
+        "sha256": "247c3ad5b59f353127567d63c0e586f4bc512c6b3fc7016a112517b852c48e69"
+      }
+    },
+    "Lakota": {
+      "sha256": "a92dc9584d7d63e31bb9854e6786c2872aa6b0ab4f2a98c23da53c40e3df688f",
+      "backup_created": false,
+      "preserved": true,
+      "health": {
+        "status": {
+          "alive": true,
+          "error": null,
+          "instance": "ebdf7248-ab7d-41be-9ff1-36796c6175c9",
+          "log_path": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+          "pid": 2358381,
+          "state": "running",
+          "updated_at": 1791402047
+        },
+        "network": "connected",
+        "schema": 7,
+        "sha256": "a92dc9584d7d63e31bb9854e6786c2872aa6b0ab4f2a98c23da53c40e3df688f"
+      }
+    },
+    "Trader": {
+      "sha256": "a92dc9584d7d63e31bb9854e6786c2872aa6b0ab4f2a98c23da53c40e3df688f",
+      "backup_created": false,
+      "preserved": true,
+      "health": {
+        "mailbox": "active",
+        "https": "active",
+        "sha256": "a92dc9584d7d63e31bb9854e6786c2872aa6b0ab4f2a98c23da53c40e3df688f"
+      }
+    }
+  },
+  "real_task": {
+    "Mac": {
+      "id": "7791781c-75e7-5f2d-9c2b-9ead1db6ae41",
+      "session_id": "b8a65ca8-6166-5a6c-8f36-bec9fd25a4a1",
+      "state": "processing",
+      "revision": 4,
+      "confirmed": 4,
+      "archived": 0,
+      "error": null,
+      "result_present": false,
+      "completion_notifications": 0,
+      "candidate_count": 0,
+      "executions": [],
+      "runs": [],
+      "snapshots": [],
+      "questions": [
+        {
+          "id": "353b6cef-7c33-51ee-864f-94349a18a8f2",
+          "state": "answered",
+          "answered_by": "owner"
+        },
+        {
+          "id": "7e897f53-7f1f-5676-af89-a14046e87bbe",
+          "state": "answered",
+          "answered_by": "owner"
+        }
+      ],
+      "resumed_runs": 0
+    },
+    "Lakota": {
+      "id": "7791781c-75e7-5f2d-9c2b-9ead1db6ae41",
+      "session_id": "d51fc584-dabc-5fa8-bf19-900a71691162",
+      "state": "processing",
+      "revision": 4,
+      "confirmed": 4,
+      "archived": 0,
+      "error": null,
+      "result_present": false,
+      "completion_notifications": 0,
+      "candidate_count": 0,
+      "executions": [
+        {
+          "id": "7e0fcaf4-8350-5372-934d-a87f3539ff00",
+          "phase": "discover",
+          "state": "done",
+          "round": 3,
+          "snapshot_id": null,
+          "previous_id": null,
+          "recovery_reason": "显式重试：材料字节总量超限。请重新获取当前限制并修正先前结果。"
+        },
+        {
+          "id": "a02c5dc7-a873-5ee2-991a-d61b5bc6da8c",
+          "phase": "analyze",
+          "state": "historical",
+          "round": 4,
+          "snapshot_id": "a21468e5-10d1-5dfb-81e4-4dc4560d3147",
+          "previous_id": "7e0fcaf4-8350-5372-934d-a87f3539ff00",
+          "recovery_reason": "新的快照执行范围使用新会话；未声称 resume"
+        },
+        {
+          "id": "e47c3a6a-0f67-5aa3-b4dd-8d8f2f7049b0",
+          "phase": "discover",
+          "state": "done",
+          "round": 1,
+          "snapshot_id": null,
+          "previous_id": "a02c5dc7-a873-5ee2-991a-d61b5bc6da8c",
+          "recovery_reason": "执行范围变化，使用新会话；未声称 resume"
+        },
+        {
+          "id": "b2cb2d57-bffc-5952-9093-b85abf112f2f",
+          "phase": "analyze",
+          "state": "historical",
+          "round": 1,
+          "snapshot_id": "9c809857-adfd-5148-b687-e34a79e61476",
+          "previous_id": "e47c3a6a-0f67-5aa3-b4dd-8d8f2f7049b0",
+          "recovery_reason": "执行范围变化，使用新会话；未声称 resume"
+        },
+        {
+          "id": "0972c3ce-88c7-5e82-bfbb-8c4e89af39ca",
+          "phase": "discover",
+          "state": "done",
+          "round": 1,
+          "snapshot_id": null,
+          "previous_id": "b2cb2d57-bffc-5952-9093-b85abf112f2f",
+          "recovery_reason": "执行范围变化，使用新会话；未声称 resume"
+        },
+        {
+          "id": "61caafe1-0721-53ad-9aff-450ba7d2c23f",
+          "phase": "analyze",
+          "state": "running",
+          "round": 1,
+          "snapshot_id": "cf5319e5-130e-5c9d-b81b-e27ad025af64",
+          "previous_id": "0972c3ce-88c7-5e82-bfbb-8c4e89af39ca",
+          "recovery_reason": "执行范围变化，使用新会话；未声称 resume"
+        }
+      ],
+      "runs": [
+        {
+          "id": "29719483-acd1-46df-9b7d-502f1fea9612",
+          "task_id": "7e0fcaf4-8350-5372-934d-a87f3539ff00",
+          "state": "succeeded",
+          "resumed_session_id": null,
+          "session_id": "01a117b8-345f-7b90-ac1d-df82583e3308",
+          "codex_version": "codex-cli 0.159.2",
+          "mcp_initialized": 1,
+          "reads": 1,
+          "submissions": 1,
+          "turn_completed": 1,
+          "exit_code": 0,
+          "error_code": null
+        },
+        {
+          "id": "5c7c2f72-28fb-4d51-9da5-b7a9a2331ee8",
+          "task_id": "7e0fcaf4-8350-5372-934d-a87f3539ff00",
+          "state": "succeeded",
+          "resumed_session_id": "01a117b8-345f-7b90-ac1d-df82583e3308",
+          "session_id": "01a117b8-345f-7b90-ac1d-df82583e3308",
+          "codex_version": "codex-cli 0.159.2",
+          "mcp_initialized": 1,
+          "reads": 1,
+          "submissions": 1,
+          "turn_completed": 1,
+          "exit_code": 0,
+          "error_code": null
+        },
+        {
+          "id": "a669d84e-8b21-4d3b-905c-5ac4e6d6c4d0",
+          "task_id": "7e0fcaf4-8350-5372-934d-a87f3539ff00",
+          "state": "succeeded",
+          "resumed_session_id": "01a117b8-345f-7b90-ac1d-df82583e3308",
+          "session_id": "01a117b8-345f-7b90-ac1d-df82583e3308",
+          "codex_version": "codex-cli 0.159.2",
+          "mcp_initialized": 1,
+          "reads": 1,
+          "submissions": 1,
+          "turn_completed": 1,
+          "exit_code": 0,
+          "error_code": null
+        },
+        {
+          "id": "5003984b-9797-4ece-86c0-e91287fe518a",
+          "task_id": "a02c5dc7-a873-5ee2-991a-d61b5bc6da8c",
+          "state": "succeeded",
+          "resumed_session_id": null,
+          "session_id": "01a117d6-0745-7a21-a774-50e06685c18c",
+          "codex_version": "codex-cli 0.159.2",
+          "mcp_initialized": 1,
+          "reads": 2,
+          "submissions": 1,
+          "turn_completed": 1,
+          "exit_code": 0,
+          "error_code": null
+        },
+        {
+          "id": "99fcf767-95e7-42e3-888b-0f3e15019f51",
+          "task_id": "a02c5dc7-a873-5ee2-991a-d61b5bc6da8c",
+          "state": "succeeded",
+          "resumed_session_id": "01a117d6-0745-7a21-a774-50e06685c18c",
+          "session_id": "01a117d6-0745-7a21-a774-50e06685c18c",
+          "codex_version": "codex-cli 0.159.2",
+          "mcp_initialized": 1,
+          "reads": 1,
+          "submissions": 1,
+          "turn_completed": 1,
+          "exit_code": 0,
+          "error_code": null
+        },
+        {
+          "id": "eef1e4b1-0f9d-4776-90f0-9396572b08ab",
+          "task_id": "a02c5dc7-a873-5ee2-991a-d61b5bc6da8c",
+          "state": "succeeded",
+          "resumed_session_id": "01a117d6-0745-7a21-a774-50e06685c18c",
+          "session_id": "01a117d6-0745-7a21-a774-50e06685c18c",
+          "codex_version": "codex-cli 0.159.2",
+          "mcp_initialized": 1,
+          "reads": 1,
+          "submissions": 1,
+          "turn_completed": 1,
+          "exit_code": 0,
+          "error_code": null
+        },
+        {
+          "id": "a06df129-4b85-4f19-92eb-bf40fbd5ec09",
+          "task_id": "a02c5dc7-a873-5ee2-991a-d61b5bc6da8c",
+          "state": "succeeded",
+          "resumed_session_id": "01a117d6-0745-7a21-a774-50e06685c18c",
+          "session_id": "01a117d6-0745-7a21-a774-50e06685c18c",
+          "codex_version": "codex-cli 0.159.2",
+          "mcp_initialized": 1,
+          "reads": 1,
+          "submissions": 1,
+          "turn_completed": 1,
+          "exit_code": 0,
+          "error_code": null
+        },
+        {
+          "id": "3f7d24a6-2b92-4c3a-a7f2-4fe60e99e82d",
+          "task_id": "e47c3a6a-0f67-5aa3-b4dd-8d8f2f7049b0",
+          "state": "succeeded",
+          "resumed_session_id": null,
+          "session_id": "01a117e2-4ec9-7833-99e1-66636e057cf7",
+          "codex_version": "codex-cli 0.159.2",
+          "mcp_initialized": 1,
+          "reads": 1,
+          "submissions": 1,
+          "turn_completed": 1,
+          "exit_code": 0,
+          "error_code": null
+        },
+        {
+          "id": "16a8a7f1-15b4-42cb-8ae1-275aee44751b",
+          "task_id": "b2cb2d57-bffc-5952-9093-b85abf112f2f",
+          "state": "succeeded",
+          "resumed_session_id": null,
+          "session_id": "01a117e3-5312-7452-84c5-3716e2558e67",
+          "codex_version": "codex-cli 0.159.2",
+          "mcp_initialized": 1,
+          "reads": 2,
+          "submissions": 1,
+          "turn_completed": 1,
+          "exit_code": 0,
+          "error_code": null
+        },
+        {
+          "id": "df47e927-4155-401b-8129-bd2aa1ae3a7b",
+          "task_id": "0972c3ce-88c7-5e82-bfbb-8c4e89af39ca",
+          "state": "succeeded",
+          "resumed_session_id": null,
+          "session_id": "01a117e4-b21d-7983-b84b-417e57541f97",
+          "codex_version": "codex-cli 0.159.2",
+          "mcp_initialized": 1,
+          "reads": 1,
+          "submissions": 1,
+          "turn_completed": 1,
+          "exit_code": 0,
+          "error_code": null
+        },
+        {
+          "id": "bbbbbbed-6072-4ca1-9717-682eee7af341",
+          "task_id": "61caafe1-0721-53ad-9aff-450ba7d2c23f",
+          "state": "running",
+          "resumed_session_id": null,
+          "session_id": "01a117e6-d62c-7530-ad0a-6b548f762995",
+          "codex_version": "codex-cli 0.159.2",
+          "mcp_initialized": 1,
+          "reads": 2,
+          "submissions": 0,
+          "turn_completed": 0,
+          "exit_code": null,
+          "error_code": null
+        }
+      ],
+      "snapshots": [
+        {
+          "id": "a21468e5-10d1-5dfb-81e4-4dc4560d3147",
+          "files": 40,
+          "bytes": 880908,
+          "created_at": 1791401264,
+          "files_with_hash": 40
+        },
+        {
+          "id": "9c809857-adfd-5148-b687-e34a79e61476",
+          "files": 22,
+          "bytes": 454280,
+          "created_at": 1791402135,
+          "files_with_hash": 22
+        },
+        {
+          "id": "cf5319e5-130e-5c9d-b81b-e27ad025af64",
+          "files": 3,
+          "bytes": 25371,
+          "created_at": 1791402365,
+          "files_with_hash": 3
+        }
+      ],
+      "questions": [
+        {
+          "id": "353b6cef-7c33-51ee-864f-94349a18a8f2",
+          "state": "answered",
+          "answered_by": "owner"
+        },
+        {
+          "id": "34009b33-75e9-5670-ad94-1108dcbd53c9",
+          "state": "answered",
+          "answered_by": "test"
+        },
+        {
+          "id": "826be5d7-da87-5497-9da4-fb031278702c",
+          "state": "superseded",
+          "answered_by": null
+        },
+        {
+          "id": "7e897f53-7f1f-5676-af89-a14046e87bbe",
+          "state": "answered",
+          "answered_by": "owner"
+        },
+        {
+          "id": "b2e44944-a4f5-5a3d-b978-9dbd403cf77d",
+          "state": "superseded",
+          "answered_by": null
+        },
+        {
+          "id": "e5f8dadb-6c59-54a7-9873-770c7e5c746e",
+          "state": "investigating",
+          "answered_by": null
+        }
+      ],
+      "resumed_runs": 5
+    }
+  },
+  "verification_boundary": "Actual Mac -> authenticated HTTPS relay on Trader -> Lakota with DeepSeek and official Codex. Run success includes clarification turns and is distinct from business completion. Prior failed confirmations, sandbox initialization, material budget failure and stale-snapshot investigations remain in history; repair facts were submitted through normal application actions. Raw business materials stayed on Lakota; no whitelist/budget expansion, project execution, direct DB result fabrication, commit, push or release."
+}

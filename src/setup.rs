@@ -74,6 +74,11 @@ pub enum ClientCommand {
         #[command(subcommand)]
         action: crate::file_roots::Command,
     },
+    /// Authorize isolated write/run work for one confirmed task on this computer.
+    TaskAccess {
+        #[command(subcommand)]
+        action: crate::task_workspace::Command,
+    },
     /// Store a request in your durable local outbox; the running service delivers it.
     Send {
         #[arg(long)]
@@ -227,6 +232,7 @@ pub fn init_server(root: &Path, team: &str, public_url: &str, members: &[String]
     let secrets_file = root.join("secrets.env");
     private_write(&secrets_file, secrets.as_bytes())?;
     let config = RelayConfig {
+        schedule: Default::default(),
         team_id: team.into(),
         members: relay_members,
         secrets_file: Some(secrets_file),
@@ -522,6 +528,7 @@ pub async fn client(root: &Path, command: ClientCommand) -> Result<()> {
             identity
         }
         ClientCommand::Roots { action } => crate::file_roots::execute(&store, action)?,
+        ClientCommand::TaskAccess { action } => crate::task_workspace::execute(&store, action)?,
         ClientCommand::Send {
             to,
             body,

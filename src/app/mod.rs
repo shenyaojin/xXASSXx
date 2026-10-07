@@ -56,7 +56,7 @@ fn uuid(s: &str) -> Result<()> {
 }
 pub fn project(store: &Store, path: &Path) -> Result<Value> {
     let path = crate::file_roots::directory(path)?;
-    let path = path.to_str().context("项目路径不是 UTF-8")?;
+    let path = path.to_str().context("工作目录路径不是 UTF-8")?;
     let id = stable_id(&store.owner()?, path);
     let name = Path::new(path)
         .file_name()
@@ -73,6 +73,21 @@ pub fn session(store: &Store, project_id: &str, recipient: &str) -> Result<Strin
     let id = stable_id(project_id, &format!("chat:{recipient}"));
     store.conn.execute("INSERT OR IGNORE INTO app_sessions(id,project_id,recipient,title,created_at) VALUES(?1,?2,?3,?4,?5)",params![id,project_id,recipient,if recipient==store.owner()?{"自己的 local agent".to_owned()}else{format!("与 {recipient} 的 local agent 对话")},now()])?;
     Ok(id)
+}
+pub fn new_session(store: &Store, project_id: &str) -> Result<String> {
+    let id = uuid::Uuid::new_v4().to_string();
+    store.conn.execute("INSERT INTO app_sessions(id,project_id,recipient,title,created_at) VALUES(?1,?2,?3,'自己的 local agent · 新对话',?4)", params![id,project_id,store.owner()?,now()])?;
+    Ok(id)
+}
+pub fn select_working_directory(store: &Store, id: &str) -> Result<()> {
+    let path: String =
+        store
+            .conn
+            .query_row("SELECT path FROM app_projects WHERE id=?1", [id], |r| {
+                r.get(0)
+            })?;
+    store.conn.execute("INSERT INTO app_preferences VALUES('working_directory',?1) ON CONFLICT(key) DO UPDATE SET value=excluded.value",[path])?;
+    Ok(())
 }
 pub fn valid_recipient(store: &Store, to: &str) -> Result<()> {
     ensure!(
@@ -133,6 +148,7 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
                 | "identity"
                 | "status"
                 | "create_task"
+                | "legacy_create_task"
                 | "authorize"
                 | "use_offer"
                 | "stop_task"
@@ -140,6 +156,10 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
                 | "project_allow"
                 | "root_add"
                 | "root_remove"
+                | "confirm_task"
+                | "revise_task"
+                | "answer_task"
+                | "reopen_task"
         ),
         "不支持的操作"
     );
@@ -170,7 +190,50 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
         ensure!(old == encoded, "重复请求 ID 的内容不一致");
         return command(store, &input.request_id);
     }
+    let owner = store.owner()?;
+    let addressed = if input.action == "chat" {
+        Some(addressing(store, &input.body)?.0)
+    } else {
+        None
+    };
+    let peer = if input.recipient != owner {
+        Some(input.recipient.as_str())
+    } else {
+        addressed.as_deref().filter(|p| *p != owner)
+    };
+    if let Some(peer) = input.payload["peer"].as_str() {
+        valid_recipient(store, peer)?;
+    }
+    // Capture the revision when the owner submits the words, not when a queued
+    // command is later processed. Keep the original payload for request idempotency.
+    let confirmation =
+        if input.action == "chat" && crate::task_coordinator::is_confirmation(&input.body) {
+            if let Some(id) = &input.task_id {
+                store
+                .conn
+                .query_row(
+                    "SELECT revision FROM app_tasks WHERE id=?1 AND protocol=2 AND initiator=?2",
+                    params![id, owner],
+                    |r| r.get::<_, i64>(0),
+                )
+                .optional()?
+            } else {
+                None
+            }
+        } else {
+            None
+        };
     let tx = store.conn.transaction()?;
+    if let Some(revision) = confirmation {
+        event(
+            &tx,
+            &stable_id(&input.request_id, "confirmation-revision"),
+            &input.session_id,
+            input.task_id.as_deref(),
+            "task_confirmation_requested",
+            json!({"revision":revision}),
+        )?;
+    }
     tx.execute("INSERT INTO app_commands(id,actor,channel,session_id,task_id,recipient,body,action,payload,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",params![input.request_id,actor.member,input.channel,input.session_id,input.task_id,input.recipient,input.body,input.action,encoded,now()])?;
     add_message(
         &tx,
@@ -184,6 +247,10 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
         Some(&input.request_id),
         None,
     )?;
+    if input.task_id.is_none() && (peer.is_some() || input.action == "create_task") {
+        let target = peer.or_else(|| input.payload["peer"].as_str());
+        crate::task_coordinator::create(&tx, input, &owner, target)?;
+    }
     tx.commit()?;
     command(store, &input.request_id)
 }
@@ -273,7 +340,7 @@ pub fn snapshot(store: &Store, session: &str) -> Result<Value> {
         |r| r.get(0),
     )?;
     Ok(
-        json!({"identity":store.identity()?,"contacts":store.contacts()?,"presence":crate::presence::view(store)?,"service":crate::service::status(store)?,"sessions":sessions,"messages":history(store,session)?,"tasks":tasks::list(store,Some(session))?,"unread":unread,"roots":store.file_roots()?}),
+        json!({"identity":store.identity()?,"contacts":store.contacts()?,"presence":crate::presence::view(store)?,"service":crate::service::status(store)?,"sessions":sessions,"messages":history(store,session)?,"tasks":tasks::list(store,None)?,"unread":unread,"roots":store.file_roots()?}),
     )
 }
 pub fn mark_read(store: &Store, session: &str, through: i64) -> Result<()> {

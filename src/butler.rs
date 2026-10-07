@@ -138,6 +138,16 @@ impl Store {
         } else {
             None
         };
+        let native_cwd = if local_read {
+            let cwd = crate::file_roots::directory(&self.member_config()?.executor.workdir)?;
+            ensure!(
+                roots.as_ref().unwrap().iter().any(|r| cwd.starts_with(r)),
+                "配置的工作目录不在白名单内；不会改用第一个目录"
+            );
+            Some(cwd)
+        } else {
+            None
+        };
         let input = if local_read {
             let mut history = self.conversation(&record.message.conversation_id)?;
             // Keep original messages. The coordinator never generates execution steps.
@@ -177,8 +187,12 @@ impl Store {
             )?;
             if let Some(roots) = roots {
                 tx.execute(
-                    "INSERT INTO native_tasks(task_id,roots) VALUES(?1,?2)",
-                    params![task, serde_json::to_string(&roots)?],
+                    "INSERT INTO native_tasks(task_id,roots,workdir) VALUES(?1,?2,?3)",
+                    params![
+                        task,
+                        serde_json::to_string(&roots)?,
+                        native_cwd.as_ref().and_then(|p| p.to_str())
+                    ],
                 )?;
             }
             tx.execute(
@@ -498,6 +512,14 @@ pub async fn run_delegation(
         .context("no Codex delegation for this request")?;
     if delegation["state"] == "completed" {
         return Ok(delegation);
+    }
+    if store.conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM legacy_holds WHERE kind='native' AND id=?1)",
+        [task_id],
+        |r| r.get::<_, bool>(0),
+    )? {
+        store.message_state(id, "needs_attention", Some("历史执行需检查后显式恢复"))?;
+        bail!("历史执行需检查后显式恢复");
     }
     let task = store.task(task_id)?;
     if task.state != "succeeded" {

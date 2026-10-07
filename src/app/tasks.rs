@@ -1,4 +1,4 @@
-//! Presentation tasks never expand executor capabilities. Files require an explicit owner action.
+//! Business task presentation plus compatibility for the old fixed-file grants.
 use super::*;
 use crate::{
     knowledge::Content,
@@ -8,11 +8,15 @@ use crate::{
 use std::path::{Path, PathBuf};
 
 pub fn get(store: &Store, id: &str) -> Result<Value> {
+    if crate::task_coordinator::is_task(&store.conn, id)? {
+        return crate::task_coordinator::get(store, id);
+    }
     let (mut task,result)=store.conn.query_row("SELECT id,session_id,project_id,title,goal,peer,state,workflow_id,remote_workflow,request_id,conversation_id,question_id,origin_request,result,error FROM app_tasks WHERE id=?1",[id],|r|Ok((json!({"id":r.get::<_,String>(0)?,"session_id":r.get::<_,String>(1)?,"project_id":r.get::<_,String>(2)?,"title":r.get::<_,String>(3)?,"goal":r.get::<_,String>(4)?,"peer":r.get::<_,Option<String>>(5)?,"state":r.get::<_,String>(6)?,"workflow_id":r.get::<_,Option<String>>(7)?,"remote_workflow":r.get::<_,Option<String>>(8)?,"request_id":r.get::<_,Option<String>>(9)?,"conversation_id":r.get::<_,Option<String>>(10)?,"question_id":r.get::<_,Option<String>>(11)?,"origin_request":r.get::<_,Option<String>>(12)?,"error":r.get::<_,Option<String>>(14)?}),r.get::<_,Option<String>>(13)?)))?;
     task["result"] = result
         .map(|s| serde_json::from_str(&s))
         .transpose()?
         .unwrap_or(Value::Null);
+    task["history_note"] = json!("历史任务：保留旧协议证据，没有新协议的意图确认与材料快照记录");
     task["project"] = store
         .conn
         .query_row(
@@ -351,6 +355,10 @@ pub fn control(store: &mut Store, i: &Instruction, retry: bool) -> Result<Value>
             .as_str()
             .context("对方任务须由对方主人重试；本端不擅自重建任务")?;
         store.workflow_retry(w)?;
+        store.conn.execute(
+            "DELETE FROM legacy_holds WHERE (kind='workflow' AND id=?1) OR (kind='app' AND id=?2)",
+            params![w, id],
+        )?;
     } else {
         ensure!(
             t["state"] != "completed",

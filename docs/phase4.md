@@ -49,7 +49,7 @@ xxassxx open /path/to/project --allow-import
 初次初始化可重复传入 `--allow-dir`。文件夹必须已经存在，相对路径以执行 init 时的目录解析，再保存成真实绝对路径。例如：
 
 ```sh
-xxassxx client init --invite ./friend.json \
+xxassxx client init --invite ./pengchao.json \
   --provider deepseek --model deepseek-flash \
   --model-secrets "$HOME/.config/xxassxx/secrets.env" \
   --allow-dir "$HOME/Research/project-a" \
@@ -88,7 +88,7 @@ xxassxx client contacts
 xxassxx client send --to alice --body "请帮我看看这个任务"
 ```
 
-`whoami` 显示用户名、显示名称、团队和信箱地址，不输出凭据。身份在一个信箱内由 `team_id + member_id` 确定，跨信箱还需要服务地址，不是全网唯一用户名。身份认证使用邀请中的独立随机凭据，用户名本身不是密码。当前尚未提供自助注册或团队统一改名；现有 `owner` / `friend` 是该团队已经预留的用户名。
+`whoami` 显示用户名、显示名称、团队和信箱地址，不输出凭据。身份在一个信箱内由 `team_id + member_id` 确定，跨信箱还需要服务地址，不是全网唯一用户名。身份认证使用邀请中的独立随机凭据，用户名本身不是密码。当前尚未提供自助注册或团队统一改名；现有 `owner` / `pengchao` 是该团队已经预留的用户名。
 
 ## 安装
 
@@ -119,7 +119,7 @@ GitHub 的 `release.yml` 在版本 tag 推送后测试并构建三个目标，�
 ```sh
 xxassxx server init --team lab \
   --public-url https://xxassxx.shenyaojin.com \
-  --member owner=Owner --member friend=Friend
+  --member owner=Owner --member pengchao=pengchao
 xxassxx server serve
 ```
 
@@ -133,22 +133,22 @@ Trader 使用 `xxassxx.shenyaojin.com`，DNS A 记录指向 Trader，Cloudflare 
 
 ## 当前团队与邀请
 
-本次 Trader 实例使用团队 `xxassxx`，入口为 `https://xxassxx.shenyaojin.com`。当前正式成员只有 `owner`、`friend`、`test`。2026-10-06 已移除早期验收成员 `a`、`b`，同步服务器、Mac/Lakota 联系人和现有邀请；其旧凭据不再被正式信箱接受，历史记录与备份保留。`test` 在 Lakota 常驻运行，白名单为 Mariner 的 scripts 目录。服务器邀请保存在 `~/.local/share/xxassxx/server/invitations/`。本机有权限 600 的副本 `smoke-output/phase4-private/friend.json`，仅交付朋友自己的邀请；该目录被 Git 忽略，不包含在安装包中。
+本次 Trader 实例使用团队 `xxassxx`，入口为 `https://xxassxx.shenyaojin.com`。当前正式成员只有 `owner`、`pengchao`、`test`。2026-10-06 已移除早期验收成员 `a`、`b`，同步服务器、Mac/Lakota 联系人和现有邀请；其旧凭据不再被正式信箱接受，历史记录与备份保留。`test` 在 Lakota 常驻运行，白名单为 Mariner 的 scripts 目录。服务器邀请保存在 `~/.local/share/xxassxx/server/invitations/`。本机有权限 600 的副本 `smoke-output/phase4-private/pengchao.json`，仅交付朋友自己的邀请；该目录被 Git 忽略，不包含在安装包中。
 
 这台 Mac 已导入 `owner.json` 并启动日常个人端，显示名称为 `Shenyao "Keith" Jin`，通信用户名仍为 `owner`；团队服务配置、邀请和 Lakota test 的联系人已同步显示名称，成员凭据保持不变。程序位于 `~/.local/bin/xxassxx`，数据位于 `~/.local/share/xxassxx/client`，本机白名单为空。DeepSeek 工具调用、Codex 登录和公网身份检查均通过，配置记录见本机 `smoke-output/mac-owner-ready.json`；首次 owner/test 业务协作仍由用户发起。
 
-朋友导入 `friend.json`，按下面的个人端流程登录自己的 Codex、提供模型配置并启动管家。朋友的安装不需要 SSH，也不要求和你在同一个局域网。此前真实验收仍保留在独立测试目录，不占用日常个人端的数据。
+朋友导入 `pengchao.json`，按下面的个人端流程登录自己的 Codex、提供模型配置并启动管家。朋友的安装不需要 SSH，也不要求和你在同一个局域网。此前真实验收仍保留在独立测试目录，不占用日常个人端的数据。
 
 ## 朋友加入（先用 DeepSeek）
 
-当前可交付的新版 Apple 芯片包：`dist/xxassxx-friend-macos-arm64-20261006.zip`，已验证离线安装、二进制哈希和 schema 6 初始化。此包含本次原生 Codex 只读委托功能；旧 `v0.1.0-alpha` 包不代表已包含后续改动。把新 ZIP 和私人 `friend.json` 分别交给朋友，按下述安装提示词配置。Intel Mac 不适用该 ZIP。
+当前可交付的新版 Apple 芯片包：`dist/xxassxx-pengchao-macos-arm64-20261006.zip`，已验证离线安装、二进制哈希和 schema 6 初始化。此包含本次原生 Codex 只读委托功能；旧 `v0.1.0-alpha` 包不代表已包含后续改动。把新 ZIP 和私人 `pengchao.json` 分别交给朋友，按下述安装提示词配置。Intel Mac 不适用该 ZIP。
 
 也可直接把 [个人端安装提示词](codex-setup-prompt.md) 交给朋友自己电脑上的 Codex，由它处理下面的安装与配置步骤。本机与 Lakota test 的首次体验另有 [已填好参数的提示词](lakota-mariner-try-prompt.md)。
 
 先安装并登录自己的官方 Codex CLI。将 DeepSeek key 放入自己拥有、权限 600 的 `~/.config/xxassxx/secrets.env`，字段为 `DEEPSEEK_API_KEY`；不要把值作为命令行参数或发到群里。
 
 ```sh
-xxassxx client init --invite ./friend.json \
+xxassxx client init --invite ./pengchao.json \
   --provider deepseek --model deepseek-flash \
   --model-secrets "$HOME/.config/xxassxx/secrets.env"
 xxassxx client doctor --probe-model
@@ -178,7 +178,7 @@ xxassxx client result WORKFLOW_ID
 已经有兼容接口，本次只补 `provider=ollama` 的默认值和显式工具探针。默认连接本机 `http://127.0.0.1:11434/v1`，不需要 API key，也不发送 DeepSeek 特有字段。不会替用户安装 Ollama 或下载模型。
 
 ```sh
-xxassxx client init --invite ./friend.json \
+xxassxx client init --invite ./pengchao.json \
   --provider ollama --model YOUR_INSTALLED_MODEL
 xxassxx client doctor --probe-model
 ```

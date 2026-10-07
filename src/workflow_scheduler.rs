@@ -229,6 +229,13 @@ fn conversation_open(conn: &rusqlite::Connection, id: &str) -> Result<bool> {
 }
 
 pub async fn run_one(store: &mut Store, id: &str, executable: &Path) -> Result<Value> {
+    if store.conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM legacy_holds WHERE kind='workflow' AND id=?1)",
+        [id],
+        |r| r.get::<_, bool>(0),
+    )? {
+        return Ok(json!({"state":"needs_attention","reason":"升级前任务需要检查证据并显式恢复"}));
+    }
     let _dispatch = match TaskLock::acquire(&store.path, &stable_id(id, "workflow-dispatch")) {
         Ok(l) => l,
         Err(_) => return Ok(json!({"workflow_id":id,"queued":true,"reason":"workflow_busy"})),

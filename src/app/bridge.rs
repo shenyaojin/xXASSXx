@@ -34,6 +34,14 @@ pub fn handle_workflow(store: &mut Store, m: &Message) -> Result<bool> {
         return Ok(false);
     }
     let t = tasks::get(store, &w.target_workflow)?;
+    // Preserve migration holds even when old peers deliver late workflow events.
+    if store.conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM legacy_holds WHERE kind='app' AND id=?1)",
+        [&w.target_workflow],
+        |r| r.get::<_, bool>(0),
+    )? {
+        return Ok(true);
+    }
     ensure!(
         t["peer"] == m.sender
             && t["remote_workflow"] == w.sender_workflow
@@ -148,6 +156,19 @@ pub fn reconcile(store: &mut Store) -> Result<()> {
     let owner = store.owner()?;
     for record in store.messages(None)? {
         let m = &record.message;
+        if m.operation == "task_v2" {
+            if record.direction == "in"
+                && !matches!(
+                    record.state.as_str(),
+                    "task_handled" | "task_history" | "failed"
+                )
+            {
+                if let Err(e) = crate::task_coordinator::ingest(store, m) {
+                    store.message_state(&m.message_id, "failed", Some(&e.to_string()))?;
+                }
+            }
+            continue;
+        }
         if m.workflow.is_some() {
             if let Err(e) = handle_workflow(store, m) {
                 store.message_state(&m.message_id, "failed", Some(&e.to_string()))?;
@@ -341,6 +362,13 @@ pub fn reconcile(store: &mut Store) -> Result<()> {
     }
     for t in tasks::list(store, None)? {
         let id = t["id"].as_str().unwrap();
+        if store.conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM legacy_holds WHERE kind='app' AND id=?1)",
+            [id],
+            |r| r.get::<_, bool>(0),
+        )? {
+            continue;
+        }
         let sid = t["session_id"].as_str().unwrap();
         if let Some(w) = t["workflow_id"].as_str() {
             let wf = crate::workflow::get(&store.conn, w)?;

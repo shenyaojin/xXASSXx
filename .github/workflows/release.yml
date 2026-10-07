@@ -53,6 +53,10 @@ jobs:
           cargo build --release --locked --target "$TARGET"
           test "$("target/$TARGET/release/xxassxx" --version)" = "xxassxx $RELEASE_VERSION"
           bash scripts/package.sh "target/$TARGET/release/xxassxx" "$TARGET" dist
+          cat dist/*.sha256 > dist/SHA256SUMS
+          sh scripts/install.sh --from dist --prefix "$RUNNER_TEMP/xxassxx-install"
+          test "$("$RUNNER_TEMP/xxassxx-install/bin/xxassxx" --version)" = "xxassxx $RELEASE_VERSION"
+          "$RUNNER_TEMP/xxassxx-install/bin/xxassxx" open --help
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}

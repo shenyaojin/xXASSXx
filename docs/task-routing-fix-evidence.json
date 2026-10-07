@@ -1,0 +1,148 @@
+{
+  "date": "2026-10-07",
+  "verification": "Real installed xXASSXx PTY, actual Mac -> Trader HTTPS relay -> Lakota, DeepSeek coordinator and official Codex. User actions via TUI; database reads used only for evidence. Final language change additionally checked using the same source debug daemon before release installation.",
+  "gui_limit": "Computer Use denied access to macOS Terminal and Codex windows; no claim of controlling the user existing native window. Real local PTY screen captures are preserved.",
+  "tasks": [
+    {
+      "task_id": "3c3e979b-b275-5aec-a7e0-46ec33e26a52",
+      "revision": 2,
+      "state": "completed",
+      "archived_both_ends": true,
+      "mac_file_executions_this_revision": 0,
+      "lakota_runs": [
+        {
+          "id": "b2c519f4-4c7a-4aeb-a7ea-8a06b68786c9",
+          "state": "succeeded",
+          "session_id": "01a117fa-be43-7170-ac20-ec5ac7f58483",
+          "resumed_session_id": null,
+          "turn_completed": 1,
+          "submissions": 1,
+          "exit_code": 0
+        },
+        {
+          "id": "679f25d1-dd2a-49d8-bf93-8bcbe7b0728f",
+          "state": "timed_out",
+          "session_id": "01a117fb-87aa-7e00-8cbb-bfe57f7f3b36",
+          "resumed_session_id": null,
+          "turn_completed": 0,
+          "submissions": 0,
+          "exit_code": null
+        },
+        {
+          "id": "8f127ad3-d51e-4fa9-a29d-7cf2b3cc1b47",
+          "state": "succeeded",
+          "session_id": "01a117fb-87aa-7e00-8cbb-bfe57f7f3b36",
+          "resumed_session_id": "01a117fb-87aa-7e00-8cbb-bfe57f7f3b36",
+          "turn_completed": 1,
+          "submissions": 1,
+          "exit_code": 0
+        }
+      ],
+      "unanswered_questions_this_revision": 0,
+      "completed_native_read_commands": 7
+    },
+    {
+      "task_id": "7791781c-75e7-5f2d-9c2b-9ead1db6ae41",
+      "revision": 5,
+      "state": "completed",
+      "archived_both_ends": true,
+      "mac_file_executions_this_revision": 0,
+      "lakota_runs": [
+        {
+          "id": "7358057f-d1f3-491e-a209-2bbaf4d235a0",
+          "state": "succeeded",
+          "session_id": "01a1181d-df98-7d10-adb5-336fa86e2763",
+          "resumed_session_id": null,
+          "turn_completed": 1,
+          "submissions": 1,
+          "exit_code": 0
+        },
+        {
+          "id": "4354f2dc-0a7e-43d2-a75e-039b9994cdb6",
+          "state": "succeeded",
+          "session_id": "01a1181e-e5ae-7d03-88fa-125d21274fdb",
+          "resumed_session_id": null,
+          "turn_completed": 1,
+          "submissions": 1,
+          "exit_code": 0
+        }
+      ],
+      "unanswered_questions_this_revision": 0,
+      "completed_native_read_commands": 11
+    }
+  ],
+  "tests": {
+    "mac_full": {
+      "passed": 107,
+      "failed": 0,
+      "ignored": 2,
+      "log": "/private/tmp/xxassxx-routing-final-all-tests.log"
+    },
+    "last_followup_request_change": {
+      "passed": 17,
+      "log": "/private/tmp/xxassxx-followup-final-tests.log"
+    },
+    "linux_core_before_final_presentation_changes": {
+      "passed": 22,
+      "build_directory": "smoke-output/task-v7-upgrade-37abbccc-9093-481c-9dde-f339098296da"
+    }
+  },
+  "final_deployment": {
+    "directory": "/Users/shenyaojin/Documents/gitproject/xXASSXx/smoke-output/task-v7-upgrade-e62a9341-87b1-4f88-8918-19b1889488e8",
+    "mac_sha256": "00c0f02c5c780dda6168e5df1db324495da6a37ccfe01e37313974286dbe1ae3",
+    "linux_sha256": "d17fab9cbb83b837e42bd4ecf3affd14f617445184dd9a5d42bd012f0a6cbcb0",
+    "health": {
+      "Mac": {
+        "status": {
+          "alive": true,
+          "error": null,
+          "instance": "28d884b0-b4c8-4fa7-8094-f39680ec235f",
+          "log_path": "/Users/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+          "pid": 11168,
+          "state": "running",
+          "updated_at": 1791407250
+        },
+        "network": "connected",
+        "schema": 7,
+        "sha256": "00c0f02c5c780dda6168e5df1db324495da6a37ccfe01e37313974286dbe1ae3"
+      },
+      "Lakota": {
+        "status": {
+          "alive": true,
+          "error": null,
+          "instance": "e59db274-d2e5-433b-8d7c-204371722cf5",
+          "log_path": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+          "pid": 2400580,
+          "state": "running",
+          "updated_at": 1791407250
+        },
+        "network": "connected",
+        "schema": 7,
+        "sha256": "d17fab9cbb83b837e42bd4ecf3affd14f617445184dd9a5d42bd012f0a6cbcb0"
+      },
+      "Trader": {
+        "mailbox": "active",
+        "https": "active",
+        "sha256": "d17fab9cbb83b837e42bd4ecf3affd14f617445184dd9a5d42bd012f0a6cbcb0"
+      }
+    }
+  },
+  "runtime_settings_change": {
+    "executor.timeout_secs": {
+      "from": 180,
+      "to": 600
+    },
+    "other_effective_settings_preserved": true,
+    "allowlists_unchanged": true,
+    "backup_created": false
+  },
+  "observed_content": {
+    "scan": "23 representative materials across 11 top-level directories, not a total directory file count; concrete duplicate-script and inconsistent-parameter findings with coverage limits.",
+    "moose": "Explains implemented modeling/comparison/inversion work, distinguishes synthetic test logs from unverified field-report claims, and recommends checking a real dataset against inputs, logs and errors.",
+    "language": "Latest followup explains underground fluid/rock interaction and inferring underground state in ordinary language; omits optimizer exponents and internal orchestration terms. Model wording remains probabilistic; no promise every future answer will be jargon-free."
+  },
+  "terminal_screens": "smoke-output/terminal-routing-validation/",
+  "final_screen": "smoke-output/terminal-routing-validation/final-terminal.txt",
+  "history_preserved": true,
+  "no_commit_push_or_distribution_release": true
+}

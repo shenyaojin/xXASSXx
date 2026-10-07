@@ -3,7 +3,7 @@ pub mod editor;
 mod presentation;
 mod startup;
 use crate::{app, interactive::OpenArgs, service, setup, store::Store};
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 use crossterm::{
     cursor::Show,
     event::{
@@ -73,11 +73,28 @@ enum Panel {
     RootPath,
     NewTask,
     Stop,
+    Questions,
+    Revise,
+    TaskAccess,
+    AccessPath,
+    AccessDependency,
+    AccessTimeout,
+}
+struct AccessForm {
+    task: String,
+    revision: i64,
+    goal: String,
+    initiator: String,
+    parent: PathBuf,
+    roots: Vec<PathBuf>,
+    read_dirs: Vec<PathBuf>,
+    timeout_secs: u64,
 }
 pub struct Ui {
     pub input: Editor,
     pub view: usize,
     pub selected_task: Option<String>,
+    selected_question: Option<String>,
     pub project: Value,
     pub session: String,
     pub data: Value,
@@ -91,16 +108,19 @@ pub struct Ui {
     folder: Option<PathBuf>,
     owner: String,
     pending_command: Option<String>,
+    access_form: Option<AccessForm>,
 }
 impl Ui {
     pub fn new(store: &Store, project: Value) -> Result<Self> {
         let owner = store.owner()?;
+        app::select_working_directory(store, project["id"].as_str().unwrap())?;
         let session = app::session(store, project["id"].as_str().unwrap(), &owner)?;
         let data = app::snapshot(store, &session)?;
         Ok(Self {
             input: Editor::default(),
             view: 0,
             selected_task: None,
+            selected_question: None,
             project,
             session,
             data,
@@ -114,6 +134,7 @@ impl Ui {
             folder: None,
             owner,
             pending_command: None,
+            access_form: None,
         })
     }
     pub fn recipient(&self, store: &Store) -> Result<String> {
@@ -131,7 +152,8 @@ impl Ui {
         let path = Path::new(self.project["path"].as_str().unwrap());
         if allow {
             store.allow_directory(path)?;
-            self.notice = "已加入文件白名单。CtrlN 创建任务，再用 CtrlG 选择要分析的文件。".into();
+            self.notice =
+                "已加入可访问目录。可以用 @成员 或 CtrlN 发起任务，确认意图后自动准备材料。".into();
         } else {
             startup::decline(store, path)?;
             self.notice =
@@ -170,14 +192,30 @@ impl Ui {
             .iter()
             .find(|t| self.selected_task.as_deref() == t["id"].as_str())
     }
+    pub fn visible_messages(&self) -> Vec<&Value> {
+        self.data["messages"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|m| {
+                self.selected_task
+                    .as_ref()
+                    .is_none_or(|id| m["task_id"] == *id)
+            })
+            .collect()
+    }
     pub fn refresh(&mut self, store: &Store) -> Result<()> {
         self.data = app::snapshot(store, &self.session)?;
         if let Some(id) = self.pending_command.clone() {
             let c = app::command(store, &id)?;
             if let Some(task) = c["task_id"].as_str() {
-                self.selected_task = Some(task.into());
-                self.pending_command = None;
-            } else if c["state"] != "pending" && c["state"] != "processing" {
+                if self.selected_task.as_deref() != Some(task) {
+                    self.selected_task = Some(task.into());
+                    self.selected_question = None;
+                    self.scroll = 0;
+                }
+            }
+            if c["state"] != "pending" && c["state"] != "processing" {
                 self.pending_command = None;
             }
         }
@@ -190,16 +228,52 @@ impl Ui {
         body: String,
         payload: Value,
     ) -> Result<()> {
-        let (recipient, body) = if action == "chat" {
-            app::addressing(store, &body)?
+        let mut action = action.to_owned();
+        let recipient = self.owner.clone();
+        let mut payload = if payload.is_object() {
+            payload
         } else {
-            (self.owner.clone(), body)
+            json!({})
         };
-        let session = app::session(store, self.project["id"].as_str().unwrap(), &recipient)?;
-        let task = self
-            .selected_task
-            .clone()
-            .filter(|id| app::tasks::get(store, id).is_ok_and(|t| t["session_id"] == session));
+        let mut session = self.session.clone();
+        let task = if matches!(
+            action.as_str(),
+            "root_add" | "root_remove" | "project_allow"
+        ) {
+            None
+        } else {
+            self.selected_task.clone()
+        };
+        if let Some(t) = self
+            .current_task()
+            .filter(|t| t["protocol"] == 2 && task.is_some())
+        {
+            session = t["session_id"].as_str().unwrap().into();
+            payload["revision"] = t["revision"].clone();
+            if action == "chat" && self.selected_question.is_some() {
+                let q = t["questions"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|q| {
+                        q["revision"] == t["revision"]
+                            && q["state"] == "user"
+                            && q["id"].as_str() == self.selected_question.as_deref()
+                    })
+                    .context("这个问题已不再等待回答。按 Esc 返回对话。")?;
+                action = "answer_task".into();
+                payload["question_id"] = q["id"].clone();
+            }
+        } else {
+            let to: String = store.conn.query_row(
+                "SELECT recipient FROM app_sessions WHERE id=?1",
+                [&session],
+                |r| r.get(0),
+            )?;
+            if to != self.owner {
+                session = app::session(store, self.project["id"].as_str().unwrap(), &self.owner)?;
+            }
+        }
         let i = app::Instruction {
             request_id: uuid::Uuid::new_v4().to_string(),
             channel: "tui".into(),
@@ -207,19 +281,28 @@ impl Ui {
             task_id: task,
             recipient,
             body,
-            action: action.into(),
+            action,
             payload,
         };
         app::submit(store, &app::Actor::local(store)?, &i)?;
         self.session = session;
-        self.selected_task = i.task_id.clone();
+        if !matches!(
+            i.action.as_str(),
+            "root_add" | "root_remove" | "project_allow"
+        ) {
+            self.selected_task = i.task_id.clone();
+        }
+        self.selected_question = None;
         self.pending_command = Some(i.request_id);
         self.input.clear();
-        self.notice = "已保存，后台 local agent 将处理；可以继续输入。".into();
+        self.notice = "已保存，助手会继续处理；可以继续输入。".into();
         self.scroll = 0;
         self.refresh(store)
     }
     fn open_files(&mut self, store: &Store) -> Result<()> {
+        if self.current_task().is_some_and(|t| t["protocol"] == 2) {
+            return self.open_task_access();
+        }
         ensure!(
             self.current_task()
                 .is_some_and(|t| t["state"] == "awaiting_authorization"),
@@ -236,15 +319,148 @@ impl Ui {
             .collect();
         Ok(())
     }
+    fn open_task_access(&mut self) -> Result<()> {
+        let t = self.current_task().context("请先选择任务")?;
+        let permission = &t["execution_permission"];
+        ensure!(
+            permission["can_allow"] == true,
+            "此任务无需你授权；远程任务由执行成员在自己的终端允许"
+        );
+        self.access_form = Some(AccessForm {
+            task: t["id"].as_str().unwrap().into(),
+            revision: t["revision"].as_i64().unwrap(),
+            goal: t["goal"].as_str().unwrap_or("").into(),
+            initiator: t["initiator"].as_str().unwrap_or("").into(),
+            parent: permission["parent"].as_str().unwrap_or("").into(),
+            roots: serde_json::from_value(permission["read_roots"].clone())?,
+            read_dirs: vec![],
+            timeout_secs: 1800,
+        });
+        self.input.clear();
+        self.panel = Panel::TaskAccess;
+        self.index = 0;
+        self.scroll = 0;
+        Ok(())
+    }
+    fn access_key(&mut self, store: &mut Store, key: KeyEvent) -> Result<bool> {
+        if key.code == KeyCode::Esc {
+            self.input.clear();
+            if self.panel == Panel::TaskAccess {
+                self.panel = Panel::Chat;
+                self.access_form = None;
+                self.notice = "暂未允许，任务会保留在这里；准备好后按 CtrlG。".into();
+            } else {
+                self.panel = Panel::TaskAccess;
+            }
+            return Ok(false);
+        }
+        if self.panel == Panel::TaskAccess {
+            match key.code {
+                KeyCode::Up => self.index = self.index.saturating_sub(1),
+                KeyCode::Down | KeyCode::Tab => self.index = (self.index + 1) % 6,
+                KeyCode::Enter => match self.index {
+                    0 => {
+                        let form = self.access_form.as_ref().context("请重新打开授权范围")?;
+                        crate::task_workspace::execute(
+                            store,
+                            crate::task_workspace::Command::Allow {
+                                task: form.task.clone(),
+                                revision: form.revision,
+                                parent: form.parent.clone(),
+                                read_dirs: form.read_dirs.clone(),
+                                timeout_secs: form.timeout_secs,
+                            },
+                        )?;
+                        self.access_form = None;
+                        self.panel = Panel::Chat;
+                        self.notice = "已允许并排队，助手会自动开始；发起方无需重试。".into();
+                        self.refresh(store)?;
+                    }
+                    1 => {
+                        self.panel = Panel::Chat;
+                        self.access_form = None;
+                        self.notice = "暂未允许，任务保留；准备好后按 CtrlG。".into();
+                    }
+                    2 => {
+                        self.input.clear();
+                        self.panel = Panel::AccessPath;
+                    }
+                    3 => {
+                        self.input.clear();
+                        self.panel = Panel::AccessDependency;
+                    }
+                    4 => {
+                        self.input.clear();
+                        self.panel = Panel::AccessTimeout;
+                    }
+                    5 => {
+                        if let Some(form) = &mut self.access_form {
+                            form.read_dirs.clear();
+                        }
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+        } else if key.code == KeyCode::Enter {
+            let form = self.access_form.as_mut().context("请重新打开授权范围")?;
+            let text = self.input.text.trim();
+            match self.panel {
+                Panel::AccessPath => {
+                    let path = crate::file_roots::directory(&expand(text))?;
+                    ensure!(
+                        form.roots.iter().any(|r| path.starts_with(r)),
+                        "请选择已允许读取的目录；会在其中新建任务文件夹"
+                    );
+                    form.parent = path;
+                }
+                Panel::AccessDependency => {
+                    let path = crate::file_roots::directory(&expand(text))?;
+                    ensure!(form.read_dirs.len() < 32, "最多添加 32 个依赖目录");
+                    if !form.roots.contains(&path) && !form.read_dirs.contains(&path) {
+                        form.read_dirs.push(path);
+                    }
+                }
+                Panel::AccessTimeout => {
+                    let minutes: u64 = text.parse().context("请输入 1 到 1440 之间的分钟数")?;
+                    ensure!(
+                        (1..=1440).contains(&minutes),
+                        "请输入 1 到 1440 之间的分钟数"
+                    );
+                    form.timeout_secs = minutes * 60;
+                }
+                _ => {}
+            }
+            self.panel = Panel::TaskAccess;
+            self.index = 0;
+            self.input.clear();
+        } else {
+            match key.code {
+                KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.input.insert(&c.to_string())
+                }
+                KeyCode::Backspace => self.input.backspace(),
+                KeyCode::Delete => self.input.delete(),
+                KeyCode::Left => self.input.left(),
+                KeyCode::Right => self.input.right(),
+                KeyCode::Home => self.input.home(),
+                KeyCode::End => self.input.end(),
+                _ => {}
+            }
+        }
+        Ok(false)
+    }
     fn change_project(&mut self, store: &Store, path: &Path) -> Result<()> {
         self.project = app::project(store, path)?;
+        app::select_working_directory(store, self.project["id"].as_str().unwrap())?;
         self.session = app::session(store, self.project["id"].as_str().unwrap(), &self.owner)?;
         self.selected_task = None;
+        self.selected_question = None;
         self.pending_command = None;
         self.panel = Panel::Chat;
         self.input.clear();
         self.scroll = 0;
-        self.notice = "已切换项目；导入白名单和既有任务授权保持原样。".into();
+        self.notice = "已选择工作目录；只影响之后的对话和任务。".into();
         self.refresh(store)
     }
     fn projects(&self) -> Vec<Value> {
@@ -275,10 +491,17 @@ impl Ui {
             }
             return Ok(false);
         }
+        if matches!(
+            self.panel,
+            Panel::TaskAccess | Panel::AccessPath | Panel::AccessDependency | Panel::AccessTimeout
+        ) {
+            return self.access_key(store, key);
+        }
         if key.code == KeyCode::Esc {
             self.panel = Panel::Chat;
             self.input.clear();
             self.selected_task = None;
+            self.selected_question = None;
             self.pending_command = None;
             self.scroll = 0;
             return Ok(false);
@@ -290,6 +513,34 @@ impl Ui {
         }
         if ctrl {
             match key.code {
+                KeyCode::Char('s')
+                    if self
+                        .current_task()
+                        .is_some_and(|t| t["protocol"] == 2 && t["state"] == "draft") =>
+                {
+                    self.enqueue(
+                        store,
+                        "confirm_task",
+                        "确认当前版本任务意图".into(),
+                        json!({}),
+                    )?;
+                    return Ok(false);
+                }
+                KeyCode::Char('e') => {
+                    ensure!(
+                        self.current_task().is_some_and(|t| t["protocol"] == 2),
+                        "请先选择任务"
+                    );
+                    self.panel = Panel::Revise;
+                    self.input.clear();
+                    return Ok(false);
+                }
+                KeyCode::Char('b') => {
+                    ensure!(self.current_task().is_some(), "请先选择任务");
+                    self.panel = Panel::Questions;
+                    self.index = 0;
+                    return Ok(false);
+                }
                 KeyCode::Char('o') => {
                     self.panel = Panel::Chats;
                     self.index = 0;
@@ -297,7 +548,13 @@ impl Ui {
                 }
                 KeyCode::Char('t') => {
                     self.panel = Panel::Tasks;
-                    self.index = 0;
+                    self.index = self.data["tasks"]
+                        .as_array()
+                        .and_then(|ts| {
+                            ts.iter()
+                                .position(|t| t["execution_permission"]["can_allow"] == true)
+                        })
+                        .unwrap_or(0);
                     return Ok(false);
                 }
                 KeyCode::Char('d') => {
@@ -334,6 +591,8 @@ impl Ui {
                     return Ok(false);
                 }
                 KeyCode::Char('n') => {
+                    self.selected_task = None;
+                    self.selected_question = None;
                     self.panel = Panel::NewTask;
                     self.input.clear();
                     return Ok(false);
@@ -342,7 +601,44 @@ impl Ui {
             }
         }
         match self.panel {
+            Panel::Questions => {
+                let questions = self
+                    .current_task()
+                    .and_then(|t| t["questions"].as_array())
+                    .map(|qs| {
+                        qs.iter()
+                            .filter(|q| q["state"] == "user")
+                            .cloned()
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
+                match key.code {
+                    KeyCode::Up => self.index = self.index.saturating_sub(1),
+                    KeyCode::Down => {
+                        self.index = (self.index + 1).min(questions.len().saturating_sub(1))
+                    }
+                    KeyCode::Enter => {
+                        if let Some(q) = questions.get(self.index) {
+                            self.selected_question = q["id"].as_str().map(str::to_owned);
+                            self.notice = format!("正在回答：{}", q["body"].as_str().unwrap_or(""));
+                            self.input.clear();
+                            self.panel = Panel::Chat;
+                        }
+                    }
+                    _ => {}
+                }
+                return Ok(false);
+            }
             Panel::Chats => {
+                if key.code == KeyCode::Char('n') {
+                    self.session = app::new_session(store, self.project["id"].as_str().unwrap())?;
+                    self.selected_task = None;
+                    self.selected_question = None;
+                    self.panel = Panel::Chat;
+                    self.input.clear();
+                    self.refresh(store)?;
+                    return Ok(false);
+                }
                 let list = self.data["sessions"].as_array().unwrap();
                 match key.code {
                     KeyCode::Up => self.index = self.index.saturating_sub(1),
@@ -355,6 +651,7 @@ impl Ui {
                             self.project = app::project(store, &path)?;
                             self.session = chat["id"].as_str().unwrap().into();
                             self.selected_task = None;
+                            self.selected_question = None;
                             self.pending_command = None;
                             self.panel = Panel::Chat;
                             self.scroll = 0;
@@ -392,7 +689,19 @@ impl Ui {
                     KeyCode::Enter => {
                         if let Some(t) = tasks.get(self.index) {
                             self.selected_task = t["id"].as_str().map(str::to_owned);
+                            self.selected_question = None;
+                            self.pending_command = None;
+                            self.scroll = 0;
+                            self.session = t["session_id"].as_str().unwrap().into();
+                            self.project = json!({"id":t["project_id"],"path":t["project"],"name":Path::new(t["project"].as_str().unwrap()).file_name().unwrap_or_default().to_string_lossy()});
+                            self.refresh(store)?;
                             self.panel = Panel::Chat;
+                            if self
+                                .current_task()
+                                .is_some_and(|t| t["execution_permission"]["can_allow"] == true)
+                            {
+                                self.open_task_access()?;
+                            }
                         }
                     }
                     _ => {}
@@ -409,16 +718,6 @@ impl Ui {
                     KeyCode::Char('n') => {
                         self.panel = Panel::ProjectPath;
                         self.input.clear();
-                    }
-                    KeyCode::Char('a') => {
-                        if let Some(p) = projects.get(self.index) {
-                            self.enqueue(
-                                store,
-                                "project_allow",
-                                "允许从所选项目导入".into(),
-                                json!({"path":p["project"]}),
-                            )?;
-                        }
                     }
                     KeyCode::Enter => {
                         if let Some(p) = projects.get(self.index) {
@@ -537,6 +836,15 @@ impl Ui {
                     )?;
                     self.panel = Panel::Roots;
                 }
+                Panel::Revise => {
+                    let action = if self.current_task().is_some_and(|t| t["archived"] == true) {
+                        "reopen_task"
+                    } else {
+                        "revise_task"
+                    };
+                    self.enqueue(store, action, text, json!({}))?;
+                    self.panel = Panel::Chat;
+                }
                 Panel::NewTask => {
                     let (to, body) = app::addressing(store, &text)?;
                     self.enqueue(store,"create_task",body.clone(),json!({"title":body.chars().take(40).collect::<String>(),"peer":if to!=self.owner{Some(to)}else{None}}))?;
@@ -581,7 +889,7 @@ impl Ui {
             .split(area);
         let name = self.data["identity"]["display_name"].as_str().unwrap_or("");
         let header = format!(
-            " xXASSXx  ·  {}  (@{})   项目：{}",
+            " xXASSXx  ·  {}  (@{})   本机对话目录：{}",
             safe(name),
             self.owner,
             safe(self.project["name"].as_str().unwrap_or(""))
@@ -628,37 +936,46 @@ impl Ui {
         }
         if let Some(task) = self.current_task() {
             lines.push(format!(
-                "任务：{} · {} · 等待：{}",
+                "任务：{} · {}",
                 task["title"].as_str().unwrap_or(""),
-                task["state"].as_str().unwrap_or(""),
-                task["waiting_for"].as_str().unwrap_or("")
+                presentation::task_status(task, &self.owner),
             ));
-            lines.push(format!(
-                "项目：{} · 参与：@{}{}",
-                task["project"].as_str().unwrap_or(""),
-                self.owner,
-                task["peer"]
-                    .as_str()
-                    .map(|p| format!(" ↔ @{p}"))
-                    .unwrap_or_default()
-            ));
-            if let Some(files) = task["materials"].as_array() {
-                lines.push(format!(
-                    "授权材料：{}",
-                    files
-                        .iter()
-                        .filter_map(|f| f["path"].as_str())
-                        .collect::<Vec<_>>()
-                        .join("、")
-                ));
-            }
+            lines.push(presentation::task_location(task, &self.owner));
             if let Some(path) = task["artifact"].as_str() {
                 lines.push(format!("结果文件：{path}"));
             }
             if let Some(error) = task["error"].as_str() {
                 lines.push(format!("需处理：{error}"));
             }
-            lines.push("CtrlD 详情  CtrlG 授权  CtrlU 采用对方材料  CtrlX 停止  CtrlY 重试".into());
+            if task["protocol"] == 2 {
+                lines.push(format!(
+                    "参与人：{} · 下一步：{} · 最近更新 {}",
+                    task["participants"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(Value::as_str)
+                        .collect::<Vec<_>>()
+                        .join("、"),
+                    if matches!(task["state"].as_str(), Some("completed" | "cancelled")) {
+                        "无"
+                    } else {
+                        task["next_owner"].as_str().unwrap_or("无")
+                    },
+                    presentation::local_time(task["updated_at"].as_i64())
+                ));
+                for q in task["questions"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|q| q["state"] == "user" && q["revision"] == task["revision"])
+                {
+                    lines.push(format!("待回答：{}", q["body"].as_str().unwrap_or("")));
+                }
+                lines.push("CtrlS 确认 · CtrlB 选问题 · CtrlE 修改/重开 · CtrlD 结果与历史 · CtrlX 取消 · CtrlY 恢复".into());
+            } else {
+                lines.push("历史任务 · CtrlD 来源和记录 · CtrlG 授权 · CtrlY 恢复旧流程".into());
+            }
         }
         let split = Layout::vertical([
             Constraint::Length(if body.height < 10 {
@@ -680,18 +997,18 @@ impl Ui {
             f.render_widget(Paragraph::new(vec![Line::from(safe(&selected))]), split[0]);
         }
         let mut lines = Vec::new();
-        for m in self.data["messages"].as_array().into_iter().flatten() {
+        for m in self.visible_messages() {
             let role = if m["kind"] == "user" {
                 "你"
             } else if m["sender"] == "butler" {
-                "自己的 local agent"
+                "自己的助手"
             } else {
                 m["sender"].as_str().unwrap_or("同伴")
             };
             lines.push(format!(
                 "{} · {}{}",
                 role,
-                m["kind"].as_str().unwrap_or(""),
+                presentation::message_kind(m["kind"].as_str().unwrap_or("")),
                 m["delivery_state"]
                     .as_str()
                     .map(|s| format!(" · 投递 {s}"))
@@ -707,12 +1024,12 @@ impl Ui {
                     if m["command_state"] == "pending" {
                         "后台排队中"
                     } else {
-                        "local agent 处理中，可以继续输入"
+                        "助手正在处理，可以继续输入"
                     }
                     .into(),
                 );
             }
-            lines.extend(m["body"].as_str().unwrap_or("").lines().map(str::to_owned));
+            lines.extend(presentation::message_body(m).lines().map(str::to_owned));
             lines.push(String::new());
         }
         let session = self.data["sessions"]
@@ -735,22 +1052,26 @@ impl Ui {
         } else {
             draw_lines(f, split[1], &title, &lines, self.scroll, true);
         }
-        let recipient = self
-            .recipient(store)
-            .unwrap_or_else(|e| format!("无效：{e}"));
         let title = match self.panel {
-            Panel::ProjectPath => "输入项目目录路径（不会授权导入）".to_owned(),
-            Panel::RootPath => "输入允许导入的目录（不扫描、不导入、不共享）".into(),
-            Panel::NewTask => "输入只读分析目标；@test 可请求对方材料".into(),
-            _ => format!(
-                "发送给：{} 的 local agent · Enter 发送 · CtrlJ/AltEnter 换行",
-                recipient
-            ),
+            Panel::ProjectPath => "输入其他工作目录路径".to_owned(),
+            Panel::RootPath => "输入可访问目录路径（允许只读任务）".into(),
+            Panel::NewTask => "输入任务目标；@成员 指定执行人".into(),
+            Panel::Revise => "输入修改或重开要求；新修订需要确认".into(),
+            Panel::TaskAccess => "在上方选择操作 · Enter 确认 · Esc 稍后处理".into(),
+            Panel::AccessPath => "输入保存位置 · Enter 返回检查 · Esc 放弃修改".into(),
+            Panel::AccessDependency => "输入只读依赖目录 · Enter 返回检查 · Esc 放弃修改".into(),
+            Panel::AccessTimeout => "输入运行时限（分钟）· Enter 返回检查".into(),
+            _ => "正在与自己的助手 对话 · @成员 指定参与人 · Enter 发送".into(),
         };
-        let title = if let Some(t) = self.current_task() {
+        let title = if let Some(t) = self.current_task().filter(|_| self.panel == Panel::Chat) {
             format!(
-                "发送给：{} 的 local agent · 关联「{}」· Esc 解除",
-                recipient,
+                "{}「{} · {}」· CtrlB 选问题作答 · Esc 返回对话",
+                if self.selected_question.is_some() {
+                    "正在回答问题"
+                } else {
+                    "讨论任务"
+                },
+                t["short_id"].as_str().unwrap_or("历史任务"),
                 t["title"].as_str().unwrap_or("")
             )
         } else {
@@ -781,7 +1102,7 @@ impl Ui {
         );
         if matches!(
             self.panel,
-            Panel::Chat | Panel::ProjectPath | Panel::RootPath | Panel::NewTask
+            Panel::Chat | Panel::ProjectPath | Panel::RootPath | Panel::NewTask | Panel::Revise
         ) && inner.width > 0
             && inner.height > 0
         {
@@ -806,7 +1127,7 @@ impl Ui {
         f.render_widget(
             Paragraph::new(vec![
                 Line::from(format!(
-                    "{connection} · 后台 {} · CtrlO 会话 · CtrlT 任务 · CtrlP 项目 · CtrlR 目录 · CtrlQ 退出界面（后台继续）",
+                    "{connection} · 后台 {} · CtrlO 会话 · CtrlT 任务 · CtrlP 工作目录 · CtrlR 可访问目录 · CtrlQ 退出界面（后台继续）",
                     if self.data["service"]["alive"] == true {
                         "运行中"
                     } else {
@@ -850,14 +1171,14 @@ impl Ui {
         }
         if !matches!(
             self.panel,
-            Panel::Chat | Panel::ProjectPath | Panel::RootPath | Panel::NewTask
+            Panel::Chat | Panel::ProjectPath | Panel::RootPath | Panel::NewTask | Panel::Revise
         ) {
             self.panel(f, body, store);
         }
     }
     fn card_label(&self) -> String {
         if self.view == 0 {
-            return format!("自己的 local agent @{}", self.owner);
+            return format!("自己的助手 @{}", self.owner);
         }
         let contacts = self.data["presence"]["members"]
             .as_array()
@@ -874,7 +1195,7 @@ impl Ui {
     }
     fn sidebar(&self, f: &mut ratatui::Frame, area: Rect) {
         let mut items = vec![format!(
-            "{}自己的 local agent",
+            "{}自己的助手",
             if self.view == 0 { "▶ " } else { "  " }
         )];
         for (n, c) in self.data["contacts"]
@@ -884,7 +1205,7 @@ impl Ui {
             .enumerate()
         {
             items.push(format!(
-                "{}{} 的 local agent",
+                "{}{}的助手",
                 if self.view == n + 1 { "▶ " } else { "  " },
                 c["member_id"].as_str().unwrap_or("")
             ));
@@ -899,6 +1220,15 @@ impl Ui {
         ));
         items.push(String::new());
         items.push("Tab / ShiftTab 查看卡片".into());
+        let approvals = self.data["tasks"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|t| t["execution_permission"]["can_allow"] == true)
+            .count();
+        if approvals > 0 {
+            items.push(format!("{approvals} 项任务需要你允许 · CtrlT"));
+        }
         for t in self.data["tasks"]
             .as_array()
             .into_iter()
@@ -909,7 +1239,7 @@ impl Ui {
             items.push(format!(
                 "· {} [{}]",
                 t["title"].as_str().unwrap_or(""),
-                t["state"].as_str().unwrap_or("")
+                presentation::task_status(t, &self.owner)
             ));
         }
         draw_lines(f, area, "团队与任务", &items, 0, false);
@@ -918,6 +1248,89 @@ impl Ui {
         f.render_widget(Clear, area);
         let mut lines = vec![];
         let title = match self.panel {
+            Panel::TaskAccess
+            | Panel::AccessPath
+            | Panel::AccessDependency
+            | Panel::AccessTimeout => {
+                if let Some(form) = &self.access_form {
+                    lines.push(format!("@{} 请你执行：{}", form.initiator, form.goal));
+                    lines.push(format!(
+                        "本次确认内容：第 {} 版 · 只允许这一项任务",
+                        form.revision
+                    ));
+                    lines.push(format!(
+                        "新文件保存到：{}",
+                        form.parent
+                            .join(format!("xxassxx-task-{}-r{}", form.task, form.revision))
+                            .display()
+                    ));
+                    lines.push(format!(
+                        "可读取的目录：{}",
+                        form.roots
+                            .iter()
+                            .chain(&form.read_dirs)
+                            .map(|p| p.display().to_string())
+                            .collect::<Vec<_>>()
+                            .join("、")
+                    ));
+                    lines.push(format!("运行时限：{} 分钟", form.timeout_secs / 60));
+                    lines.push(
+                        "只在新任务文件夹里修改副本和运行程序；原文件和依赖只读，不联网。".into(),
+                    );
+                    lines.push("允许后自动开始，结果自动返回发起方。".into());
+                    lines.push(String::new());
+                    if self.panel == Panel::TaskAccess {
+                        for (n, label) in [
+                            "允许并开始",
+                            "暂时不允许",
+                            "修改保存位置",
+                            "添加只读依赖目录（可选）",
+                            "修改运行时限",
+                            "清空额外依赖目录",
+                        ]
+                        .iter()
+                        .enumerate()
+                        {
+                            lines.push(format!(
+                                "{}{}",
+                                if self.index == n { "▶ " } else { "  " },
+                                label
+                            ));
+                        }
+                        lines.push("↑↓ 选择 · Enter 确认选择 · Esc 稍后处理".into());
+                    } else {
+                        lines.push(
+                            match self.panel {
+                                Panel::AccessTimeout => "输入分钟数（1–1440）：",
+                                Panel::AccessDependency => "输入需要额外读取的本机目录：",
+                                _ => "输入新任务文件夹的上级目录：",
+                            }
+                            .into(),
+                        );
+                        lines.push(format!("> {}▏", self.input.text));
+                        lines.push("Enter 保存并返回检查 · Esc 放弃此项修改".into());
+                    }
+                }
+                "允许本次任务"
+            }
+            Panel::Questions => {
+                lines.push("↑↓ 选择问题 · Enter 回答 · Esc 返回".into());
+                for (n, q) in self
+                    .current_task()
+                    .and_then(|t| t["questions"].as_array())
+                    .into_iter()
+                    .flatten()
+                    .filter(|q| q["state"] == "user")
+                    .enumerate()
+                {
+                    lines.push(format!(
+                        "{} {}",
+                        if n == self.index { "▶" } else { " " },
+                        q["body"].as_str().unwrap_or("")
+                    ));
+                }
+                "选择要回答的问题"
+            }
             Panel::ProjectAccess => {
                 lines.push("是否将启动文件夹加入本机文件白名单？".into());
                 lines.push(self.project["path"].as_str().unwrap().into());
@@ -938,10 +1351,7 @@ impl Ui {
                 "启动文件夹"
             }
             Panel::Chats => {
-                lines.push(
-                    "Enter 查看历史 · 输入默认仍给自己的 local agent，联系同伴请显式 @ · Esc 返回"
-                        .into(),
-                );
+                lines.push("n 新建独立对话 · Enter 查看历史 · Esc 返回".into());
                 for (n, c) in self.data["sessions"]
                     .as_array()
                     .into_iter()
@@ -959,7 +1369,8 @@ impl Ui {
                 "持久会话"
             }
             Panel::Tasks => {
-                lines.push("↑↓ 选择 · Enter 关联到输入 · Esc 返回；不会新建/执行任务".into());
+                lines
+                    .push("↑↓ 选择 · Enter 查看任务；待你允许的任务会先展示范围 · Esc 返回".into());
                 for (n, t) in self.data["tasks"]
                     .as_array()
                     .into_iter()
@@ -967,18 +1378,17 @@ impl Ui {
                     .enumerate()
                 {
                     lines.push(format!(
-                        "{}{} · {} · 等待 {}",
+                        "{}{} · {}",
                         if n == self.index { "▶ " } else { "  " },
                         t["title"].as_str().unwrap_or(""),
-                        t["state"].as_str().unwrap_or(""),
-                        t["waiting_for"].as_str().unwrap_or("")
+                        presentation::task_status(t, &self.owner),
                     ));
                 }
                 if let Some(task) = self.data["tasks"]
                     .as_array()
                     .and_then(|a| a.get(self.index))
                 {
-                    lines.push(format!("项目：{}", task["project"].as_str().unwrap_or("")));
+                    lines.push(presentation::task_location(task, &self.owner));
                     lines.push(format!("目标：{}", task["goal"].as_str().unwrap_or("")));
                     lines.push(format!(
                         "准备的材料：{}",
@@ -994,9 +1404,7 @@ impl Ui {
                 "任务卡"
             }
             Panel::Projects => {
-                lines.push(
-                    "Enter 切换 · n 添加/选择路径 · a 同时允许所选目录导入 · Esc 返回".into(),
-                );
+                lines.push("Enter 选择 · n 输入其他路径 · Esc 返回".into());
                 for (n, p) in self.projects().iter().enumerate() {
                     lines.push(format!(
                         "{}{}",
@@ -1004,7 +1412,7 @@ impl Ui {
                         p["project"].as_str().unwrap_or("")
                     ));
                 }
-                "当前项目（不会改变已有任务）"
+                "选择工作目录"
             }
             Panel::Roots => {
                 lines.push(
@@ -1073,7 +1481,98 @@ impl Ui {
                             .filter(|e| e["task_id"] == t["id"])
                             .collect::<Vec<_>>()
                     );
-                    lines.push(serde_json::to_string_pretty(&detail).unwrap_or_default());
+                    if t["protocol"] == 2 {
+                        lines.push(format!(
+                            "{} · 修订 {} · {}",
+                            t["short_id"].as_str().unwrap_or(""),
+                            t["revision"],
+                            presentation::task_state(&t["state"])
+                        ));
+                        lines.push(format!(
+                            "{}\n原话：{}\n目标：{}",
+                            presentation::task_location(t, &self.owner),
+                            t["original"].as_str().unwrap_or(""),
+                            t["goal"].as_str().unwrap_or("")
+                        ));
+                        if let Some(body) = t["result"]["body"].as_str() {
+                            lines.push(format!("结果：\n{body}"));
+                        }
+                        for r in t["revisions"].as_array().into_iter().flatten() {
+                            lines.push(format!(
+                                "修订 {} · 确认人 {} · {}",
+                                r["revision"],
+                                r["confirmed_by"].as_str().unwrap_or("未确认"),
+                                presentation::local_time(r["confirmed_at"].as_i64())
+                            ));
+                        }
+                        for q in t["questions"].as_array().into_iter().flatten() {
+                            lines.push(format!(
+                                "问题（修订 {}）：{}\n答案：{}",
+                                q["revision"],
+                                q["body"].as_str().unwrap_or(""),
+                                q["answer"].as_str().unwrap_or("等待回答")
+                            ));
+                        }
+                        for e in t["executions"].as_array().into_iter().flatten() {
+                            lines.push(format!(
+                                "执行 {} · {} · {} · {} 轮",
+                                e["id"].as_str().unwrap_or(""),
+                                e["phase"].as_str().unwrap_or(""),
+                                e["state"].as_str().unwrap_or(""),
+                                e["round"]
+                            ));
+                        }
+                        for r in t["runs"].as_array().into_iter().flatten() {
+                            lines.push(format!(
+                                "运行 {} · {} · 恢复会话 {} · 提交 {} · 退出 {} · {}",
+                                r["id"].as_str().unwrap_or(""),
+                                r["state"].as_str().unwrap_or(""),
+                                r["resumed_session_id"].as_str().unwrap_or("新会话"),
+                                r["submissions"],
+                                r["exit_code"],
+                                r["error_code"].as_str().unwrap_or("")
+                            ));
+                            lines.push(format!(
+                                "物理执行目录：{}",
+                                r["working_directory"].as_str().unwrap_or("")
+                            ));
+                        }
+                        for m in t["materials"].as_array().into_iter().flatten() {
+                            lines.push(format!(
+                                "快照 {} · 修订 {} · 来源 @{}",
+                                m["id"].as_str().unwrap_or(""),
+                                m["revision"],
+                                m["member"].as_str().unwrap_or("")
+                            ));
+                            for f in m["manifest"].as_array().into_iter().flatten() {
+                                lines.push(format!(
+                                    "  {} · {} 字节 · {}",
+                                    f["path"].as_str().unwrap_or(""),
+                                    f["bytes"],
+                                    f["sha256"].as_str().unwrap_or("")
+                                ));
+                            }
+                        }
+                        for m in t["meetings"].as_array().into_iter().flatten() {
+                            lines.push(format!(
+                                "例会 {} · {} · {}",
+                                m["payload"]["meeting_id"].as_str().unwrap_or(""),
+                                presentation::message_kind(m["kind"].as_str().unwrap_or("")),
+                                presentation::local_time(m["created_at"].as_i64())
+                            ));
+                        }
+                        for e in t["history"].as_array().into_iter().flatten() {
+                            lines.push(format!(
+                                "{} · @{} · {} · {}",
+                                presentation::local_time(e["created_at"].as_i64()),
+                                e["sender"].as_str().unwrap_or(""),
+                                e["kind"].as_str().unwrap_or(""),
+                                e["payload"]["body"].as_str().unwrap_or("记录已保存")
+                            ));
+                        }
+                    } else {
+                        lines.push(serde_json::to_string_pretty(&detail).unwrap_or_default());
+                    }
                 } else {
                     let mut conversations = std::collections::BTreeSet::new();
                     for message in self.data["messages"].as_array().into_iter().flatten() {
@@ -1099,7 +1598,14 @@ impl Ui {
             Panel::Stop => {
                 lines.push("停止本端后续调度并拒绝此任务的新提交。".into());
                 lines.push("当前模型调用仍可能持续到超时；不会冒充已经终止进程。".into());
-                lines.push("不会自动取消对方任务。已完成结果不会被改写。".into());
+                lines.push(
+                    if self.current_task().is_some_and(|t| t["protocol"] == 2) {
+                        "已确认任务会通知参与方取消；对方离线时持久排队。"
+                    } else {
+                        "历史任务不会自动取消对方任务。"
+                    }
+                    .into(),
+                );
                 lines.push("Enter 确认停止 · Esc 取消".into());
                 "停止作用范围"
             }
@@ -1159,7 +1665,7 @@ fn draw_lines(
         .collect::<Vec<_>>();
     f.render_widget(Paragraph::new(text), inner);
 }
-const HELP: &str = "大部分实质任务会交给 Codex；可直接让它找文件或解释材料。\n默认输入给自己的 local agent；@test 明确选择 test 的 local agent。\nTab / ShiftTab 切换查看状态卡。\n@ 候选打开时：↑↓选择，Tab 确认，此时不会发送。\nEnter 发送；CtrlJ 或 AltEnter 换行；粘贴不会自动发送。\n方向键/Home/End 编辑；PageUp/PageDown 或滚轮查看历史。\nCtrlO 查看所有会话和未读消息。\nCtrlT 选择任务；输入框将显示关联任务，Esc 解除关联。\nCtrlN 新建只读文件任务（可 @成员 请求对方授权）。\nCtrlG 选择少量具体文件，CtrlS 确认任务读取授权。\nCtrlU 采用同伴准备的材料；不会要求手工拼版本或任务 ID。\nCtrlD 展开来源、结果位置、错误和原始往返。\nCtrlX 停止本端后续调度（需确认）；CtrlY 显式重试原任务。\nCtrlP 选择项目：n 输入路径，a 明确允许导入。\nCtrlR 管理白名单目录：n 添加，Delete 移除。\n选择项目不授权读取；白名单允许 Codex 按本地或团队请求只读查询。\nCtrlQ / CtrlC 退出界面，后台 local agent 继续工作。\n/identity、/status、/contacts 不调用模型。\n任意脚本执行与代码编辑尚不支持；需要时主动运行 xxassxx codex PATH。";
+const HELP: &str = "大部分实质任务会交给 Codex；可直接让它找文件或解释材料。\n默认输入给自己的助手；@test 明确选择 test的助手。\nTab / ShiftTab 切换查看状态卡。\n@ 候选打开时：↑↓选择，Tab 确认，此时不会发送。\nEnter 发送；CtrlJ 或 AltEnter 换行；粘贴不会自动发送。\n方向键/Home/End 编辑；PageUp/PageDown 或滚轮查看历史。\nCtrlO 查看所有会话和未读消息；n 新建独立对话。\nCtrlT 选择任务；待你允许的任务按 Enter 查看范围，再选允许并开始。\nCtrlN 新建任务（@成员 指定执行人）。\nCtrlS 确认任务意图；CtrlB 选问题；CtrlE 修改或重开。\nCtrlU 仅用于兼容旧任务的固定材料授权；新任务不逐项授权。\nCtrlD 展开来源、结果位置、错误和原始往返。\nCtrlX 停止本端后续调度（需确认）；CtrlY 显式重试原任务。\nCtrlP 选择工作目录：Enter 选择，n 输入其他路径。\nCtrlR 管理白名单目录：n 添加，Delete 移除。\n选择工作目录不授权读取；白名单允许 Codex 按本地或团队请求只读查询。\nCtrlQ / CtrlC 退出界面，后台助手 继续工作。\n/identity、/status、/contacts 不调用模型。\n写入或运行：执行方 CtrlT → Enter 查看范围 → 允许并开始，发起方无需重试。\nCtrlG 打开当前任务的执行授权；可调整保存位置、依赖目录和运行时限。";
 
 pub async fn open(args: OpenArgs) -> Result<()> {
     let default_directory = args.directory.is_none();
@@ -1251,7 +1757,14 @@ pub async fn open(args: OpenArgs) -> Result<()> {
                 Event::Paste(text) => {
                     if matches!(
                         ui.panel,
-                        Panel::Chat | Panel::ProjectPath | Panel::RootPath | Panel::NewTask
+                        Panel::Chat
+                            | Panel::ProjectPath
+                            | Panel::RootPath
+                            | Panel::NewTask
+                            | Panel::Revise
+                            | Panel::AccessPath
+                            | Panel::AccessDependency
+                            | Panel::AccessTimeout
                     ) {
                         ui.input
                             .insert(&text.replace("\r\n", "\n").replace('\r', "\n"));
@@ -1272,7 +1785,7 @@ pub async fn open(args: OpenArgs) -> Result<()> {
     drop(terminal);
     drop(_guard);
     if service::status(&store)?["alive"] == true {
-        println!("已关闭终端界面，后台 local agent 继续运行。再次运行 xxassxx 即可打开界面。");
+        println!("已关闭终端界面，后台助手 继续运行。再次运行 xxassxx 即可打开界面。");
         let command = if default_directory {
             "xxassxx client stop".to_owned()
         } else {

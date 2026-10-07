@@ -1,0 +1,240 @@
+{
+  "recorded_at_utc": "2026-10-07T18:30:33.528988+00:00",
+  "environment": "small-scale testing before 1.0.0",
+  "version": "0.1.0-alpha",
+  "authorization": "User requested direct upgrade of Mac, Lakota and Trader without backups.",
+  "backup_created": false,
+  "reinitialized": false,
+  "source_archive_sha256": "4c7d2cad2d00a5d5bf23a7e01761f1252efb012c0d12ce72ab2f33f0485e2b3a",
+  "clients": {
+    "Mac": {
+      "member_id": "owner",
+      "schema_before": 6,
+      "schema": 7,
+      "old_sha256": "81a1fecb2aba35a4698b1f662176032c38b8dbe131d4dc8b9649a046fc6362ea",
+      "sha256": "6cf240add378a9ca7b5b61f2132429aed7ae66ed1949a180053aa5c93d265f88",
+      "history_counts": {
+        "app_sessions": 4,
+        "app_tasks": 0,
+        "tasks": 1,
+        "runs": 1,
+        "messages": 12
+      },
+      "roots": [
+        "/Users/shenyaojin"
+      ],
+      "identity_config_history_roots_preserved": true,
+      "config_sha256": "aefb5aee241a4a6bf8deb907bb6690949469e71c633961df892b5dfde5f161d9",
+      "integrity": "ok",
+      "foreign_keys": "ok",
+      "status": {
+        "alive": true,
+        "error": null,
+        "instance": "fd2edb8c-60d1-4ffd-891d-33ee978c40ef",
+        "log_path": "/Users/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+        "pid": 81098,
+        "state": "running",
+        "updated_at": 1791397499
+      },
+      "doctor": {
+        "allowed_directories": [
+          "/Users/shenyaojin"
+        ],
+        "codex": {
+          "available": true,
+          "logged_in": true
+        },
+        "mailbox": {
+          "error": null,
+          "reachable_and_identity_matches": true
+        },
+        "model": {
+          "model": "deepseek-flash",
+          "provider": "deepseek",
+          "tool_roundtrip": "not_requested"
+        },
+        "note": "Without --probe-model, model inference and tool capability are not tested. Codex login status does not prove available inference quota.",
+        "ready": true
+      },
+      "relay_identity": {
+        "member_id": "owner",
+        "task_protocol": 2,
+        "team_id": "xxassxx"
+      },
+      "v2_events_authenticated": true,
+      "backup_created": false,
+      "ui": {
+        "working_directory": "/Users/shenyaojin",
+        "selected_through_TUI": true,
+        "TUI_exit_code": 0,
+        "roots_unchanged": true,
+        "network": {
+          "state": "connected",
+          "last_success": 1791397548,
+          "error": null
+        },
+        "presence": [
+          {
+            "member_id": "test",
+            "observed_age_secs": 3,
+            "ttl_secs": 30,
+            "fetched_at": 1791397549
+          }
+        ]
+      }
+    },
+    "Lakota": {
+      "member_id": "test",
+      "schema_before": 6,
+      "schema": 7,
+      "old_sha256": "83938e1b97b555b36e198cfe73af23e94547a765cef40525a2e325b6bc8565d3",
+      "sha256": "6acaecbea32600a90efefa0e622df396d8d29cbc1adc641538eb899e9309ff37",
+      "history_counts": {
+        "app_sessions": 2,
+        "app_tasks": 0,
+        "tasks": 4,
+        "runs": 3,
+        "messages": 12
+      },
+      "roots": [
+        "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts"
+      ],
+      "identity_config_history_roots_preserved": true,
+      "config_sha256": "2a0d024dde2b235443462456c9b12bac9f09d33d5afc57367aa2284f0ee106b0",
+      "integrity": "ok",
+      "foreign_keys": "ok",
+      "status": {
+        "alive": true,
+        "error": null,
+        "instance": "1e39a3ce-ebbe-490f-97c7-bf0d80e5a55a",
+        "log_path": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+        "pid": 2323903,
+        "state": "running",
+        "updated_at": 1791397499
+      },
+      "doctor": {
+        "allowed_directories": [
+          "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts"
+        ],
+        "codex": {
+          "available": true,
+          "logged_in": true
+        },
+        "mailbox": {
+          "error": null,
+          "reachable_and_identity_matches": true
+        },
+        "model": {
+          "model": "deepseek-flash",
+          "provider": "deepseek",
+          "tool_roundtrip": "not_requested"
+        },
+        "note": "Without --probe-model, model inference and tool capability are not tested. Codex login status does not prove available inference quota.",
+        "ready": true
+      },
+      "relay_identity": {
+        "member_id": "test",
+        "task_protocol": 2,
+        "team_id": "xxassxx"
+      },
+      "v2_events_authenticated": true,
+      "backup_created": false,
+      "ui": {
+        "working_directory": "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts",
+        "selected_through_TUI": true,
+        "TUI_exit_code": 0,
+        "roots_unchanged": true,
+        "network": {
+          "state": "connected",
+          "last_success": 1791397549,
+          "error": null
+        },
+        "presence": [
+          {
+            "member_id": "owner",
+            "observed_age_secs": 1,
+            "ttl_secs": 30,
+            "fetched_at": 1791397550
+          }
+        ]
+      }
+    }
+  },
+  "relay": {
+    "role": "relay",
+    "old_sha256": "0a31f483aacbf57c92b4af630ea58bd2e88cd090c182a55eb689935fa15a9f66",
+    "sha256": "6acaecbea32600a90efefa0e622df396d8d29cbc1adc641538eb899e9309ff37",
+    "service": "active",
+    "https_service": "active",
+    "members": [
+      "owner",
+      "pengchao",
+      "test"
+    ],
+    "existing_messages": 16,
+    "members_credentials_messages_preserved": true,
+    "schedule": {
+      "meeting_interval_secs": 7200,
+      "meeting_wait_secs": 300,
+      "meeting_max_rounds": 2,
+      "timezone": "America/Denver",
+      "daily_time": "18:00"
+    },
+    "backup_created": false
+  },
+  "final_status": {
+    "Mac": {
+      "status": {
+        "alive": true,
+        "error": null,
+        "instance": "fd2edb8c-60d1-4ffd-891d-33ee978c40ef",
+        "log_path": "/Users/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+        "pid": 81098,
+        "state": "running",
+        "updated_at": 1791397764
+      },
+      "network": "connected",
+      "schema": 7,
+      "sha256": "6cf240add378a9ca7b5b61f2132429aed7ae66ed1949a180053aa5c93d265f88"
+    },
+    "Lakota": {
+      "status": {
+        "alive": true,
+        "error": null,
+        "instance": "1e39a3ce-ebbe-490f-97c7-bf0d80e5a55a",
+        "log_path": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+        "pid": 2323903,
+        "state": "running",
+        "updated_at": 1791397765
+      },
+      "network": "connected",
+      "schema": 7,
+      "sha256": "6acaecbea32600a90efefa0e622df396d8d29cbc1adc641538eb899e9309ff37"
+    },
+    "Trader": {
+      "mailbox": "active",
+      "https": "active",
+      "sha256": "6acaecbea32600a90efefa0e622df396d8d29cbc1adc641538eb899e9309ff37"
+    }
+  },
+  "linux_regression": {
+    "command": "cargo test --offline --locked --test task_migration --test task_workflow --test task_schedule",
+    "passed": 14,
+    "failed": 0,
+    "models": "deterministic fixtures; no real inference"
+  },
+  "scope": [
+    "Mac and Linux release builds from the same current source",
+    "Existing client schema 6 to 7 migration and integrity checks",
+    "Original identity/config/authorized roots and history IDs retained",
+    "Authenticated public HTTPS identity, task protocol 2 and system-event API",
+    "Actual PTY TUI open/close and explicit working-directory selection",
+    "Both clients observed each other online; service health confirmed after checks"
+  ],
+  "not_tested_in_this_upgrade": [
+    "New business-task round trip with real agents across Mac and Lakota",
+    "Linux real Codex sandbox execution",
+    "Long-duration offline recovery"
+  ],
+  "local_evidence_directory": "/Users/shenyaojin/Documents/gitproject/xXASSXx/smoke-output/task-v7-upgrade-395d612c-2eb0-4473-a665-11468cfc65d2"
+}
