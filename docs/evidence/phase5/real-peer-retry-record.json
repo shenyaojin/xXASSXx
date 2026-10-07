@@ -1,0 +1,20 @@
+{
+  "started_utc": "2026-10-07T02:34:36.306170+00:00",
+  "root": "/private/tmp/xxassxx-phase5-real-v2",
+  "kind": "REAL DeepSeek + official Codex, two isolated local clients",
+  "checks": [
+    {
+      "name": "opening environment does not call models or Codex"
+    },
+    {
+      "name": "persistent natural follow-up",
+      "request_ids": [
+        "4a2e3f55-419c-4c5b-9f10-196c0bdf7d98",
+        "07c45d97-825b-47c8-bcbd-20529a1779a3"
+      ],
+      "answer": "银杏。"
+    }
+  ],
+  "status": "failed",
+  "error": "Timeout waiting for actual peer reply: [{'body': '请说明你有哪些已共享、可供协作的材料。只列材料元数据，不分析文件，不启动 Codex。', 'command_id': '416c03bd-1c28-4338-a5b7-eb5a67721779', 'created_at': 1791340482, 'id': '9f2f5deb-a529-58d9-894b-aa10c7fec2c0', 'kind': 'user', 'recipient': 'test', 'sender': 'owner', 'task_id': None, 'wire_id': None}, {'body': '消息已加入持久发件箱；投递和回复以实际回执为准。', 'command_id': '416c03bd-1c28-4338-a5b7-eb5a67721779', 'created_at': 1791340482, 'id': '5dc60caf-7d5a-5ff4-bb01-655a78ba4a1a', 'kind': 'queued', 'recipient': 'owner', 'sender': 'butler', 'task_id': None, 'wire_id': None}, {'body': '请说明你有哪些已共享、可供协作的材料。只列材料元数据，不分析文件，不启动 Codex。', 'command_id': None, 'created_at': 1791340482, 'id': '72311e9c-40c9-54a2-bfd1-3e06cd7a9f97', 'kind': 'delivery', 'recipient': 'test', 'sender': 'owner', 'task_id': None, 'wire_id': '9091e3b3-7c87-5fc1-be93-a62d3683ed10'}, {'body': '目前可供协作的已共享材料共有 1 项，仅列元数据如下（未读取/分析任何文件内容，也未启动 Codex）：\\n\\n1. Synthetic tiny CSV\\n- 对象 ID：54f3db10-cf8c-4227-acac-89ea97feed88\\n- 类型（kind）：dataset\\n- 标题（title）：Synthetic tiny CSV\\n- 来源成员（source_member）：test\\n- 是否为共享（shared）：true\\n- 创建时间：1791340473\\n- 主版本（main）版本 ID：7e4b7a1f-1760-40ad-9bf3-930fbb01530b\\n- 当前版本（version）版本 ID：7e4b7a1f-1760-40ad-9bf3-930fbb01530b\\n- 版本内容类型：text；创建时间：1791340473\\n- 版本清单（manifest，共 1 项）：\\n  - 路径 record.txt，字节数 20，sha256：3c81fcf1e216a4f562afff55408c7855cd1f1e895b03d0a9ba7e03b678a65cc3\\n- 版本备注：Only synthetic data; metadata is explicitly shared.（仅为合成数据；元数据已明确共享）\\n\\n来源引用：成员 test，对象 54f3db10-cf8c-4227-acac-89ea97feed88，版本 ID 7e4b7a1f-1760-40ad-9bf3-930fbb01530b。\\n\\n如需对上述材料做进一步处理（例如启动 Codex 任务），请明确告知。', 'command_id': None, 'created_at': 1791340721, 'id': '5d9c4ed7-82b2-5994-bf61-1af0a1e02f43', 'kind': 'peer_message', 'recipient': 'owner', 'sender': 'test', 'task_id': None, 'wire_id': '705be483-4451-57aa-87ec-0c4b7389371e'}]"
+}

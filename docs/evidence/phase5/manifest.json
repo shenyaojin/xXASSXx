@@ -1,0 +1,32 @@
+{
+  "date_local": "2026-10-06 America/Denver",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)",
+  "default_tests": {
+    "passed": 80,
+    "failed": 0,
+    "ignored": 2
+  },
+  "real_report": "real/real.json",
+  "binaries": {
+    "target/debug/xxassxx": "3a69712262c5fbc11233131162cb8060d09caf5514243666d61e4c16027f981e"
+  },
+  "files_sha256": {
+    "build.txt": "2461b00c8697c4189b2de92ca6fb05b5d72273c78a0a47b1ce4e83ccca077b70",
+    "clippy.txt": "ec3275bd7cdb61fe7edc4fadcb9a7a8d1c03aef38d75c8a6d05652c57a1d448e",
+    "format.txt": "860e574db4a90ccfaeebc6089758350cd5980b7dac2bc2c817c2f4c00a65ec50",
+    "mock-tests.txt": "24f2a722746eca754d57f77bb31a2618486e135a7fa5ec67ddd81ec0cd20e7c9",
+    "pty/C.ansi": "0deaa7dbe0ef7b92905ba907bc55fee79b9d3e6bd8cd31f2403406e0d765a17d",
+    "pty/background.json": "377c30949713d3454af5784805d1a32f3e1e7912130bdde0f451ad7d447902ee",
+    "pty/default.ansi": "29e468d8a886e72ef0c198e849583da1375c71b5a2358f9cdaead6c333b59776",
+    "pty/open.ansi": "0deaa7dbe0ef7b92905ba907bc55fee79b9d3e6bd8cd31f2403406e0d765a17d",
+    "pty/pty.json": "6f73f1ec81462b5a7cc35efbb1f11be011aab2d14f6555a582bf5e6ef6e68ac4",
+    "pty/real-tui.ansi": "c3001edbb62cf8c8fc75754b25b06b5a583a7093029d566cf140d14848674f1d",
+    "pty/real-tui.json": "04bd232304ff67b03bcd205738fd950bb6061feeb9282f4c84c5545a18e44aae",
+    "real/owner.json": "38c527f19dd629a574628747c239e926e30514249f753a90a64549c49d5ef92d",
+    "real/real.json": "eb2db4a65798a1c33c6c23985805767aaff8942554220600418cb5b853a30995",
+    "real/test.json": "7554dfb39255de9afe837fc22c02082a1ec43d181a4b5cd194f5836a30daf7cf",
+    "real-initial-failure.json": "aac62848cc8f7697dd44f0af5e0e6767a828e8e72f7d53d46fd17a8c98f17150",
+    "real-peer-retry-record.json": "1573160ee65333f8417cba31b607c1d60e5e57d9aa98074ac9dc15e709d2c142"
+  }
+}

@@ -1,0 +1,245 @@
+{
+  "phase4_mvp_validated": true,
+  "date": "2026-10-06",
+  "scope": "installation, separate server/client entry points, persistent public HTTPS mailbox, DeepSeek and compatible Ollama adapter",
+  "default_tests": {
+    "macos_full_suite_before_final_codex_path_helper": 64,
+    "macos_setup_tests_after_helper": 5,
+    "linux_final_source": 64,
+    "linux_failures": 0,
+    "real_tests_ignored_in_default_suite": 2,
+    "macos_clippy_all_targets_deny_warnings": "passed"
+  },
+  "installation": {
+    "passed": true,
+    "target": "aarch64-apple-darwin",
+    "binary_sha256": "7cc910f3b9bda94ce4010b6784838c40aaba38067473ab1eddf410338c8b4d63",
+    "user_prefix_with_spaces": true,
+    "client_server_commands": true,
+    "tampered_archive_rejected_existing_binary_unchanged": true
+  },
+  "deployment": {
+    "endpoint": "https://xxassxx.shenyaojin.com",
+    "mailbox_address": "127.0.0.1:7788",
+    "mailbox_user_service": "xxassxx-mailbox.service",
+    "https_system_service": "xxassxx-https.service",
+    "services_enabled": true,
+    "linger": true,
+    "unauthenticated_https_status": 401,
+    "tls_verification": 0,
+    "linux_native_gnu_binary_sha256": "be31f0c75e7f25ec08a501708fbdc7732715171cf2d03e2e0d6e04accdb4d53c",
+    "caddy_version": "2.11.7",
+    "caddy_standalone_binary_sha256": "678ade3bfc088749c81a681adc603333ee0bb023b6a6cfe3c0f58bef8ff854e9",
+    "restart_check": {
+      "passed": true,
+      "members_preserved": 4,
+      "messages_preserved": 4,
+      "payloads_and_ack_state_unchanged": true,
+      "authenticated_https_after_restart": true
+    }
+  },
+  "public_qc": {
+    "run_id": "phase4-https-d0f81bc7-4a59-48b3-8b85-cf7ad0648733",
+    "transport": "direct HTTPS; no SSH forwarding or controller relay",
+    "report_path": "smoke-output/phase4-public-qc-1/report.json",
+    "independent_check": {
+      "passed": true,
+      "summary": {
+        "sample_count": 8,
+        "passed": 4,
+        "failed": 4,
+        "retest_sample_ids": [
+          "S02",
+          "S03",
+          "S06",
+          "S08"
+        ]
+      },
+      "transport": "direct HTTPS; no SSH forwarding or controller relay",
+      "both_results_recomputed": true,
+      "sources_and_reads_verified": true,
+      "every_turn_raw_file_content_verified": true,
+      "real_execution_and_session_resume_verified": true,
+      "test_butlers_stopped": true
+    },
+    "checks": {
+      "a_doctor": {
+        "codex": {
+          "available": true,
+          "logged_in": true
+        },
+        "mailbox": {
+          "error": null,
+          "reachable_and_identity_matches": true
+        },
+        "model": {
+          "model": "deepseek-flash",
+          "provider": "deepseek",
+          "tool_roundtrip": "not_requested"
+        },
+        "note": "Without --probe-model, model inference and tool capability are not tested. Codex login status does not prove available inference quota.",
+        "ready": true
+      },
+      "b_doctor": {
+        "codex": {
+          "available": true,
+          "logged_in": true
+        },
+        "mailbox": {
+          "error": null,
+          "reachable_and_identity_matches": true
+        },
+        "model": {
+          "model": "deepseek-flash",
+          "provider": "deepseek",
+          "tool_roundtrip": "not_requested"
+        },
+        "note": "Without --probe-model, model inference and tool capability are not tested. Codex login status does not prove available inference quota.",
+        "ready": true
+      },
+      "no_ssh_tunnels": true,
+      "no_control_calls_seconds": 12,
+      "idle_no_extra_calls": true
+    },
+    "members": {
+      "a": {
+        "host": "trader",
+        "workflow_id": "a5ca91ba-da9f-4dd1-984a-1d80f508b678",
+        "state": "completed",
+        "codex_runs": 3,
+        "session_id": "01a113cf-6b5e-7033-b9ac-de72de5fe535",
+        "all_later_runs_resume_first_session": true,
+        "read_bytes_each_turn": [
+          1025,
+          1025,
+          1025
+        ],
+        "deepseek_calls": 3,
+        "sources": [
+          {
+            "member": "a",
+            "object_id": "f7faa611-e851-4515-be02-b7a741957791",
+            "path": "record.txt",
+            "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+            "version_id": "065be4e5-d396-4e75-a49b-7969a8ad6f94"
+          },
+          {
+            "member": "b",
+            "object_id": "fcdde12c-e7d1-4fd3-abf4-9d765a5136e4",
+            "path": "record.txt",
+            "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+            "version_id": "daef9853-0cc9-4f42-887f-2ff3245d30c3"
+          }
+        ],
+        "all_runs_exit_zero": true
+      },
+      "b": {
+        "host": "lakota",
+        "workflow_id": "185aa110-b149-4b02-a3c1-9f07520452c3",
+        "state": "completed",
+        "codex_runs": 2,
+        "session_id": "01a113d0-1208-7a13-ae3f-badf9cd20a35",
+        "all_later_runs_resume_first_session": true,
+        "read_bytes_each_turn": [
+          162,
+          162
+        ],
+        "deepseek_calls": 3,
+        "sources": [
+          {
+            "member": "b",
+            "object_id": "fcdde12c-e7d1-4fd3-abf4-9d765a5136e4",
+            "path": "record.txt",
+            "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+            "version_id": "daef9853-0cc9-4f42-887f-2ff3245d30c3"
+          },
+          {
+            "member": "a",
+            "object_id": "f7faa611-e851-4515-be02-b7a741957791",
+            "path": "record.txt",
+            "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+            "version_id": "065be4e5-d396-4e75-a49b-7969a8ad6f94"
+          }
+        ],
+        "all_runs_exit_zero": true
+      }
+    },
+    "cleanup": {
+      "test_butlers_stopped": true,
+      "team_mailbox_kept_running": true
+    }
+  },
+  "real_deepseek_tool_probe": {
+    "ready": true,
+    "mailbox": {
+      "reachable_and_identity_matches": true,
+      "error": null
+    },
+    "codex": {
+      "available": true,
+      "logged_in": true
+    },
+    "model": {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "tool_roundtrip": "passed"
+    },
+    "model_calls": 2
+  },
+  "release": {
+    "github_published": false,
+    "github_actions_executed": false,
+    "apple_silicon_preview_bundle": "dist/xxassxx-macos-arm64-preview.zip",
+    "apple_silicon_preview_sha256": "c379ed3f27fbdc8de1467579542196e2494bb4700e05a7b65900b359c70f4fd3",
+    "intel_macos_and_linux_musl": "configured in CI; not built/validated in this turn",
+    "signing_notarization": false
+  },
+  "not_implemented": [
+    "startup update check",
+    "Telegram output adapters",
+    "interactive TUI/task cards",
+    "live presence/heartbeat",
+    "dynamic enrollment/invitation expiry"
+  ],
+  "not_real_tested": [
+    "Ollama / specific Qwen model"
+  ],
+  "source_sha256": {
+    "src/butler.rs": "09ea5d578c269626d6a6b2cdd7bf96eaaa6e3b2d273ec6eb565cacfe33436401",
+    "src/butler_mcp.rs": "534fdafc8a3858c23c671fc6b4dc36ceae05782543b4f95b2a92787d42d97c68",
+    "src/cli.rs": "799138602787fd50931140ca66d59e5f2d9a2551283d5d1c25e8c13a8f008970",
+    "src/codex.rs": "4eda1eb0e5e1720250c179d2d6e15c508243608eebd50de2006603285e26d398",
+    "src/knowledge.rs": "2b439d7a0bb0d8c7362884ffec16fddd0d3f1648958645fd33fbe3298b4057bc",
+    "src/lib.rs": "6258d9be417321c7b9d2a2669679df324ae80dc3f70ac4750984715b2b924381",
+    "src/mailbox.rs": "9b7dc2c1ba1eef0702bf56abee908b9d5b8ac005839d6da4c6b203bc27c8f561",
+    "src/main.rs": "f4536f020f29bd7a878cf66e64aaa479c933e8e6f06ce9313ffb09e7a3ce08db",
+    "src/mcp.rs": "35c4868f45140782cb7144fb4d50491c576b0793d1117a5157887f1d37f1ef35",
+    "src/model.rs": "3543bd39cc9231008b44c4181fd5bbe29724dc5cd2fb1c926e882b7f728f0570",
+    "src/schema.sql": "35025d8bf47b618d686ba880eae33e07b2e13162bc554cde8aa1ff1d8d275fe2",
+    "src/schema_v2.sql": "2580d72c49293fe45ff0d3330a1015d1d4a955a9bd694cb726d9b7eddb27c1b9",
+    "src/schema_v3.sql": "8022d94758fa6ec6305d9baefe8843cd560eb29e630030e4cbfa1a5df67e7de7",
+    "src/secrets.rs": "d3e750e20c48925bad7d1205c19e066021f54218ec11e792da792db46818d714",
+    "src/service.rs": "855adc80bfa64a0724ff51866d5d16caf464ae3658bfc3644bf3d7a577267d4c",
+    "src/setup.rs": "bde9f0bacf4b43e9accc224eb387a3f4dc3b29777430371bba3e10bee61b30d5",
+    "src/store.rs": "69c6eed56d64bf0cf9e723e34f692eb5216d179e6927bdd627f752f8f1b6be6c",
+    "src/supervisor.rs": "4a26de9b1fef5b5813fd0cc4f76fa039a2121d0d609679867ec2e5b0bf0cba23",
+    "src/task_files.rs": "19c4f8fc931494a3572bf06be84c57e08e5ee376d7cee8d48edb613f5a17cab5",
+    "src/team.rs": "efcf26d3bca98ff81a8224b8034faabd5ed3b0401a7a50e5e9e2c04d8fc39147",
+    "src/workflow.rs": "cff16f2a48324a9e8491485a1946a56dff711258f225f02b6232f4a287a72158",
+    "src/workflow_cli.rs": "e35deb85d9b07121175e696b90f04660c66173b38d9ea319e7b16fa5395aeb9b",
+    "src/workflow_model.rs": "3693557e8e2129f487cd75eb89803c34e35ed7e1eb53c3e4c753636f1d45bba0",
+    "src/workflow_scheduler.rs": "f317b5b892f959e4427dc70c04b6e89c879ea72f16cd4bc18eb133557ba9c5c2",
+    "tests/collaboration.rs": "fd4f498de19e23938193b249afe14a5b4ecf17ec08600a046e917deba785c8fd",
+    "tests/common/mod.rs": "12fc8ab59222229a980bb2c09b865cd8bb550f8226b98d4552b767da36b239b1",
+    "tests/fixtures/codex.py": "a5d652c7f6b612915000e5d2c913fa5103dd2283316f1420a0792898f518d930",
+    "tests/fixtures/collaborator.py": "b01606980cdcafedb9ec1cb1c8269bf5373530f36354f52e94058f2d1a09748e",
+    "tests/integration.rs": "25bcef677a21c083e4ad792a6a732511a8aae4a2d7f5823bd664e80d8c217e9a",
+    "tests/knowledge.rs": "0fcd0c8f89d9970759f0348690cd31476cf91ef150364856621d1ae674a893ad",
+    "tests/model.rs": "f6f00ed03bc25c75fcf68b459c304a5a5383e610ded1ec9c9dd41531fa101681",
+    "tests/real_codex.rs": "05157f86840bc6cf46d1a5b141b36a14a157719e6cf30e58c60f87a3ca9d8a6c",
+    "tests/real_deepseek.rs": "2fecf4d7c9d5b7f2e9592c5a90261197a42c7e0c0a496bd06aa8b91cbb4eb466",
+    "tests/setup.rs": "01fb58a56f62a22d5fde84a75c1b48b7bae922eac44d928b7f6da0a1a600ecb7",
+    "tests/team.rs": "ab395c0f32726ecdf130305d4f648dc4821dc9d16acfa8b0e1cf79c4f7b21c88",
+    "tests/workflow.rs": "036ef6f4aa676d74cd52028a997ecc4c728245573a82dbfce4642a3366baaa41"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "status": "passed",
+  "model": "mock HTTP model",
+  "codex": "mock process",
+  "real_deepseek": "not_run",
+  "object_id": "4905f814-4439-4381-9c6f-f02acb70c1b0",
+  "v1": "b83a37c7-5428-49ba-9c9d-ac42b8d00263",
+  "v2": "b1a63216-b0a7-40bf-a6d8-a5bf433d3096",
+  "diff": {
+    "added": [],
+    "changed": [
+      "data.csv"
+    ],
+    "removed": []
+  },
+  "request_id": "d988840e-a0f8-4d7c-9265-8536ebec5f6f",
+  "followup_id": "da7e0453-4760-4789-a661-8885fa7a5a43",
+  "reply_id": "7b69d751-1aa2-5db1-b4a6-8ec15b75e15a",
+  "conversation_id": "c42c2d47-2a8c-5469-b841-1f6748d6e649",
+  "initiating_mcp_read_verified": true,
+  "offline_recovery_verified": true,
+  "old_export_sha256": "1a80986111952a11d02e84dbed98ae00f279469aad0615d17fa81911f8a6b428",
+  "verified_date": "2026-10-06",
+  "provenance": "scripts/demo.py; simulated model and Codex, actual Rust CLI/HTTP/SQLite/MCP",
+  "task_id": "931f5d6b-6217-4578-ba7e-bd2dbb3e4ccc",
+  "task_state": "succeeded",
+  "result": "MOCK_RESULT",
+  "delegation_state": "completed",
+  "run": {
+    "codex_version": "codex-cli mock-0.144.5",
+    "deadline": 1791323395,
+    "error_code": null,
+    "error_message": null,
+    "exit_code": 0,
+    "id": "c731113c-ae2e-43c8-a71f-8a4d9a6bbfcc",
+    "mcp_initialized": true,
+    "reads": 1,
+    "result": "MOCK_RESULT",
+    "resumed_session_id": null,
+    "sandbox": "read-only",
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "state": "succeeded",
+    "submissions": 1,
+    "task_id": "931f5d6b-6217-4578-ba7e-bd2dbb3e4ccc",
+    "turn_completed": true
+  },
+  "real_codex_phase2": "not_run",
+  "real_deepseek_reason": "DEEPSEEK_API_KEY missing",
+  "local_tests": {
+    "passed": 45,
+    "failed": 0,
+    "real_tests_ignored": 2
+  }
+}

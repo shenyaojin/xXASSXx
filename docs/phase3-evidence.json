@@ -1,0 +1,1539 @@
+{
+  "phase3_complete": true,
+  "final_demo": "用户选定：实验数据质控（phase3-qc-v1，合成材料），首次真实双机运行及独立验收通过",
+  "default_tests": {
+    "macos": 59,
+    "linux": 59,
+    "real_ignored": 2
+  },
+  "single_host": {
+    "status": "passed",
+    "run_id": "phase3-real-1bc36b35-fcdb-4c2b-8980-f2b78db64f3a",
+    "mode": "single_host_technical",
+    "transport": "loopback HTTP through SSH tunnels via Mac/controller; controller must stay connected",
+    "model": "deepseek-flash",
+    "real_codex": true,
+    "real_deepseek": true,
+    "checks": {
+      "a_real_tools_and_persisted_result": true,
+      "b_real_tools_and_persisted_result": true,
+      "idle_no_model_calls": true
+    },
+    "final_demo": "not_selected",
+    "members": {
+      "a": {
+        "workflow": {
+          "active_event": null,
+          "conversation_id": null,
+          "coordinated": true,
+          "created_at": 1791329121,
+          "deadline": 1791330321,
+          "error": null,
+          "goal": "Read the authorized JSON through task MCP. Submit a completed JSON body with probe copied exactly and total equal to the sum of values. Cite the read source.",
+          "id": "c7adb07a-dfb8-4767-9732-cf0372cb8dff",
+          "limits": {
+            "max_chunk_bytes": 8192,
+            "max_duration_secs": 1200,
+            "max_messages": 6,
+            "max_model_calls": 8,
+            "max_read_bytes": 262144,
+            "max_read_per_run": 65536,
+            "max_result_bytes": 8192,
+            "max_wakes": 6
+          },
+          "model_calls": 3,
+          "parent_request": null,
+          "peer": null,
+          "peer_workflow": null,
+          "read_bytes": 48,
+          "result": {
+            "action": "complete",
+            "body": "{\"probe\":\"5d636e402052\",\"total\":31}",
+            "reply_to": null,
+            "sources": [
+              {
+                "member": "a",
+                "object_id": "9eae3601-cc7c-4bc3-af0d-7726033af22d",
+                "path": "record.txt",
+                "sha256": "1338f74dbc40e5f8e4a63435f8012039e93ab3a629184faf4b2a600217edbccd",
+                "version_id": "acb03413-f95b-4d72-af73-1849beac0062"
+              }
+            ]
+          },
+          "role": "local",
+          "sent": 0,
+          "state": "completed",
+          "task_id": "ee39fe11-ca61-4fba-a08e-b0706e104c25",
+          "wakes": 1
+        },
+        "grants": [
+          {
+            "bytes": 48,
+            "member": "a",
+            "object_id": "9eae3601-cc7c-4bc3-af0d-7726033af22d",
+            "path": "record.txt",
+            "sha256": "1338f74dbc40e5f8e4a63435f8012039e93ab3a629184faf4b2a600217edbccd",
+            "version_id": "acb03413-f95b-4d72-af73-1849beac0062"
+          }
+        ],
+        "events": [
+          {
+            "created_at": 1791329121,
+            "id": "e8870c64-8d77-5d6b-a885-8cd869e7b8e3",
+            "kind": "start",
+            "message_id": null,
+            "run_id": "7994d4e6-716d-4217-9654-2b13ac40ea15",
+            "state": "done"
+          }
+        ],
+        "file_reads": [
+          {
+            "bytes": 48,
+            "object_id": "9eae3601-cc7c-4bc3-af0d-7726033af22d",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "7994d4e6-716d-4217-9654-2b13ac40ea15",
+            "sha256": "1338f74dbc40e5f8e4a63435f8012039e93ab3a629184faf4b2a600217edbccd",
+            "version_id": "acb03413-f95b-4d72-af73-1849beac0062"
+          }
+        ],
+        "messages": [],
+        "runs": [
+          {
+            "id": "7994d4e6-716d-4217-9654-2b13ac40ea15",
+            "state": "succeeded",
+            "session_id": "01a11389-4773-7753-be36-56a638d72bba",
+            "resumed_session_id": null,
+            "codex_version": "codex-cli 0.159.3",
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          }
+        ],
+        "model_runs": [
+          {
+            "id": "d2b5e0a6-6bf5-45df-ba29-d44c1951aef9",
+            "state": "succeeded",
+            "calls": 3,
+            "error": null,
+            "tools": [
+              {
+                "name": "inspect_workflow",
+                "tool_call_id": "call_00_aVIDdSzUPsx4IbxLRATJ8409",
+                "ok": true
+              },
+              {
+                "name": "dispatch_codex",
+                "tool_call_id": "call_00_NE4kzU54KZlS2Rvmc2cm8539",
+                "ok": true
+              }
+            ]
+          }
+        ]
+      },
+      "b": {
+        "workflow": {
+          "active_event": null,
+          "conversation_id": null,
+          "coordinated": true,
+          "created_at": 1791329122,
+          "deadline": 1791330322,
+          "error": null,
+          "goal": "Read the authorized JSON through task MCP. Submit a completed JSON body with probe copied exactly and total equal to the sum of values. Cite the read source.",
+          "id": "7feb44cd-1b3d-4992-99c9-7466efd7a23c",
+          "limits": {
+            "max_chunk_bytes": 8192,
+            "max_duration_secs": 1200,
+            "max_messages": 6,
+            "max_model_calls": 8,
+            "max_read_bytes": 262144,
+            "max_read_per_run": 65536,
+            "max_result_bytes": 8192,
+            "max_wakes": 6
+          },
+          "model_calls": 3,
+          "parent_request": null,
+          "peer": null,
+          "peer_workflow": null,
+          "read_bytes": 48,
+          "result": {
+            "action": "complete",
+            "body": "{\"probe\":\"79698c508d5a\",\"total\":31}",
+            "reply_to": null,
+            "sources": [
+              {
+                "member": "b",
+                "object_id": "a3027367-bc8c-4c61-af51-99cc9ad81122",
+                "path": "record.txt",
+                "sha256": "bd74f510b9a1033835cf438d99375c7e2d63e8649dd4cb74f4b340a64fc22b1b",
+                "version_id": "f2320eb0-ae69-4c72-9f6a-66790cd003e9"
+              }
+            ]
+          },
+          "role": "local",
+          "sent": 0,
+          "state": "completed",
+          "task_id": "8dbb08dd-bd1b-46fb-81f5-1e76203df53b",
+          "wakes": 1
+        },
+        "grants": [
+          {
+            "bytes": 48,
+            "member": "b",
+            "object_id": "a3027367-bc8c-4c61-af51-99cc9ad81122",
+            "path": "record.txt",
+            "sha256": "bd74f510b9a1033835cf438d99375c7e2d63e8649dd4cb74f4b340a64fc22b1b",
+            "version_id": "f2320eb0-ae69-4c72-9f6a-66790cd003e9"
+          }
+        ],
+        "events": [
+          {
+            "created_at": 1791329122,
+            "id": "df23506d-a95a-521b-a8a5-8dc0fde7893a",
+            "kind": "start",
+            "message_id": null,
+            "run_id": "a89e7229-c91e-498b-b700-c92049c431e7",
+            "state": "done"
+          }
+        ],
+        "file_reads": [
+          {
+            "bytes": 48,
+            "object_id": "a3027367-bc8c-4c61-af51-99cc9ad81122",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "a89e7229-c91e-498b-b700-c92049c431e7",
+            "sha256": "bd74f510b9a1033835cf438d99375c7e2d63e8649dd4cb74f4b340a64fc22b1b",
+            "version_id": "f2320eb0-ae69-4c72-9f6a-66790cd003e9"
+          }
+        ],
+        "messages": [],
+        "runs": [
+          {
+            "id": "a89e7229-c91e-498b-b700-c92049c431e7",
+            "state": "succeeded",
+            "session_id": "01a11389-4bdd-7de1-8fd9-1053c520bfc7",
+            "resumed_session_id": null,
+            "codex_version": "codex-cli 0.159.2",
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          }
+        ],
+        "model_runs": [
+          {
+            "id": "9ff39edd-aa32-4629-8c7e-76c9894762ec",
+            "state": "succeeded",
+            "calls": 3,
+            "error": null,
+            "tools": [
+              {
+                "name": "inspect_workflow",
+                "tool_call_id": "call_00_UNA5BJdZlcnr6txCZiwn4810",
+                "ok": true
+              },
+              {
+                "name": "dispatch_codex",
+                "tool_call_id": "call_00_x47OuBDLfkYv3wYjv3lk3402",
+                "ok": true
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "services_stopped": true
+  },
+  "two_host_technical": {
+    "status": "passed",
+    "run_id": "phase3-real-b2e0f60e-2881-465d-b07d-ef1aecf43c9f",
+    "mode": "two_host_technical",
+    "transport": "loopback HTTP through SSH tunnels via Mac/controller; controller must stay connected",
+    "model": "deepseek-flash",
+    "real_codex": true,
+    "real_deepseek": true,
+    "checks": {
+      "a_real_tools_and_persisted_result": true,
+      "b_real_tools_and_persisted_result": true,
+      "automatic_clarification_and_explicit_session_resume": true,
+      "idle_no_model_calls": true
+    },
+    "final_demo": "not_selected",
+    "members": {
+      "a": {
+        "workflow": {
+          "active_event": null,
+          "conversation_id": "09f481fc-67d0-557b-8c0e-f32a8ec3d163",
+          "coordinated": true,
+          "created_at": 1791329195,
+          "deadline": 1791330395,
+          "error": null,
+          "goal": "这是小型协议技术检查。读取你的校准规则文件，向 B 请求它所持批次测量的校准总量。你不知道 B 的批次代码；让 B 从自身材料确认批次，缺少对应校准参数时向你澄清。依据 B 提供的批次，只回复该批次所需参数，不传整个规则表。拿到 B 的校准总量后加上本地 local_offset，提交包含 final_total、简要推导和两端来源引用的最终 JSON body。",
+          "id": "1286445c-248a-4e3c-93e9-7a4ee198f3c9",
+          "limits": {
+            "max_chunk_bytes": 8192,
+            "max_duration_secs": 1200,
+            "max_messages": 6,
+            "max_model_calls": 8,
+            "max_read_bytes": 262144,
+            "max_read_per_run": 65536,
+            "max_result_bytes": 8192,
+            "max_wakes": 6
+          },
+          "model_calls": 3,
+          "parent_request": null,
+          "peer": "b",
+          "peer_workflow": "1b3b0c2b-3253-47ac-b5a5-1545a73162a1",
+          "read_bytes": 171,
+          "result": {
+            "action": "complete",
+            "body": "{\"batch\":\"p7\",\"calibrated_total\":27,\"local_offset\":2,\"final_total\":29,\"derivation\":\"B 的结果消息 91e84110-c61f-5f37-88f4-55bee23dc1b7 确认 raw 总量为 4 + 5 = 9，使用 A 提供的批次 p7 校准系数 3 得到校准总量 9 × 3 = 27。本地授权文件的 local_offset = 2，因此 final_total = 27 + 2 = 29。\",\"sources\":[{\"member\":\"a\",\"object_id\":\"6f551798-50f4-4651-8209-c604ea401810\",\"version_id\":\"0fddfdd2-fd17-4bff-bbbc-ef618f3a4370\",\"path\":\"record.txt\",\"sha256\":\"6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e\"},{\"member\":\"b\",\"object_id\":\"8416f88e-52b9-4b64-b2b5-58bd8dbf951c\",\"version_id\":\"a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691\",\"path\":\"record.txt\",\"sha256\":\"0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4\"}]}",
+            "reply_to": null,
+            "sources": [
+              {
+                "member": "a",
+                "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+                "path": "record.txt",
+                "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+                "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+              },
+              {
+                "member": "b",
+                "object_id": "8416f88e-52b9-4b64-b2b5-58bd8dbf951c",
+                "path": "record.txt",
+                "sha256": "0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4",
+                "version_id": "a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691"
+              }
+            ]
+          },
+          "role": "owner",
+          "sent": 2,
+          "state": "completed",
+          "task_id": "e483ce79-4e7c-41db-b0b1-9e09a16f176b",
+          "wakes": 3
+        },
+        "grants": [
+          {
+            "bytes": 57,
+            "member": "a",
+            "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+            "path": "record.txt",
+            "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+            "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+          }
+        ],
+        "events": [
+          {
+            "created_at": 1791329195,
+            "id": "87732037-7dba-586d-a2d2-ed65eb82bf34",
+            "kind": "start",
+            "message_id": null,
+            "run_id": "1bba8abc-8274-4f60-88bf-b07b53389f3f",
+            "state": "done"
+          },
+          {
+            "created_at": 1791329236,
+            "id": "b6842aaf-f676-524a-bf3a-cc51fddccdec",
+            "kind": "clarification",
+            "message_id": "70963aa8-e57f-552e-a659-6ab1c0fbb365",
+            "run_id": "9435dd0d-7d4d-4c4e-ae86-2da810aa9942",
+            "state": "done"
+          },
+          {
+            "created_at": 1791329273,
+            "id": "570cd220-8431-5a43-b28d-03e69007a6ad",
+            "kind": "result",
+            "message_id": "91e84110-c61f-5f37-88f4-55bee23dc1b7",
+            "run_id": "8d09a7bb-b450-4129-bb7e-6094657f3e10",
+            "state": "done"
+          }
+        ],
+        "file_reads": [
+          {
+            "bytes": 57,
+            "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "1bba8abc-8274-4f60-88bf-b07b53389f3f",
+            "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+            "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+          },
+          {
+            "bytes": 57,
+            "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "9435dd0d-7d4d-4c4e-ae86-2da810aa9942",
+            "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+            "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+          },
+          {
+            "bytes": 57,
+            "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "8d09a7bb-b450-4129-bb7e-6094657f3e10",
+            "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+            "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+          }
+        ],
+        "messages": [
+          {
+            "body": "请从你获授权的材料确认批次代码，并计算该批次测量的校准总量。如缺少该批次对应的校准参数，请先向我澄清并提供批次代码；我会仅回复该批次所需参数。请在最终结果中提供校准总量、简要推导及材料的精确来源引用。",
+            "conversation_id": "09f481fc-67d0-557b-8c0e-f32a8ec3d163",
+            "created_at": 1791329216,
+            "kind": "request",
+            "message_id": "a5055c00-2c8b-50f0-81b6-1f7d3fda5d47",
+            "object_id": null,
+            "operation": "workflow",
+            "recipient": "b",
+            "reply_to": null,
+            "sender": "a",
+            "version_id": null,
+            "workflow": {
+              "event": "request",
+              "sender_workflow": "1286445c-248a-4e3c-93e9-7a4ee198f3c9",
+              "sources": [
+                {
+                  "member": "a",
+                  "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+                  "path": "record.txt",
+                  "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+                  "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+                }
+              ],
+              "target_workflow": "1b3b0c2b-3253-47ac-b5a5-1545a73162a1"
+            }
+          },
+          {
+            "body": "授权 CSV 确认批次为 p7，raw 原始总量为 4 + 5 = 9。文件未提供校准系数，请提供批次 p7 对应的校准系数及其精确来源引用，以计算校准总量 9 × 系数。",
+            "conversation_id": "09f481fc-67d0-557b-8c0e-f32a8ec3d163",
+            "created_at": 1791329235,
+            "kind": "request",
+            "message_id": "70963aa8-e57f-552e-a659-6ab1c0fbb365",
+            "object_id": null,
+            "operation": "workflow",
+            "recipient": "a",
+            "reply_to": "a5055c00-2c8b-50f0-81b6-1f7d3fda5d47",
+            "sender": "b",
+            "version_id": null,
+            "workflow": {
+              "event": "clarification",
+              "sender_workflow": "1b3b0c2b-3253-47ac-b5a5-1545a73162a1",
+              "sources": [
+                {
+                  "member": "b",
+                  "object_id": "8416f88e-52b9-4b64-b2b5-58bd8dbf951c",
+                  "path": "record.txt",
+                  "sha256": "0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4",
+                  "version_id": "a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691"
+                }
+              ],
+              "target_workflow": "1286445c-248a-4e3c-93e9-7a4ee198f3c9"
+            }
+          },
+          {
+            "body": "批次 p7 对应的校准系数为 3（calibration_by_batch.p7）。请据此计算校准总量，并返回简要推导及两端精确来源引用。该参数来源：member=a，object_id=6f551798-50f4-4651-8209-c604ea401810，version_id=0fddfdd2-fd17-4bff-bbbc-ef618f3a4370，path=record.txt，sha256=6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e。",
+            "conversation_id": "09f481fc-67d0-557b-8c0e-f32a8ec3d163",
+            "created_at": 1791329251,
+            "kind": "reply",
+            "message_id": "4b99861a-fa21-56cc-9ac8-ed992c258cb5",
+            "object_id": null,
+            "operation": "workflow",
+            "recipient": "b",
+            "reply_to": "70963aa8-e57f-552e-a659-6ab1c0fbb365",
+            "sender": "a",
+            "version_id": null,
+            "workflow": {
+              "event": "answer",
+              "sender_workflow": "1286445c-248a-4e3c-93e9-7a4ee198f3c9",
+              "sources": [
+                {
+                  "member": "a",
+                  "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+                  "path": "record.txt",
+                  "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+                  "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+                }
+              ],
+              "target_workflow": "1b3b0c2b-3253-47ac-b5a5-1545a73162a1"
+            }
+          },
+          {
+            "body": "批次 p7 的校准总量为 27。授权 CSV 第 2、3 行的 raw 值分别为 4、5，原始总量为 4 + 5 = 9；A 在澄清回复（message_id=4b99861a-fa21-56cc-9ac8-ed992c258cb5）提供 calibration_by_batch.p7 = 3。因此校准总量 = Σraw × 校准系数 = 9 × 3 = 27。\n\n测量数据精确来源：member=b；object_id=8416f88e-52b9-4b64-b2b5-58bd8dbf951c；version_id=a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691；path=record.txt；sha256=0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4。\n校准系数精确来源（由 A 的澄清回复提供）：member=a；object_id=6f551798-50f4-4651-8209-c604ea401810；version_id=0fddfdd2-fd17-4bff-bbbc-ef618f3a4370；path=record.txt；sha256=6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e。",
+            "conversation_id": "09f481fc-67d0-557b-8c0e-f32a8ec3d163",
+            "created_at": 1791329272,
+            "kind": "reply",
+            "message_id": "91e84110-c61f-5f37-88f4-55bee23dc1b7",
+            "object_id": null,
+            "operation": "workflow",
+            "recipient": "a",
+            "reply_to": "a5055c00-2c8b-50f0-81b6-1f7d3fda5d47",
+            "sender": "b",
+            "version_id": null,
+            "workflow": {
+              "event": "result",
+              "sender_workflow": "1b3b0c2b-3253-47ac-b5a5-1545a73162a1",
+              "sources": [
+                {
+                  "member": "b",
+                  "object_id": "8416f88e-52b9-4b64-b2b5-58bd8dbf951c",
+                  "path": "record.txt",
+                  "sha256": "0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4",
+                  "version_id": "a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691"
+                },
+                {
+                  "member": "a",
+                  "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+                  "path": "record.txt",
+                  "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+                  "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+                }
+              ],
+              "target_workflow": "1286445c-248a-4e3c-93e9-7a4ee198f3c9"
+            }
+          }
+        ],
+        "runs": [
+          {
+            "id": "1bba8abc-8274-4f60-88bf-b07b53389f3f",
+            "state": "succeeded",
+            "session_id": "01a1138a-61f1-7bd0-8b09-b0ddf180dce8",
+            "resumed_session_id": null,
+            "codex_version": "codex-cli 0.159.3",
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          },
+          {
+            "id": "9435dd0d-7d4d-4c4e-ae86-2da810aa9942",
+            "state": "succeeded",
+            "session_id": "01a1138a-61f1-7bd0-8b09-b0ddf180dce8",
+            "resumed_session_id": "01a1138a-61f1-7bd0-8b09-b0ddf180dce8",
+            "codex_version": "codex-cli 0.159.3",
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          },
+          {
+            "id": "8d09a7bb-b450-4129-bb7e-6094657f3e10",
+            "state": "succeeded",
+            "session_id": "01a1138a-61f1-7bd0-8b09-b0ddf180dce8",
+            "resumed_session_id": "01a1138a-61f1-7bd0-8b09-b0ddf180dce8",
+            "codex_version": "codex-cli 0.159.3",
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          }
+        ],
+        "model_runs": [
+          {
+            "id": "161d0b11-59de-4b6f-a7d1-02770fcdceaf",
+            "state": "succeeded",
+            "calls": 3,
+            "error": null,
+            "tools": [
+              {
+                "name": "inspect_workflow",
+                "tool_call_id": "call_00_VRvIJEFOA1HCLoi7Q2Zy7982",
+                "ok": true
+              },
+              {
+                "name": "dispatch_codex",
+                "tool_call_id": "call_00_CLwILZfnGYTzRxjKRloL9295",
+                "ok": true
+              }
+            ]
+          }
+        ]
+      },
+      "b": {
+        "workflow": {
+          "active_event": null,
+          "conversation_id": "09f481fc-67d0-557b-8c0e-f32a8ec3d163",
+          "coordinated": true,
+          "created_at": 1791329194,
+          "deadline": 1791330417,
+          "error": null,
+          "goal": "使用授权的 CSV 处理 A 请求。校准总量定义为 raw 列求和乘该批次的校准系数。CSV 不含校准系数，不能自行假定；读取确认批次后，通过绑定的协作工具向 A 澄清该批次系数。收到补充信息后在同一任务中继续，给出批次、原始总量、系数和校准总量，附来源引用。不要访问其他文件或使用 shell。",
+          "id": "1b3b0c2b-3253-47ac-b5a5-1545a73162a1",
+          "limits": {
+            "max_chunk_bytes": 8192,
+            "max_duration_secs": 1200,
+            "max_messages": 6,
+            "max_model_calls": 8,
+            "max_read_bytes": 262144,
+            "max_read_per_run": 65536,
+            "max_result_bytes": 8192,
+            "max_wakes": 6
+          },
+          "model_calls": 3,
+          "parent_request": "a5055c00-2c8b-50f0-81b6-1f7d3fda5d47",
+          "peer": "a",
+          "peer_workflow": "1286445c-248a-4e3c-93e9-7a4ee198f3c9",
+          "read_bytes": 62,
+          "result": {
+            "action": "complete",
+            "body": "批次 p7 的校准总量为 27。授权 CSV 第 2、3 行的 raw 值分别为 4、5，原始总量为 4 + 5 = 9；A 在澄清回复（message_id=4b99861a-fa21-56cc-9ac8-ed992c258cb5）提供 calibration_by_batch.p7 = 3。因此校准总量 = Σraw × 校准系数 = 9 × 3 = 27。\n\n测量数据精确来源：member=b；object_id=8416f88e-52b9-4b64-b2b5-58bd8dbf951c；version_id=a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691；path=record.txt；sha256=0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4。\n校准系数精确来源（由 A 的澄清回复提供）：member=a；object_id=6f551798-50f4-4651-8209-c604ea401810；version_id=0fddfdd2-fd17-4bff-bbbc-ef618f3a4370；path=record.txt；sha256=6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e。",
+            "reply_to": null,
+            "sources": [
+              {
+                "member": "b",
+                "object_id": "8416f88e-52b9-4b64-b2b5-58bd8dbf951c",
+                "path": "record.txt",
+                "sha256": "0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4",
+                "version_id": "a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691"
+              },
+              {
+                "member": "a",
+                "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+                "path": "record.txt",
+                "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+                "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+              }
+            ]
+          },
+          "role": "peer",
+          "sent": 2,
+          "state": "completed",
+          "task_id": "b3245f85-c641-4eff-8397-bd631270a831",
+          "wakes": 2
+        },
+        "grants": [
+          {
+            "bytes": 31,
+            "member": "b",
+            "object_id": "8416f88e-52b9-4b64-b2b5-58bd8dbf951c",
+            "path": "record.txt",
+            "sha256": "0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4",
+            "version_id": "a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691"
+          }
+        ],
+        "events": [
+          {
+            "created_at": 1791329217,
+            "id": "cb7dc7b6-16ba-59f9-b2b6-9bdb761c31af",
+            "kind": "request",
+            "message_id": "a5055c00-2c8b-50f0-81b6-1f7d3fda5d47",
+            "run_id": "f15bb955-04f4-45a9-b898-1db3d1b57507",
+            "state": "done"
+          },
+          {
+            "created_at": 1791329253,
+            "id": "331263ab-2740-5540-8523-c181a8fb1145",
+            "kind": "answer",
+            "message_id": "4b99861a-fa21-56cc-9ac8-ed992c258cb5",
+            "run_id": "daa0d77e-94aa-4fd4-ba46-b2115c5d79d8",
+            "state": "done"
+          }
+        ],
+        "file_reads": [
+          {
+            "bytes": 31,
+            "object_id": "8416f88e-52b9-4b64-b2b5-58bd8dbf951c",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "f15bb955-04f4-45a9-b898-1db3d1b57507",
+            "sha256": "0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4",
+            "version_id": "a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691"
+          },
+          {
+            "bytes": 31,
+            "object_id": "8416f88e-52b9-4b64-b2b5-58bd8dbf951c",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "daa0d77e-94aa-4fd4-ba46-b2115c5d79d8",
+            "sha256": "0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4",
+            "version_id": "a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691"
+          }
+        ],
+        "messages": [
+          {
+            "body": "请从你获授权的材料确认批次代码，并计算该批次测量的校准总量。如缺少该批次对应的校准参数，请先向我澄清并提供批次代码；我会仅回复该批次所需参数。请在最终结果中提供校准总量、简要推导及材料的精确来源引用。",
+            "conversation_id": "09f481fc-67d0-557b-8c0e-f32a8ec3d163",
+            "created_at": 1791329216,
+            "kind": "request",
+            "message_id": "a5055c00-2c8b-50f0-81b6-1f7d3fda5d47",
+            "object_id": null,
+            "operation": "workflow",
+            "recipient": "b",
+            "reply_to": null,
+            "sender": "a",
+            "version_id": null,
+            "workflow": {
+              "event": "request",
+              "sender_workflow": "1286445c-248a-4e3c-93e9-7a4ee198f3c9",
+              "sources": [
+                {
+                  "member": "a",
+                  "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+                  "path": "record.txt",
+                  "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+                  "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+                }
+              ],
+              "target_workflow": "1b3b0c2b-3253-47ac-b5a5-1545a73162a1"
+            }
+          },
+          {
+            "body": "授权 CSV 确认批次为 p7，raw 原始总量为 4 + 5 = 9。文件未提供校准系数，请提供批次 p7 对应的校准系数及其精确来源引用，以计算校准总量 9 × 系数。",
+            "conversation_id": "09f481fc-67d0-557b-8c0e-f32a8ec3d163",
+            "created_at": 1791329235,
+            "kind": "request",
+            "message_id": "70963aa8-e57f-552e-a659-6ab1c0fbb365",
+            "object_id": null,
+            "operation": "workflow",
+            "recipient": "a",
+            "reply_to": "a5055c00-2c8b-50f0-81b6-1f7d3fda5d47",
+            "sender": "b",
+            "version_id": null,
+            "workflow": {
+              "event": "clarification",
+              "sender_workflow": "1b3b0c2b-3253-47ac-b5a5-1545a73162a1",
+              "sources": [
+                {
+                  "member": "b",
+                  "object_id": "8416f88e-52b9-4b64-b2b5-58bd8dbf951c",
+                  "path": "record.txt",
+                  "sha256": "0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4",
+                  "version_id": "a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691"
+                }
+              ],
+              "target_workflow": "1286445c-248a-4e3c-93e9-7a4ee198f3c9"
+            }
+          },
+          {
+            "body": "批次 p7 对应的校准系数为 3（calibration_by_batch.p7）。请据此计算校准总量，并返回简要推导及两端精确来源引用。该参数来源：member=a，object_id=6f551798-50f4-4651-8209-c604ea401810，version_id=0fddfdd2-fd17-4bff-bbbc-ef618f3a4370，path=record.txt，sha256=6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e。",
+            "conversation_id": "09f481fc-67d0-557b-8c0e-f32a8ec3d163",
+            "created_at": 1791329251,
+            "kind": "reply",
+            "message_id": "4b99861a-fa21-56cc-9ac8-ed992c258cb5",
+            "object_id": null,
+            "operation": "workflow",
+            "recipient": "b",
+            "reply_to": "70963aa8-e57f-552e-a659-6ab1c0fbb365",
+            "sender": "a",
+            "version_id": null,
+            "workflow": {
+              "event": "answer",
+              "sender_workflow": "1286445c-248a-4e3c-93e9-7a4ee198f3c9",
+              "sources": [
+                {
+                  "member": "a",
+                  "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+                  "path": "record.txt",
+                  "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+                  "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+                }
+              ],
+              "target_workflow": "1b3b0c2b-3253-47ac-b5a5-1545a73162a1"
+            }
+          },
+          {
+            "body": "批次 p7 的校准总量为 27。授权 CSV 第 2、3 行的 raw 值分别为 4、5，原始总量为 4 + 5 = 9；A 在澄清回复（message_id=4b99861a-fa21-56cc-9ac8-ed992c258cb5）提供 calibration_by_batch.p7 = 3。因此校准总量 = Σraw × 校准系数 = 9 × 3 = 27。\n\n测量数据精确来源：member=b；object_id=8416f88e-52b9-4b64-b2b5-58bd8dbf951c；version_id=a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691；path=record.txt；sha256=0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4。\n校准系数精确来源（由 A 的澄清回复提供）：member=a；object_id=6f551798-50f4-4651-8209-c604ea401810；version_id=0fddfdd2-fd17-4bff-bbbc-ef618f3a4370；path=record.txt；sha256=6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e。",
+            "conversation_id": "09f481fc-67d0-557b-8c0e-f32a8ec3d163",
+            "created_at": 1791329272,
+            "kind": "reply",
+            "message_id": "91e84110-c61f-5f37-88f4-55bee23dc1b7",
+            "object_id": null,
+            "operation": "workflow",
+            "recipient": "a",
+            "reply_to": "a5055c00-2c8b-50f0-81b6-1f7d3fda5d47",
+            "sender": "b",
+            "version_id": null,
+            "workflow": {
+              "event": "result",
+              "sender_workflow": "1b3b0c2b-3253-47ac-b5a5-1545a73162a1",
+              "sources": [
+                {
+                  "member": "b",
+                  "object_id": "8416f88e-52b9-4b64-b2b5-58bd8dbf951c",
+                  "path": "record.txt",
+                  "sha256": "0f6b74b912ef975c7039dc6724972c83a2edad5dc6ea140ac5956e57a8574bb4",
+                  "version_id": "a2d0b7a2-48a0-4ca2-bd67-adb14c1c5691"
+                },
+                {
+                  "member": "a",
+                  "object_id": "6f551798-50f4-4651-8209-c604ea401810",
+                  "path": "record.txt",
+                  "sha256": "6b21ab71fc71ade211e0d592c7104b38049e957f141ed2a307f134d3cd4b7f1e",
+                  "version_id": "0fddfdd2-fd17-4bff-bbbc-ef618f3a4370"
+                }
+              ],
+              "target_workflow": "1286445c-248a-4e3c-93e9-7a4ee198f3c9"
+            }
+          }
+        ],
+        "runs": [
+          {
+            "id": "f15bb955-04f4-45a9-b898-1db3d1b57507",
+            "state": "succeeded",
+            "session_id": "01a1138a-bbab-77e3-97b5-d6c4a0964c3d",
+            "resumed_session_id": null,
+            "codex_version": "codex-cli 0.159.2",
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          },
+          {
+            "id": "daa0d77e-94aa-4fd4-ba46-b2115c5d79d8",
+            "state": "succeeded",
+            "session_id": "01a1138a-bbab-77e3-97b5-d6c4a0964c3d",
+            "resumed_session_id": "01a1138a-bbab-77e3-97b5-d6c4a0964c3d",
+            "codex_version": "codex-cli 0.159.2",
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          }
+        ],
+        "model_runs": [
+          {
+            "id": "f790453b-6aa4-41d4-bb87-2194a77efdec",
+            "state": "succeeded",
+            "calls": 3,
+            "error": null,
+            "tools": [
+              {
+                "name": "inspect_workflow",
+                "tool_call_id": "call_00_hwLmRUAnQORtHCCNShjR9008",
+                "ok": true
+              },
+              {
+                "name": "dispatch_codex",
+                "tool_call_id": "call_00_Skd4yyhg5BcOKdqx4RZ63558",
+                "ok": true
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "services_stopped": true
+  },
+  "independent_check": {
+    "passed": true,
+    "expected": 29,
+    "actual": 29,
+    "method": "Independently parse original synthetic CSV and JSON; recompute and verify both SHA-256 references against final result",
+    "both_granted_source_hashes_match": true
+  },
+  "phase3_completed_date": "2026-10-06",
+  "timezone": "America/Denver",
+  "two_host_qc": {
+    "status": "passed",
+    "run_id": "phase3-real-e03420f2-0617-47ec-b2e0-3caadd05db34",
+    "mode": "reviewed_case",
+    "transport": "loopback HTTP through SSH tunnels via Mac/controller; controller must stay connected",
+    "model": "deepseek-flash",
+    "real_codex": true,
+    "real_deepseek": true,
+    "checks": {
+      "a_real_tools_and_persisted_result": true,
+      "b_real_tools_and_persisted_result": true,
+      "automatic_clarification_and_explicit_session_resume": true,
+      "idle_no_model_calls": true
+    },
+    "final_demo": "第三阶段最终验收候选：双机实验数据质控（全部为合成材料）",
+    "hosts": {
+      "a": {
+        "alias": "trader",
+        "root": "/home/ubuntu/xxassxx-tests/phase3-real-e03420f2-0617-47ec-b2e0-3caadd05db34",
+        "host": "VM-0-8-ubuntu",
+        "binary_sha256": "72ae3b82ab0e57a33978e329cd004e7aa76ee0fbe6c9f567b5314f1346736424"
+      },
+      "b": {
+        "alias": "lakota",
+        "root": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/phase3-real-e03420f2-0617-47ec-b2e0-3caadd05db34",
+        "host": "lakota.mines.edu",
+        "binary_sha256": "72ae3b82ab0e57a33978e329cd004e7aa76ee0fbe6c9f567b5314f1346736424"
+      }
+    },
+    "workflows": {
+      "b": "1b08c16f-ce39-43ee-84e4-c2a4831473d9",
+      "a": "dacbd9cb-96b0-418c-ab1c-acbc0a3555f1"
+    },
+    "output_directory": "smoke-output/phase3-qc-final-1",
+    "attempts": 1,
+    "independent_check": {
+      "passed": true,
+      "case_id": "phase3-qc-v1",
+      "summary": {
+        "sample_count": 8,
+        "passed": 4,
+        "failed": 4,
+        "retest_sample_ids": [
+          "S02",
+          "S03",
+          "S06",
+          "S08"
+        ]
+      },
+      "checked": "Both results recomputed from input bytes; file reads, exact citations, original session resume, raw events and cleanup verified"
+    },
+    "raw_event_check": {
+      "passed": true,
+      "method": "Read-only per-run inspection of original Codex JSON events; compare actual MCP-returned text byte-for-byte with each assigned material and verify tools, actions, thread IDs and completion.",
+      "members": {
+        "a": [
+          {
+            "run_id": "85dee4dc-20a8-4c7d-b86e-60b1032f6eba",
+            "session_id": "01a113a1-6353-7432-bc5c-cd320ae1c6b2",
+            "resumed_session_id": null,
+            "completed_tools": [
+              "get_task",
+              "read_task_file",
+              "submit_collaboration_turn"
+            ],
+            "read_bytes": 1025,
+            "read_text_matches_assigned_material": true,
+            "source": {
+              "member": "a",
+              "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+              "path": "record.txt",
+              "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+              "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+            },
+            "submitted_action": "ask",
+            "thread_started_matches_saved_session": true,
+            "turn_completed": true
+          },
+          {
+            "run_id": "98b8210f-6e61-4f11-b21e-4aaae0ca6668",
+            "session_id": "01a113a1-6353-7432-bc5c-cd320ae1c6b2",
+            "resumed_session_id": "01a113a1-6353-7432-bc5c-cd320ae1c6b2",
+            "completed_tools": [
+              "get_task",
+              "read_task_file",
+              "submit_collaboration_turn"
+            ],
+            "read_bytes": 1025,
+            "read_text_matches_assigned_material": true,
+            "source": {
+              "member": "a",
+              "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+              "path": "record.txt",
+              "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+              "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+            },
+            "submitted_action": "reply",
+            "thread_started_matches_saved_session": true,
+            "turn_completed": true
+          },
+          {
+            "run_id": "5fa356ff-72db-4a5c-b42b-181ce847930a",
+            "session_id": "01a113a1-6353-7432-bc5c-cd320ae1c6b2",
+            "resumed_session_id": "01a113a1-6353-7432-bc5c-cd320ae1c6b2",
+            "completed_tools": [
+              "get_task",
+              "read_task_file",
+              "submit_collaboration_turn"
+            ],
+            "read_bytes": 1025,
+            "read_text_matches_assigned_material": true,
+            "source": {
+              "member": "a",
+              "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+              "path": "record.txt",
+              "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+              "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+            },
+            "submitted_action": "complete",
+            "thread_started_matches_saved_session": true,
+            "turn_completed": true
+          }
+        ],
+        "b": [
+          {
+            "run_id": "d7a80fe1-0722-4f0f-9a4c-24eea6f49672",
+            "session_id": "01a113a1-c4a3-7302-8f68-d234e9390300",
+            "resumed_session_id": null,
+            "completed_tools": [
+              "get_task",
+              "read_task_file",
+              "submit_collaboration_turn"
+            ],
+            "read_bytes": 162,
+            "read_text_matches_assigned_material": true,
+            "source": {
+              "member": "b",
+              "object_id": "4e4eb3dc-7c1a-4164-90c1-f058ee7cc854",
+              "path": "record.txt",
+              "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+              "version_id": "4e8a104b-28dc-43eb-9eb9-59e65a79119d"
+            },
+            "submitted_action": "ask",
+            "thread_started_matches_saved_session": true,
+            "turn_completed": true
+          },
+          {
+            "run_id": "94b1456b-9715-479f-9a7b-aa7aa5cc343f",
+            "session_id": "01a113a1-c4a3-7302-8f68-d234e9390300",
+            "resumed_session_id": "01a113a1-c4a3-7302-8f68-d234e9390300",
+            "completed_tools": [
+              "get_task",
+              "read_task_file",
+              "submit_collaboration_turn"
+            ],
+            "read_bytes": 162,
+            "read_text_matches_assigned_material": true,
+            "source": {
+              "member": "b",
+              "object_id": "4e4eb3dc-7c1a-4164-90c1-f058ee7cc854",
+              "path": "record.txt",
+              "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+              "version_id": "4e8a104b-28dc-43eb-9eb9-59e65a79119d"
+            },
+            "submitted_action": "complete",
+            "thread_started_matches_saved_session": true,
+            "turn_completed": true
+          }
+        ]
+      }
+    },
+    "cleanup_check": {
+      "remote": {
+        "trader": {
+          "matching_test_processes": [],
+          "recorded_pids_present": {
+            "1491835": false,
+            "1491794": false
+          },
+          "run_directory_retained": true
+        },
+        "lakota": {
+          "matching_test_processes": [],
+          "recorded_pids_present": {
+            "2022364": false
+          },
+          "run_directory_retained": true
+        }
+      },
+      "controller": {
+        "control_directories_removed": true,
+        "remaining_matching_ssh_processes": []
+      },
+      "mailbox_stopped_exit_code": 0,
+      "passed": true
+    },
+    "cleanup": {
+      "trader": {
+        "alive": false,
+        "error": null,
+        "instance": "9739dc4c-1953-4919-b6bf-2ec0af73d9ef",
+        "log_path": "/home/ubuntu/xxassxx-tests/phase3-real-e03420f2-0617-47ec-b2e0-3caadd05db34/member.sqlite3.service/butler.log",
+        "pid": 1491835,
+        "state": "stopped",
+        "updated_at": 1791330831
+      },
+      "lakota": {
+        "alive": false,
+        "error": null,
+        "instance": "76e8e0ea-7735-44eb-b5da-d13884eea2d8",
+        "log_path": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/phase3-real-e03420f2-0617-47ec-b2e0-3caadd05db34/member.sqlite3.service/butler.log",
+        "pid": 2022364,
+        "state": "stopped",
+        "updated_at": 1791330834
+      },
+      "mailbox": "stopped"
+    },
+    "preflight": {
+      "trader": {
+        "host": "VM-0-8-ubuntu",
+        "binary": "/home/ubuntu/xxassxx-tests/phase3-build-7fe212bd-cd5d-445c-abf6-789722bd4aa3/bin/xxassxx",
+        "binary_executable": true,
+        "binary_sha256": "72ae3b82ab0e57a33978e329cd004e7aa76ee0fbe6c9f567b5314f1346736424",
+        "codex": "/home/ubuntu/.local/bin/codex",
+        "codex_version": "codex-cli 0.159.3",
+        "codex_version_exit": 0,
+        "codex_logged_in": true,
+        "secret_file": "/home/ubuntu/.config/xxassxx/secrets.env",
+        "secret_regular": true,
+        "secret_mode": "0o600",
+        "secret_owned_by_user": true,
+        "secret_readable": true,
+        "secret_nonempty": true,
+        "mock_environment_present": false
+      },
+      "lakota": {
+        "host": "lakota.mines.edu",
+        "python_version": "3.12.14",
+        "binary": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/phase3-build-7fe212bd-cd5d-445c-abf6-789722bd4aa3/bin/xxassxx",
+        "binary_executable": true,
+        "binary_sha256": "72ae3b82ab0e57a33978e329cd004e7aa76ee0fbe6c9f567b5314f1346736424",
+        "codex": "/rcp/rcp42/home/shenyaojin/.nvm/versions/node/v22.18.0/bin/codex",
+        "codex_version": "codex-cli 0.159.2",
+        "codex_version_exit": 0,
+        "codex_logged_in": true,
+        "secret_file": "/rcp/rcp42/home/shenyaojin/.config/xxassxx/secrets.env",
+        "secret_regular": true,
+        "secret_mode": "0o600",
+        "secret_owned_by_user": true,
+        "secret_readable": true,
+        "secret_nonempty": true,
+        "mock_environment_present": false
+      }
+    },
+    "build_source_check": {
+      "archive": "smoke-output/phase3-build-7fe212bd-cd5d-445c-abf6-789722bd4aa3/source-verified.tar.gz",
+      "archive_sha256": "c644dc794d94f181ef8561d1bcf2fbadfb4436972149d36fc75fe23528d37a03",
+      "current_source_matches_verified_build": true,
+      "checked_files": [
+        "Cargo.lock",
+        "Cargo.toml",
+        "src/butler.rs",
+        "src/butler_mcp.rs",
+        "src/cli.rs",
+        "src/codex.rs",
+        "src/knowledge.rs",
+        "src/lib.rs",
+        "src/mailbox.rs",
+        "src/main.rs",
+        "src/mcp.rs",
+        "src/model.rs",
+        "src/schema.sql",
+        "src/schema_v2.sql",
+        "src/schema_v3.sql",
+        "src/secrets.rs",
+        "src/service.rs",
+        "src/store.rs",
+        "src/supervisor.rs",
+        "src/task_files.rs",
+        "src/team.rs",
+        "src/workflow.rs",
+        "src/workflow_cli.rs",
+        "src/workflow_model.rs",
+        "src/workflow_scheduler.rs",
+        "tests/collaboration.rs",
+        "tests/common/mod.rs",
+        "tests/fixtures/codex.py",
+        "tests/fixtures/collaborator.py",
+        "tests/integration.rs",
+        "tests/knowledge.rs",
+        "tests/model.rs",
+        "tests/real_codex.rs",
+        "tests/real_deepseek.rs",
+        "tests/team.rs",
+        "tests/workflow.rs"
+      ]
+    },
+    "members": {
+      "a": {
+        "workflow": {
+          "id": "dacbd9cb-96b0-418c-ab1c-acbc0a3555f1",
+          "task_id": "bd4ac9c5-51b8-402e-8443-1e95bff5e29b",
+          "state": "completed",
+          "role": "owner",
+          "peer": "b",
+          "conversation_id": "8a0ee834-af66-5d62-9efe-f4975d7d2d5c",
+          "limits": {
+            "max_chunk_bytes": 8192,
+            "max_duration_secs": 1200,
+            "max_messages": 6,
+            "max_model_calls": 8,
+            "max_read_bytes": 262144,
+            "max_read_per_run": 65536,
+            "max_result_bytes": 8192,
+            "max_wakes": 6
+          },
+          "model_calls": 3,
+          "wakes": 3,
+          "read_bytes": 3075,
+          "sent": 2
+        },
+        "grants": [
+          {
+            "bytes": 1025,
+            "member": "a",
+            "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+            "path": "record.txt",
+            "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+            "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+          }
+        ],
+        "file_reads": [
+          {
+            "bytes": 1025,
+            "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "85dee4dc-20a8-4c7d-b86e-60b1032f6eba",
+            "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+            "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+          },
+          {
+            "bytes": 1025,
+            "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "98b8210f-6e61-4f11-b21e-4aaae0ca6668",
+            "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+            "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+          },
+          {
+            "bytes": 1025,
+            "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "5fa356ff-72db-4a5c-b42b-181ce847930a",
+            "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+            "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+          }
+        ],
+        "runs": [
+          {
+            "id": "85dee4dc-20a8-4c7d-b86e-60b1032f6eba",
+            "state": "succeeded",
+            "session_id": "01a113a1-6353-7432-bc5c-cd320ae1c6b2",
+            "resumed_session_id": null,
+            "codex_version": "codex-cli 0.159.3",
+            "mcp_initialized": true,
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          },
+          {
+            "id": "98b8210f-6e61-4f11-b21e-4aaae0ca6668",
+            "state": "succeeded",
+            "session_id": "01a113a1-6353-7432-bc5c-cd320ae1c6b2",
+            "resumed_session_id": "01a113a1-6353-7432-bc5c-cd320ae1c6b2",
+            "codex_version": "codex-cli 0.159.3",
+            "mcp_initialized": true,
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          },
+          {
+            "id": "5fa356ff-72db-4a5c-b42b-181ce847930a",
+            "state": "succeeded",
+            "session_id": "01a113a1-6353-7432-bc5c-cd320ae1c6b2",
+            "resumed_session_id": "01a113a1-6353-7432-bc5c-cd320ae1c6b2",
+            "codex_version": "codex-cli 0.159.3",
+            "mcp_initialized": true,
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          }
+        ],
+        "model_runs": [
+          {
+            "id": "ea2eb95f-ddfd-41b3-87e8-18d4144522d4",
+            "state": "succeeded",
+            "calls": 3,
+            "error": null,
+            "tools": [
+              {
+                "name": "inspect_workflow",
+                "tool_call_id": "call_00_eiTUXoh9vRFNOnZISy7X3081",
+                "ok": true
+              },
+              {
+                "name": "dispatch_codex",
+                "tool_call_id": "call_00_E7PInd8ywMXGFmEd6Uwr1515",
+                "ok": true
+              }
+            ]
+          }
+        ],
+        "result": {
+          "action": "complete",
+          "body": "{\"case_id\":\"phase3-qc-v1\",\"protocol_id\":\"FL-QC-02\",\"samples\":[{\"sample_id\":\"S01\",\"batch\":\"p7\",\"corrected\":[20.000,22.000,24.000],\"mean\":22.000,\"spread\":4.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S02\",\"batch\":\"p7\",\"corrected\":[14.000,16.000,18.000],\"mean\":16.000,\"spread\":4.000,\"status\":\"fail\",\"reasons\":[\"mean_below_min\"]},{\"sample_id\":\"S03\",\"batch\":\"p7\",\"corrected\":[20.000,26.000,32.000],\"mean\":26.000,\"spread\":12.000,\"status\":\"fail\",\"reasons\":[\"spread_exceeded\"]},{\"sample_id\":\"S04\",\"batch\":\"p7\",\"corrected\":[50.000,50.000,50.000],\"mean\":50.000,\"spread\":0.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S05\",\"batch\":\"q4\",\"corrected\":[20.000,20.000,20.000],\"mean\":20.000,\"spread\":0.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S06\",\"batch\":\"q4\",\"corrected\":[52.000,53.000,54.000],\"mean\":53.000,\"spread\":2.000,\"status\":\"fail\",\"reasons\":[\"mean_above_max\"]},{\"sample_id\":\"S07\",\"batch\":\"q4\",\"corrected\":[21.000,24.000,27.000],\"mean\":24.000,\"spread\":6.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S08\",\"batch\":\"q4\",\"corrected\":[8.000,18.000,28.000],\"mean\":18.000,\"spread\":20.000,\"status\":\"fail\",\"reasons\":[\"mean_below_min\",\"spread_exceeded\"]}],\"summary\":{\"sample_count\":8,\"passed\":4,\"failed\":4,\"retest_sample_ids\":[\"S02\",\"S03\",\"S06\",\"S08\"]},\"human_summary\":\"依据 FL-QC-02 复核全部8个样本，4个通过、4个未通过，S02、S03、S06和S08需复测。\"}",
+          "reply_to": null,
+          "sources": [
+            {
+              "member": "a",
+              "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+              "path": "record.txt",
+              "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+              "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+            },
+            {
+              "member": "b",
+              "object_id": "4e4eb3dc-7c1a-4164-90c1-f058ee7cc854",
+              "path": "record.txt",
+              "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+              "version_id": "4e8a104b-28dc-43eb-9eb9-59e65a79119d"
+            }
+          ]
+        }
+      },
+      "b": {
+        "workflow": {
+          "id": "1b08c16f-ce39-43ee-84e4-c2a4831473d9",
+          "task_id": "c2a4ceb1-8a05-4553-af61-dd99cc6587a9",
+          "state": "completed",
+          "role": "peer",
+          "peer": "a",
+          "conversation_id": "8a0ee834-af66-5d62-9efe-f4975d7d2d5c",
+          "limits": {
+            "max_chunk_bytes": 8192,
+            "max_duration_secs": 1200,
+            "max_messages": 6,
+            "max_model_calls": 8,
+            "max_read_bytes": 262144,
+            "max_read_per_run": 65536,
+            "max_result_bytes": 8192,
+            "max_wakes": 6
+          },
+          "model_calls": 3,
+          "wakes": 2,
+          "read_bytes": 324,
+          "sent": 2
+        },
+        "grants": [
+          {
+            "bytes": 162,
+            "member": "b",
+            "object_id": "4e4eb3dc-7c1a-4164-90c1-f058ee7cc854",
+            "path": "record.txt",
+            "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+            "version_id": "4e8a104b-28dc-43eb-9eb9-59e65a79119d"
+          }
+        ],
+        "file_reads": [
+          {
+            "bytes": 162,
+            "object_id": "4e4eb3dc-7c1a-4164-90c1-f058ee7cc854",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "d7a80fe1-0722-4f0f-9a4c-24eea6f49672",
+            "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+            "version_id": "4e8a104b-28dc-43eb-9eb9-59e65a79119d"
+          },
+          {
+            "bytes": 162,
+            "object_id": "4e4eb3dc-7c1a-4164-90c1-f058ee7cc854",
+            "offset": 0,
+            "path": "record.txt",
+            "run_id": "94b1456b-9715-479f-9a7b-aa7aa5cc343f",
+            "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+            "version_id": "4e8a104b-28dc-43eb-9eb9-59e65a79119d"
+          }
+        ],
+        "runs": [
+          {
+            "id": "d7a80fe1-0722-4f0f-9a4c-24eea6f49672",
+            "state": "succeeded",
+            "session_id": "01a113a1-c4a3-7302-8f68-d234e9390300",
+            "resumed_session_id": null,
+            "codex_version": "codex-cli 0.159.2",
+            "mcp_initialized": true,
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          },
+          {
+            "id": "94b1456b-9715-479f-9a7b-aa7aa5cc343f",
+            "state": "succeeded",
+            "session_id": "01a113a1-c4a3-7302-8f68-d234e9390300",
+            "resumed_session_id": "01a113a1-c4a3-7302-8f68-d234e9390300",
+            "codex_version": "codex-cli 0.159.2",
+            "mcp_initialized": true,
+            "reads": 1,
+            "submissions": 1,
+            "turn_completed": true,
+            "exit_code": 0
+          }
+        ],
+        "model_runs": [
+          {
+            "id": "b6194cb4-f6a1-4de3-88d7-0b8c6999c923",
+            "state": "succeeded",
+            "calls": 3,
+            "error": null,
+            "tools": [
+              {
+                "name": "inspect_workflow",
+                "tool_call_id": "call_00_rr5taMihTYtcBNgraDwj4130",
+                "ok": true
+              },
+              {
+                "name": "dispatch_codex",
+                "tool_call_id": "call_00_db85j65AkeBSgeKwScif7817",
+                "ok": true
+              }
+            ]
+          }
+        ],
+        "result": {
+          "action": "complete",
+          "body": "{\"case_id\":\"phase3-qc-v1\",\"protocol_id\":\"FL-QC-02\",\"samples\":[{\"sample_id\":\"S01\",\"batch\":\"p7\",\"corrected\":[20.000,22.000,24.000],\"mean\":22.000,\"spread\":4.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S02\",\"batch\":\"p7\",\"corrected\":[14.000,16.000,18.000],\"mean\":16.000,\"spread\":4.000,\"status\":\"fail\",\"reasons\":[\"mean_below_min\"]},{\"sample_id\":\"S03\",\"batch\":\"p7\",\"corrected\":[20.000,26.000,32.000],\"mean\":26.000,\"spread\":12.000,\"status\":\"fail\",\"reasons\":[\"spread_exceeded\"]},{\"sample_id\":\"S04\",\"batch\":\"p7\",\"corrected\":[50.000,50.000,50.000],\"mean\":50.000,\"spread\":0.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S05\",\"batch\":\"q4\",\"corrected\":[20.000,20.000,20.000],\"mean\":20.000,\"spread\":0.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S06\",\"batch\":\"q4\",\"corrected\":[52.000,53.000,54.000],\"mean\":53.000,\"spread\":2.000,\"status\":\"fail\",\"reasons\":[\"mean_above_max\"]},{\"sample_id\":\"S07\",\"batch\":\"q4\",\"corrected\":[21.000,24.000,27.000],\"mean\":24.000,\"spread\":6.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S08\",\"batch\":\"q4\",\"corrected\":[8.000,18.000,28.000],\"mean\":18.000,\"spread\":20.000,\"status\":\"fail\",\"reasons\":[\"mean_below_min\",\"spread_exceeded\"]}],\"summary\":{\"sample_count\":8,\"passed\":4,\"failed\":4,\"retest_sample_ids\":[\"S02\",\"S03\",\"S06\",\"S08\"]},\"human_summary\":\"依据 FL-QC-02 对全部8个样本逐次校正并质控，4个通过、4个未通过，S02、S03、S06和S08需复测。\",\"raw_samples\":[{\"sample_id\":\"S01\",\"batch\":\"p7\",\"raw\":[15,16,17]},{\"sample_id\":\"S02\",\"batch\":\"p7\",\"raw\":[12,13,14]},{\"sample_id\":\"S03\",\"batch\":\"p7\",\"raw\":[15,18,21]},{\"sample_id\":\"S04\",\"batch\":\"p7\",\"raw\":[30,30,30]},{\"sample_id\":\"S05\",\"batch\":\"q4\",\"raw\":[22,22,22]},{\"sample_id\":\"S06\",\"batch\":\"q4\",\"raw\":[54,55,56]},{\"sample_id\":\"S07\",\"batch\":\"q4\",\"raw\":[23,26,29]},{\"sample_id\":\"S08\",\"batch\":\"q4\",\"raw\":[10,20,30]}]}",
+          "reply_to": null,
+          "sources": [
+            {
+              "member": "b",
+              "object_id": "4e4eb3dc-7c1a-4164-90c1-f058ee7cc854",
+              "path": "record.txt",
+              "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+              "version_id": "4e8a104b-28dc-43eb-9eb9-59e65a79119d"
+            },
+            {
+              "member": "a",
+              "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+              "path": "record.txt",
+              "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+              "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+            }
+          ]
+        }
+      }
+    },
+    "messages": [
+      {
+        "body": "请依据你持有的授权测量 CSV 完成逐样本质控。请先读取实际材料，确认其中全部实际批次，并提出完成质控所缺少的校准参数、计算、判定及报告规则问题；我会依据本地实验方案提供这些实际批次对应的参数和完整规则。请勿猜测参数或读数。最终结果需附测量文件的精确来源引用，并提供可复核的逐样本读数和计算结果。",
+        "conversation_id": "8a0ee834-af66-5d62-9efe-f4975d7d2d5c",
+        "created_at": 1791330724,
+        "kind": "request",
+        "message_id": "7ee6bc27-f341-55c3-863c-e05ecf633ca3",
+        "object_id": null,
+        "operation": "workflow",
+        "recipient": "b",
+        "reply_to": null,
+        "sender": "a",
+        "version_id": null,
+        "workflow": {
+          "event": "request",
+          "sender_workflow": "dacbd9cb-96b0-418c-ab1c-acbc0a3555f1",
+          "sources": [
+            {
+              "member": "a",
+              "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+              "path": "record.txt",
+              "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+              "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+            }
+          ],
+          "target_workflow": "1b08c16f-ce39-43ee-84e4-c2a4831473d9"
+        }
+      },
+      {
+        "body": "已读取授权测量 CSV，共 8 个样本，实际批次为 p7（S01–S04）和 q4（S05–S08）。请依据实验方案提供：case_id、protocol_id；p7 和 q4 各自的完整校准公式及参数（包括运算顺序、单位）；三次读数分别校正后均值和极差的计算规则；全部质控判定条件及阈值、边界是否包含等号、使用原始或校正值及舍入前或舍入后值判定；全部失败原因的精确名称和输出顺序、多项失败是否全部列出；复测规则；校正值、均值和极差的报告精度及舍入规则。请附实验方案的精确来源引用，以便最终结果同时引用测量文件和方案。",
+        "conversation_id": "8a0ee834-af66-5d62-9efe-f4975d7d2d5c",
+        "created_at": 1791330748,
+        "kind": "request",
+        "message_id": "9f676484-4aa5-54a7-9be8-9d7b1eebb62e",
+        "object_id": null,
+        "operation": "workflow",
+        "recipient": "a",
+        "reply_to": "7ee6bc27-f341-55c3-863c-e05ecf633ca3",
+        "sender": "b",
+        "version_id": null,
+        "workflow": {
+          "event": "clarification",
+          "sender_workflow": "1b08c16f-ce39-43ee-84e4-c2a4831473d9",
+          "sources": [
+            {
+              "member": "b",
+              "object_id": "4e4eb3dc-7c1a-4164-90c1-f058ee7cc854",
+              "path": "record.txt",
+              "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+              "version_id": "4e8a104b-28dc-43eb-9eb9-59e65a79119d"
+            }
+          ],
+          "target_workflow": "dacbd9cb-96b0-418c-ab1c-acbc0a3555f1"
+        }
+      },
+      {
+        "body": "依据授权方案：case_id=phase3-qc-v1，protocol_id=FL-QC-02。仅提供已确认实际批次的校准参数：p7：blank=5、factor=2，每次 corrected=(raw-5)*2；q4：blank=2、factor=1，每次 corrected=(raw-2)*1。先减 blank，再乘 factor。方案未规定单位，不补充推定单位。\n每个样本的三次 raw 分别校正，mean=(corrected1+corrected2+corrected3)/3，spread=max(corrected1,corrected2,corrected3)-min(corrected1,corrected2,corrected3)。以未舍入的校正值计算未舍入 mean 和 spread 并判定，全部满足 20<=mean<=50 且 spread<=6 才通过，三个边界均包含等号。\n依序检查并列出全部触发原因：mean<20 为 mean_below_min；mean>50 为 mean_above_max；spread>6 为 spread_exceeded。reasons 的固定顺序为 [mean_below_min,mean_above_max,spread_exceeded]，未触发项省略；无原因时 reasons=[]、status=pass，有任何原因时 status=fail。全部 fail 样本均需复测。\n输出 corrected 三次值、mean、spread 时才用 ROUND_HALF_UP 保留三位小数，并输出为 JSON 数字，禁止用输出舍入值反向判定。samples 按 sample_id 排序，每项含 sample_id、batch、corrected、mean、spread、status、reasons。summary 含 sample_count、passed、failed、按 sample_id 排序的 retest_sample_ids；另含 case_id、protocol_id 和一句中文 human_summary。请同时提供实际三次原始读数以便我复核（可置于独立 raw_samples 字段），并在提交的 sources 附测量文件及本方案精确引用，引用不要混入结果 body。",
+        "conversation_id": "8a0ee834-af66-5d62-9efe-f4975d7d2d5c",
+        "created_at": 1791330778,
+        "kind": "reply",
+        "message_id": "afb74a18-830b-5094-858e-76ad54471775",
+        "object_id": null,
+        "operation": "workflow",
+        "recipient": "b",
+        "reply_to": "9f676484-4aa5-54a7-9be8-9d7b1eebb62e",
+        "sender": "a",
+        "version_id": null,
+        "workflow": {
+          "event": "answer",
+          "sender_workflow": "dacbd9cb-96b0-418c-ab1c-acbc0a3555f1",
+          "sources": [
+            {
+              "member": "a",
+              "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+              "path": "record.txt",
+              "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+              "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+            },
+            {
+              "member": "b",
+              "object_id": "4e4eb3dc-7c1a-4164-90c1-f058ee7cc854",
+              "path": "record.txt",
+              "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+              "version_id": "4e8a104b-28dc-43eb-9eb9-59e65a79119d"
+            }
+          ],
+          "target_workflow": "1b08c16f-ce39-43ee-84e4-c2a4831473d9"
+        }
+      },
+      {
+        "body": "{\"case_id\":\"phase3-qc-v1\",\"protocol_id\":\"FL-QC-02\",\"samples\":[{\"sample_id\":\"S01\",\"batch\":\"p7\",\"corrected\":[20.000,22.000,24.000],\"mean\":22.000,\"spread\":4.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S02\",\"batch\":\"p7\",\"corrected\":[14.000,16.000,18.000],\"mean\":16.000,\"spread\":4.000,\"status\":\"fail\",\"reasons\":[\"mean_below_min\"]},{\"sample_id\":\"S03\",\"batch\":\"p7\",\"corrected\":[20.000,26.000,32.000],\"mean\":26.000,\"spread\":12.000,\"status\":\"fail\",\"reasons\":[\"spread_exceeded\"]},{\"sample_id\":\"S04\",\"batch\":\"p7\",\"corrected\":[50.000,50.000,50.000],\"mean\":50.000,\"spread\":0.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S05\",\"batch\":\"q4\",\"corrected\":[20.000,20.000,20.000],\"mean\":20.000,\"spread\":0.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S06\",\"batch\":\"q4\",\"corrected\":[52.000,53.000,54.000],\"mean\":53.000,\"spread\":2.000,\"status\":\"fail\",\"reasons\":[\"mean_above_max\"]},{\"sample_id\":\"S07\",\"batch\":\"q4\",\"corrected\":[21.000,24.000,27.000],\"mean\":24.000,\"spread\":6.000,\"status\":\"pass\",\"reasons\":[]},{\"sample_id\":\"S08\",\"batch\":\"q4\",\"corrected\":[8.000,18.000,28.000],\"mean\":18.000,\"spread\":20.000,\"status\":\"fail\",\"reasons\":[\"mean_below_min\",\"spread_exceeded\"]}],\"summary\":{\"sample_count\":8,\"passed\":4,\"failed\":4,\"retest_sample_ids\":[\"S02\",\"S03\",\"S06\",\"S08\"]},\"human_summary\":\"依据 FL-QC-02 对全部8个样本逐次校正并质控，4个通过、4个未通过，S02、S03、S06和S08需复测。\",\"raw_samples\":[{\"sample_id\":\"S01\",\"batch\":\"p7\",\"raw\":[15,16,17]},{\"sample_id\":\"S02\",\"batch\":\"p7\",\"raw\":[12,13,14]},{\"sample_id\":\"S03\",\"batch\":\"p7\",\"raw\":[15,18,21]},{\"sample_id\":\"S04\",\"batch\":\"p7\",\"raw\":[30,30,30]},{\"sample_id\":\"S05\",\"batch\":\"q4\",\"raw\":[22,22,22]},{\"sample_id\":\"S06\",\"batch\":\"q4\",\"raw\":[54,55,56]},{\"sample_id\":\"S07\",\"batch\":\"q4\",\"raw\":[23,26,29]},{\"sample_id\":\"S08\",\"batch\":\"q4\",\"raw\":[10,20,30]}]}",
+        "conversation_id": "8a0ee834-af66-5d62-9efe-f4975d7d2d5c",
+        "created_at": 1791330801,
+        "kind": "reply",
+        "message_id": "7e8d462a-1260-59bb-bece-776e1a66742a",
+        "object_id": null,
+        "operation": "workflow",
+        "recipient": "a",
+        "reply_to": "7ee6bc27-f341-55c3-863c-e05ecf633ca3",
+        "sender": "b",
+        "version_id": null,
+        "workflow": {
+          "event": "result",
+          "sender_workflow": "1b08c16f-ce39-43ee-84e4-c2a4831473d9",
+          "sources": [
+            {
+              "member": "b",
+              "object_id": "4e4eb3dc-7c1a-4164-90c1-f058ee7cc854",
+              "path": "record.txt",
+              "sha256": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+              "version_id": "4e8a104b-28dc-43eb-9eb9-59e65a79119d"
+            },
+            {
+              "member": "a",
+              "object_id": "44877f68-7639-4c8e-bdc2-cf7e1a10832d",
+              "path": "record.txt",
+              "sha256": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+              "version_id": "7cc26068-83eb-445d-832a-c8577e1a98a6"
+            }
+          ],
+          "target_workflow": "dacbd9cb-96b0-418c-ab1c-acbc0a3555f1"
+        }
+      }
+    ],
+    "source_and_evidence_sha256": {
+      "scripts/ssh_workflow.py": "91b7659c80af8c30882d00af8e8ca0b5b2bb006ce20181269a06c6afe2f90cbd",
+      "scripts/ssh_demo.py": "b8c3f137dcba088d45d8294e266482868974c071b3fd435e09fd3f62aab23548",
+      "scripts/check_phase3_qc.py": "c68c890336e5d56cb35114f81489f83b51849e7965f184c897a08f8cdb0f15d0",
+      "examples/phase3-qc/case.json": "f994d697aa578c39f410d118303eb159ea4fdeaa65c086ccb3e4a59cd1ba441b",
+      "examples/phase3-qc/a/protocol.json": "ac918cf259b5ac079f6b99a88fab50830638e83e5451f63f9ea8ebcd5586aaad",
+      "examples/phase3-qc/b/measurements.csv": "0ec36f40f45232aaf2f30bbd6e4c1a3acaa7eb6697420fe2ee1791c3673752b1",
+      "examples/phase3-qc/acceptance/expected.json": "57d52302ae4ad8e875510ffdd14360d1bbffdf22821f388a4daa901c7b8ec3e8",
+      "smoke-output/phase3-qc-final-1/a-execution.json": "dd22e088388e1d572ea4a4ad1cfec451df92e81b7626e5c649bc7bbe8e7820be",
+      "smoke-output/phase3-qc-final-1/a-result.json": "3fd9b429e37dec61f9b4f2a9620d88821ab095e04785dbd7f5c1a14718d1a1a5",
+      "smoke-output/phase3-qc-final-1/a-workflow.json": "6552df01dc3f9ed45770477bd528eef34a5b720b4763c0b61f37141472dc1af9",
+      "smoke-output/phase3-qc-final-1/b-execution.json": "219f39affd9b854fbdebf2f2de48abf62ec45cb581a01b609dd5a339671f478f",
+      "smoke-output/phase3-qc-final-1/b-result.json": "bba62616efa8fc57ea34e7b74f4502227ed0b85c90917e3751243339e7cf9aa7",
+      "smoke-output/phase3-qc-final-1/b-workflow.json": "5cf958ed6725ca974b835a47b7bbb4285a0bd2af335659b84a83e0e983b67ee2",
+      "smoke-output/phase3-qc-final-1/case.json": "f994d697aa578c39f410d118303eb159ea4fdeaa65c086ccb3e4a59cd1ba441b",
+      "smoke-output/phase3-qc-final-1/cleanup-check.json": "acda55fdd669050b268fc8b1f82831ba013b3b08adc3ddd8d7562564e6f3e670",
+      "smoke-output/phase3-qc-final-1/independent-check.json": "57cfec6856501483867575eaa18bcc07e576e344eef41141f5e2b4282658645f",
+      "smoke-output/phase3-qc-final-1/lakota-service-log.json": "e70a8c7decff5b819cadcb216641a84ae1bbf367a728af0c5fbb0c9c8f7ed88d",
+      "smoke-output/phase3-qc-final-1/raw-event-check.json": "9fc41a7f8ffcc8389fc8e5f35875401136d692d97ab6f19b9002885840717b35",
+      "smoke-output/phase3-qc-final-1/report.json": "72bdfc99c10cc101162f109d8d2a94d290615da2ac6a2f88d15f00f395955f61",
+      "smoke-output/phase3-qc-final-1/trader-service-log.json": "dba7f7b355b7364a299b4da852838ac8bcbdb273eaf5c0fd7911a38553668cc5"
+    }
+  },
+  "deployment_scope": "Third-stage real two-host case accepted via Mac/controller SSH tunnels; standalone public deployment remains Phase 4."
+}

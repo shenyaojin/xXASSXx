@@ -1,0 +1,85 @@
+{
+  "status": "passed",
+  "run_id": "ssh-demo-f2f49b72-0227-4c6c-b778-4b505de86d75",
+  "model": "off",
+  "codex": "mock process",
+  "transport": "loopback HTTP through SSH tunnels via controller",
+  "real_codex": "not_run",
+  "real_deepseek": "not_run",
+  "checks": {
+    "identical_linux_binary": true,
+    "offline_delivery_after_mailbox_restart": true,
+    "cross_machine_metadata_reply": true,
+    "separate_knowledge_stores": true,
+    "metadata_reply_excludes_content": true,
+    "butler_restart_recovery": true,
+    "followup_pinned_to_v2_after_v3": true,
+    "one_delegation_one_execution": true,
+    "repeated_message_no_duplicate": true,
+    "owner_mcp_reads_remote_reply": true
+  },
+  "object_id": "a33e1cce-9cd4-4741-861f-0a468f667675",
+  "v1": "b087bd43-85ef-49e2-a158-44e127a773c5",
+  "v2": "f1e7d43c-5a10-4414-8f2d-c4b59af7f4a2",
+  "v3": "9ca84caf-7a7b-4a0a-9a81-c333b90df048",
+  "conversation_id": "76b89ac0-c9b1-54a1-9e83-7d3de28fa6a6",
+  "request_id": "61801b5d-7a5e-471f-8741-5b3dc602f4c5",
+  "followup_id": "7ab21150-da8f-402e-9a00-cf8345b45ff9",
+  "reply_id": "abec1001-8c34-5ad3-88f7-a019981998b5",
+  "cleanup": {
+    "services_stopped": true,
+    "errors": [],
+    "remaining_test_processes": {
+      "lakota": [],
+      "trader": []
+    }
+  },
+  "date": "2026-10-06",
+  "hosts": {
+    "a": "trader: Ubuntu 20.04.6, glibc 2.31, x86_64",
+    "b": "lakota: RHEL 8.10, glibc 2.28, x86_64"
+  },
+  "linux_binary_sha256": "787424d0729542a51e629c8249680e859ffc8f671dcc4f8e59cf481324a30c22",
+  "source_archive_sha256": "68ffd471a27a0ea7233665762d04852b54c78d5a85299d18bc3f9f0bf289c331",
+  "source_manifest_sha256": "47c592a68d1bb3634a42da0d1bddb09451e6ef8b351311b01e0b59aac97f4e97",
+  "runner_sha256": "b8c3f137dcba088d45d8294e266482868974c071b3fd435e09fd3f62aab23548",
+  "rust_version": "1.99.0",
+  "macos_tests": {
+    "passed": 47,
+    "failed": 0,
+    "ignored": 2
+  },
+  "linux_tests": {
+    "passed": 47,
+    "failed": 0,
+    "ignored": 2
+  },
+  "service_exit_codes": {
+    "a-butler.stdout": [
+      0
+    ],
+    "b-butler-1.stdout": [
+      0
+    ],
+    "b-butler-2.stdout": [
+      0
+    ],
+    "relay-1.stdout": [
+      0
+    ],
+    "relay-2.stdout": [
+      0
+    ]
+  },
+  "codex_execution": {
+    "id": "e9c20f75-4386-4621-81be-4308c49cbbc1",
+    "task_id": "b7daddaa-50a2-4287-9b7f-e796ee77e0ef",
+    "state": "succeeded",
+    "mcp_initialized": true,
+    "reads": 1,
+    "submissions": 1,
+    "turn_completed": true,
+    "exit_code": 0,
+    "result": "MOCK_RESULT"
+  }
+}

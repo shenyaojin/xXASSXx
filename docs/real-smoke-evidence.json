@@ -1,0 +1,46 @@
+{
+  "verified_at": "2026-10-06T14:19:49-06:00",
+  "real_codex": true,
+  "status": "passed",
+  "task_id": "f1fd5398-f870-4780-b34d-87e2b9b3daaf",
+  "session_id": "01a112df-5979-7883-a40f-ba948a77d2d2",
+  "local_evidence_directory": "smoke-output/6fe6d59e-9845-4ced-9c40-7ca07ef4f6ab",
+  "runs": [
+    {
+      "id": "297bfa3e-a4cf-4e2b-b27f-8761547b61f2",
+      "state": "succeeded",
+      "session_id": "01a112df-5979-7883-a40f-ba948a77d2d2",
+      "resumed_session_id": null,
+      "codex_version": "codex-cli 0.160.1",
+      "mcp_initialized": true,
+      "reads": 1,
+      "submissions": 1,
+      "result": "XXASSXX_REAL_SMOKE_OK",
+      "turn_completed": true,
+      "exit_code": 0,
+      "error_code": null,
+      "observed_completed_mcp_tools": [
+        "get_task",
+        "submit_task_result"
+      ]
+    },
+    {
+      "id": "4e5612a0-c878-4c3d-b19d-c946c37fc9e8",
+      "state": "succeeded",
+      "session_id": "01a112df-5979-7883-a40f-ba948a77d2d2",
+      "resumed_session_id": "01a112df-5979-7883-a40f-ba948a77d2d2",
+      "codex_version": "codex-cli 0.160.1",
+      "mcp_initialized": true,
+      "reads": 1,
+      "submissions": 1,
+      "result": "XXASSXX_REAL_SMOKE_OK",
+      "turn_completed": true,
+      "exit_code": 0,
+      "error_code": null,
+      "observed_completed_mcp_tools": [
+        "get_task",
+        "submit_task_result"
+      ]
+    }
+  ]
+}

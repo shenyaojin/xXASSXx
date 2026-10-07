@@ -1,0 +1,33 @@
+{
+  "kind": "actual-pty",
+  "terminal": "xterm-256color",
+  "checks": [
+    {
+      "entry": "default",
+      "exit": 0,
+      "termios_restored": true,
+      "alternate_screen_restored": true,
+      "daemon_survived": true,
+      "bytes": 26112
+    },
+    {
+      "entry": "-C",
+      "exit": 0,
+      "termios_restored": true,
+      "alternate_screen_restored": true,
+      "daemon_survived": true,
+      "bytes": 5763
+    },
+    {
+      "entry": "open",
+      "exit": 0,
+      "termios_restored": true,
+      "alternate_screen_restored": true,
+      "daemon_survived": true,
+      "bytes": 5763
+    }
+  ],
+  "paste_unicode_recipient": "passed",
+  "resize": "110x30 -> 38x12 -> 110x30",
+  "records_persisted": true
+}

@@ -1,0 +1,13 @@
+{
+  "kind": "real model through actual PTY TUI",
+  "requests": [
+    "21e1d479-64bc-4db1-9730-8c6373f90b7a",
+    "827af2d8-e100-43b6-9921-e4c6f00cbf7d"
+  ],
+  "input_channel": "tui",
+  "answer": "「松柏」。仅作讨论，未建立任何新任务。",
+  "task_and_source_details_opened": true,
+  "peer_history_opened": true,
+  "termios_restored": true,
+  "background_alive": true
+}

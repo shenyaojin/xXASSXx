@@ -1,0 +1,17 @@
+{
+  "kind": "simulated Codex through real MCP",
+  "task": "95cb4792-2b1e-5455-a8cb-4f7d9678f56d",
+  "state_at_tui_exit": "running",
+  "final_state": "completed",
+  "sources": [
+    {
+      "member": "owner",
+      "object_id": "93ab1f71-ec8d-50f2-aaaf-1744c2208088",
+      "path": "tiny.csv",
+      "sha256": "3c81fcf1e216a4f562afff55408c7855cd1f1e895b03d0a9ba7e03b678a65cc3",
+      "version_id": "83791541-1401-4b2e-a1df-b2267f983ef1"
+    }
+  ],
+  "termios_restored": true,
+  "artifact": "/private/tmp/xxassxx-phase5-pty/owner/member.sqlite3.results/app-95cb4792-2b1e-5455-a8cb-4f7d9678f56d.json"
+}

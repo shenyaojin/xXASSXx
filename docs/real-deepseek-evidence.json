@@ -1,0 +1,55 @@
+{
+  "status": "passed",
+  "real_deepseek": true,
+  "delivered": true,
+  "model": "deepseek-flash",
+  "request_id": "9287a9ca-f39e-4eb7-b347-ca8c099c30f5",
+  "object_id": "9ceff0e7-1567-4b6d-ac52-dd3efccd6f94",
+  "version_id": "8ce8faed-7806-4763-825e-61bff421b777",
+  "model_runs": [
+    {
+      "run_id": "55edff5c-0484-4619-8b79-4e636097cf4a",
+      "state": "succeeded",
+      "calls": 3,
+      "tools": [
+        {
+          "tool_call_id": "call_00_pwGdxbhT5YZGTilVygJf3130",
+          "name": "knowledge_metadata",
+          "ok": true
+        },
+        {
+          "tool_call_id": "call_00_6z9t8WvaNCS7cRYty32T9962",
+          "name": "submit_reply",
+          "ok": true
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "message_id": "9287a9ca-f39e-4eb7-b347-ca8c099c30f5",
+      "reply_to": null,
+      "sender": "a",
+      "recipient": "b",
+      "version_id": null,
+      "state": "replied"
+    },
+    {
+      "message_id": "e87eaa33-a9cc-5e01-84cd-2913fb3a1585",
+      "reply_to": "9287a9ca-f39e-4eb7-b347-ca8c099c30f5",
+      "sender": "b",
+      "recipient": "a",
+      "version_id": "8ce8faed-7806-4763-825e-61bff421b777",
+      "state": "sent"
+    }
+  ],
+  "verified_date": "2026-10-06",
+  "credential_field": "DEEPSEEK_API (mapped to DEEPSEEK_API_KEY only in test process environment)",
+  "scope": "Real DeepSeek metadata tool loop and HTTP A/B reply; does not invoke real Codex",
+  "initial_failure": {
+    "report": "deepseek-c426e18c-d594-450b-9dff-75f9d843eac2",
+    "error": "model_tool_round_limit",
+    "cause": "standalone prose slash falsely rejected as a local absolute path",
+    "fixed": true
+  }
+}

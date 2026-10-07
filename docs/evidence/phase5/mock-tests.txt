@@ -1,0 +1,181 @@
+   Compiling xxassxx v0.1.0 (/Users/shenyaojin/Documents/gitproject/xXASSXx)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.11s
+     Running unittests src/lib.rs (target/debug/deps/xxassxx-a6da52fd49d82d62)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/xxassxx-a1589bd813191615)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/app.rs (target/debug/deps/app-5bc74d98774b9f45)
+
+running 9 tests
+test ui_routing_unicode_render_and_project_are_independent_of_grants ... ok
+test presence_offline_old_clients_and_expiry_do_not_call_models ... ok
+test old_mailbox_presence_is_unknown_instead_of_inferred_online ... ok
+test trusted_actor_idempotent_queue_second_channel_and_events ... ok
+test persistent_owner_model_followup_and_tool_failure_cannot_claim_success ... ok
+test tui_file_picker_authorizes_without_pasting_ids_and_stop_is_real ... ok
+test authorized_local_task_uses_real_rust_mcp_fixed_snapshot_and_one_execution ... ok
+test remote_owner_authorization_clarification_resume_and_result_share_task_history ... ok
+peer request: metadata request requires object_id
+test receiving_and_presence_continue_while_owner_model_waits_and_restart_is_safe ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.64s
+
+     Running tests/collaboration.rs (target/debug/deps/collaboration-def22686949a2ae4)
+
+running 4 tests
+test closed_conversation_does_not_run_model_or_delegate ... ok
+test model_to_codex_to_http_reply_read_by_initiator_mcp ... ok
+test peer_delegation_never_receives_owner_mcp_capability ... ok
+test failed_codex_cannot_reply_and_retry_resumes_bound_session ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+
+     Running tests/file_roots.rs (target/debug/deps/file_roots-f08d5e2f0ffc29c1)
+
+running 4 tests
+test migration_does_not_grant_legacy_databases_access_to_the_cwd ... ok
+test links_cannot_expand_the_allowlist ... ok
+test imports_default_to_deny_and_removal_keeps_existing_snapshots ... ok
+test client_init_and_roots_are_independent_of_startup_directory ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/integration.rs (target/debug/deps/integration-25c38d6b90a62ec8)
+
+running 28 tests
+test concurrent_claims_have_exactly_one_winner ... ok
+test expired_runner_can_be_recovered_without_accepting_late_result ... ok
+test missing_codex_diagnostic ... ok
+test login_diagnostic ... ok
+test mcp_initialization_failure ... ok
+test malformed_events ... ok
+test ctrl_c_stops_worker_children_and_records_interruption ... ok
+test drains_stderr_without_deadlock ... ok
+test duplicate_submission_and_conflicts ... ok
+test missing_mcp_result ... ok
+test missing_completed_event ... ok
+test stdio_protocol_errors_and_initialization_are_enforced ... ok
+test store_rejects_inactive_stale_wrong_and_unread_submissions ... ok
+test prose_completion_is_not_success ... ok
+test quota_diagnostic ... ok
+test successful_result_retry_is_idempotent ... ok
+test process_failure ... ok
+test rejects_wrong_identity_through_mcp ... ok
+test active_worker_blocks_recovery_even_after_lease_expiry ... ok
+test runner_sigkill_during_preflight_stops_child ... ok
+test submitted_result_plus_failure_is_not_success ... ok
+test terminal_failure_cannot_be_overridden_by_completion ... ok
+test rejects_changed_session_on_resume ... ok
+test runner_sigkill_stops_codex_and_mcp_before_resume ... ok
+test transient_reconnect_can_recover ... ok
+test success_and_resume_by_persisted_id ... ok
+test preflight_timeout ... ok
+test timeout_and_recovery ... ok
+
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.80s
+
+     Running tests/interactive.rs (target/debug/deps/interactive-414a9bc9210b9020)
+
+running 3 tests
+工作文件夹不存在: No such file or directory (os error 2)
+error: the argument '--check' cannot be used with '--allow-import'
+
+Usage: xxassxx codex --check <PROJECT>
+
+For more information, try '--help'.
+test no_terminal_or_missing_installation_has_no_startup_side_effects ... ok
+test check_launch_does_not_start_share_or_authorize_and_roundtrips_paths ... ok
+test foreground_codex_gets_real_butler_mcp_and_daemon_survives_exit ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
+
+     Running tests/knowledge.rs (target/debug/deps/knowledge-b3c88d4ebf8f1896)
+
+running 6 tests
+test corrupt_missing_content_and_failed_publish_never_succeed ... ok
+test migration_preserves_phase_one_data_and_repeat_init ... ok
+test reject_symlinks_special_files_own_state_and_path_escape ... ok
+test concurrent_publish_compare_and_swap ... ok
+test text_idempotency_conflicts_parent_validation_and_immutable_rows ... ok
+test snapshots_are_independent_binary_and_empty_directories_survive ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running tests/model.rs (target/debug/deps/model-b9525bcb4b383a95)
+
+running 4 tests
+test model_delegation_tool_is_transactionally_idempotent ... ok
+test actual_http_tool_loop_preserves_ids_reasoning_and_no_file_content ... ok
+test explicit_metadata_needs_no_model_and_missing_key_is_visible ... ok
+test failures_limits_invalid_tools_and_retry_are_visible ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.81s
+
+     Running tests/real_codex.rs (target/debug/deps/real_codex-db70616df3717990)
+
+running 1 test
+test real_codex_mcp_and_resume ... ignored, REAL CODEX: uses network and existing login; run explicitly with --ignored --nocapture
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/real_deepseek.rs (target/debug/deps/real_deepseek-85021c7122c3408f)
+
+running 1 test
+test real_deepseek_tools_and_traceable_reply ... ignored, REAL DEEPSEEK: explicit opt-in, uses DEEPSEEK_API_KEY and actual quota
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/setup.rs (target/debug/deps/setup-d8e8f7454d9d6531)
+
+running 5 tests
+test invalid_server_or_invitation_does_not_create_installation ... ok
+test tool_probe_rejects_chat_only_model ... ok
+test ollama_defaults_and_tool_roundtrip_use_v1_without_key_or_vendor_fields ... ok
+test private_invitations_join_and_authenticate_without_exported_tokens ... ok
+test reconnect_survives_transport_failure_beyond_failure_budget ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.39s
+
+     Running tests/team.rs (target/debug/deps/team-a755a92b4be38cde)
+
+running 5 tests
+test model_off_and_closed_conversation_keep_original_messages ... ok
+test relay_auth_dedup_and_lost_ack ... ok
+test prose_slash_survives_delivery_while_local_paths_are_rejected ... ok
+test independent_databases_real_http_offline_restart_reply_followup_and_third_member ... ok
+test butler_sigint_during_http_tick_is_not_lost ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.89s
+
+     Running tests/workflow.rs (target/debug/deps/workflow-8b651d63cfd57d4f)
+
+running 12 tests
+test secrets_are_parsed_not_executed_and_require_private_regular_file ... ok
+test v2_migration_preserves_identity_messages_and_knowledge ... ok
+test file_tools_reject_wrong_grants_paths_hashes_symlinks_and_budgets ... ok
+test busy_session_queues_without_claiming ... ok
+test background_service_start_is_idempotent_and_stop_restart_is_observable ... ok
+test first_turn_waits_and_real_mcp_file_reads_are_pinned ... ok
+test incoming_peer_text_cannot_expand_grants_and_other_members_cannot_bind ... ok
+test failed_turn_emits_no_message_and_explicit_retry_uses_bound_session ... ok
+test coordinator_uses_metadata_tools_and_failure_or_call_limit_prevents_codex ... ok
+test wake_limits_and_stop_prevent_further_execution ... ok
+test duplicate_turn_and_wrong_resumed_session_do_not_duplicate_results ... ok
+test automatic_clarification_answer_result_and_final_without_manual_codex_turns ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.43s
+
+   Doc-tests xxassxx
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
