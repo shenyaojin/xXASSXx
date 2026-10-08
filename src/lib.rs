@@ -23,6 +23,7 @@ pub mod task_materials;
 pub mod task_schedule;
 pub mod task_workspace;
 pub mod team;
+pub mod transfers;
 pub mod tui;
 pub mod workflow;
 pub mod workflow_cli;

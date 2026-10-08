@@ -145,6 +145,13 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
         matches!(
             input.action.as_str(),
             "chat"
+                | "send_files"
+                | "prepare_files"
+                | "allow_files"
+                | "receive_files"
+                | "revoke_files"
+                | "retry_files"
+                | "analyze_attachment"
                 | "identity"
                 | "status"
                 | "create_task"
@@ -340,7 +347,7 @@ pub fn snapshot(store: &Store, session: &str) -> Result<Value> {
         |r| r.get(0),
     )?;
     Ok(
-        json!({"identity":store.identity()?,"contacts":store.contacts()?,"presence":crate::presence::view(store)?,"service":crate::service::status(store)?,"sessions":sessions,"messages":history(store,session)?,"tasks":tasks::list(store,None)?,"unread":unread,"roots":store.file_roots()?}),
+        json!({"identity":store.identity()?,"contacts":store.contacts()?,"presence":crate::presence::view(store)?,"service":crate::service::status(store)?,"sessions":sessions,"messages":history(store,session)?,"tasks":tasks::list(store,None)?,"attachments":crate::transfers::list(store)?,"unread":unread,"roots":store.file_roots()?}),
     )
 }
 pub fn mark_read(store: &Store, session: &str, through: i64) -> Result<()> {

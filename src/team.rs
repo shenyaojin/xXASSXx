@@ -683,10 +683,45 @@ pub async fn sync(store: &mut Store) -> Result<Value> {
             .conn
             .execute("UPDATE task_fact_outbox SET sent=1 WHERE id=?1", [id])?;
     }
+    let mut attachment_peers: Option<Value> = None;
     for record in records
         .iter()
         .filter(|r| r.direction == "out" && r.state == "pending")
     {
+        if record.message.operation == "task_v2" {
+            let wire = crate::task_coordinator::Wire::parse(&record.message)?;
+            let files: bool = store.conn.query_row("SELECT EXISTS(SELECT 1 FROM app_tasks WHERE id=?1 AND (json_extract(draft,'$.mode')='files' OR json_extract(draft,'$.deliver_files')=1))",[&wire.task_id],|r|r.get(0))?;
+            if files {
+                if attachment_peers.is_none() {
+                    attachment_peers = Some(if identity["file_transfer_protocol"] == 1 {
+                        response_json(
+                            client
+                                .get(format!("{base}/v1/files/capabilities"))
+                                .bearer_auth(&credential)
+                                .send()
+                                .await?,
+                        )
+                        .await?
+                    } else {
+                        json!({"members":[]})
+                    });
+                }
+                let ready = attachment_peers.as_ref().unwrap()["members"]
+                    .as_array()
+                    .is_some_and(|members| members.iter().any(|m| m == &record.message.recipient));
+                if !ready {
+                    let reason = "附件任务等待对方启动支持文件传输的新版客户端，并确认信箱已升级";
+                    store.conn.execute(
+                        "UPDATE messages SET error=?2 WHERE id=?1",
+                        rusqlite::params![record.message.message_id, reason],
+                    )?;
+                    if wire.event == "proposal" {
+                        store.conn.execute("UPDATE app_tasks SET state='waiting',waiting_reason=?2,next_owner=?3 WHERE id=?1 AND state IN ('queued','waiting')",rusqlite::params![wire.task_id,reason,record.message.recipient])?;
+                    }
+                    continue;
+                }
+            }
+        }
         let response = client
             .post(format!("{base}/v1/messages"))
             .bearer_auth(&credential)

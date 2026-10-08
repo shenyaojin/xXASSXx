@@ -72,7 +72,7 @@ fn schema_six_is_incremental_idempotent_and_does_not_forge_history() {
     assert_eq!(
         c.pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
             .unwrap(),
-        8
+        9
     );
     assert_eq!(
         c.query_row("SELECT config FROM identity", [], |r| r.get::<_, String>(0))

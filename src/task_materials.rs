@@ -15,6 +15,9 @@ use std::{
 };
 
 pub fn check_binding(c: &Connection, task: &str, rev: i64) -> Result<(PathBuf, Vec<PathBuf>)> {
+    if let Some((dir, _)) = crate::transfers::input_binding(c, task, rev)? {
+        return Ok((dir.clone(), vec![dir]));
+    }
     let (cwd, raw): (String, String) = c.query_row(
         "SELECT workdir,roots FROM task_bindings WHERE task_id=?1 AND revision=?2",
         params![task, rev],
@@ -42,6 +45,13 @@ pub fn check_binding(c: &Connection, task: &str, rev: i64) -> Result<(PathBuf, V
 pub fn bind(store: &Store, t: &Value) -> Result<()> {
     let id = t["id"].as_str().unwrap();
     let rev = t["revision"].as_i64().unwrap();
+    if let Some((dir, _)) = crate::transfers::input_binding(&store.conn, id, rev)? {
+        store.conn.execute(
+            "INSERT OR IGNORE INTO task_bindings VALUES(?1,?2,?3,?4)",
+            params![id, rev, dir.to_str(), json!([dir]).to_string()],
+        )?;
+        return Ok(());
+    }
     let cwd = PathBuf::from(t["project"].as_str().unwrap());
     let canonical = crate::file_roots::directory(&cwd)
         .context("所绑定工作目录已删除或不可用；请选择目录后重试")?;
@@ -131,6 +141,8 @@ pub fn freeze(store: &Store, t: &Value, execution: &str, files: &Value) -> Resul
         let mut private = vec![
             store.path.clone(),
             store.content_root(),
+            crate::transfers::base(store),
+            store.path.with_extension("attachment-inputs"),
             store.path.with_extension("task-materials"),
         ];
         for suffix in ["-wal", "-shm", ".service", ".run-locks"] {

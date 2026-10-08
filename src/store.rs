@@ -98,7 +98,7 @@ impl Store {
 
     fn migrate(conn: &Connection, version: i64) -> Result<()> {
         ensure!(
-            (0..=8).contains(&version),
+            (0..=9).contains(&version),
             "unsupported database schema {version}"
         );
         if version == 0 {
@@ -124,6 +124,9 @@ impl Store {
         }
         if version < 8 {
             conn.execute_batch(include_str!("schema_v8.sql"))?;
+        }
+        if version < 9 {
+            conn.execute_batch(include_str!("schema_v9.sql"))?;
         }
         Ok(())
     }

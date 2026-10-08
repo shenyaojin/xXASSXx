@@ -1,0 +1,10 @@
+BEGIN IMMEDIATE;
+CREATE TABLE file_transfers(id TEXT PRIMARY KEY,direction TEXT NOT NULL,session_id TEXT REFERENCES app_sessions(id),task_id TEXT,revision INTEGER,manifest TEXT NOT NULL,state TEXT NOT NULL,authorized INTEGER NOT NULL DEFAULT 0,requested INTEGER NOT NULL DEFAULT 0,error TEXT,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL);
+CREATE TABLE transfer_files(transfer_id TEXT NOT NULL REFERENCES file_transfers(id),file_id TEXT NOT NULL,path TEXT NOT NULL,offset INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(transfer_id,file_id));
+CREATE TABLE transfer_grants(id TEXT PRIMARY KEY,kind TEXT NOT NULL,task_id TEXT,revision INTEGER,recipient TEXT NOT NULL,evidence TEXT NOT NULL,created_at INTEGER NOT NULL,revoked INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE transfer_preferences(singleton INTEGER PRIMARY KEY CHECK(singleton=1),max_file INTEGER NOT NULL DEFAULT 1073741824,max_batch INTEGER NOT NULL DEFAULT 2147483648,auto_receive INTEGER NOT NULL DEFAULT 20971520);
+INSERT INTO transfer_preferences(singleton) VALUES(1);
+CREATE TABLE attachment_inputs(task_id TEXT PRIMARY KEY,revision INTEGER NOT NULL,directory TEXT NOT NULL,manifest TEXT NOT NULL);
+CREATE TABLE task_file_delivery(task_id TEXT NOT NULL,revision INTEGER NOT NULL,required INTEGER NOT NULL DEFAULT 0,review TEXT,PRIMARY KEY(task_id,revision));
+PRAGMA user_version=9;
+COMMIT;

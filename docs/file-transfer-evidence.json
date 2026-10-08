@@ -1,0 +1,1299 @@
+{
+  "date": "2026-10-07 America/Denver",
+  "scope": "isolated test members; existing installed services unchanged",
+  "real_models": "DeepSeek local agent and official Codex",
+  "transport": "same-Mac localhost relay; cross-machine authenticated relay over SSH reverse tunnel, not deployed Trader HTTPS",
+  "same_machine_root": "smoke-output/file-transfer-real-f994327d",
+  "cross_machine_root": "smoke-output/file-transfer-cross-56d2e303",
+  "same_machine": [
+    {
+      "member": "a",
+      "binary_sha256": "c3b26fdaf8fd33d3ba510cf11e67c069bba161535fb1ac03c3eb9b3d5dcf7a6e",
+      "schema": 9,
+      "tasks": [
+        {
+          "id": "c04aa587-0311-54f3-851b-0d0e814a8209",
+          "revision": 1,
+          "state": "completed",
+          "result": {
+            "body": "任务已完成。@b 在其独立任务目录里生成了三个产物：values.csv（含 value 列，数值 2、4、6，共 12 字节）、核对均值的脚本 check_mean.awk，以及报告 report.txt（1388 字节，明确写明为合成数据，并记录了命令、输出和文件清单）。均值核对结果为 4，与要求一致；原有文件均未改动。\n\n两个交付文件 values.csv 和 report.txt 已由对方发出并保存到你的电脑，可以直接查看。一个小提示：对方首次用 Python 跑脚本时因本机开发工具缺失而失败，随后改用 awk 脚本实际运行并核对通过，成功结论来自这次真实运行；失败日志也保留在报告记录里，不影响交付结果。\n\n报告文件里包含完整的命令、输出和文件清单，这里不再逐条列出。",
+            "candidates": [
+              {
+                "member": "b",
+                "result": {
+                  "attachment": {
+                    "manifest": {
+                      "files": [
+                        {
+                          "bytes": 12,
+                          "id": "e50261f2-c721-5b6d-bea2-7070db6b62d3",
+                          "name": "values.csv",
+                          "sha256": "4bf52ef5f6a4bb4d36efed5a331d561e4f0a7d2d25f77f48345f89ba364374e0"
+                        },
+                        {
+                          "bytes": 1388,
+                          "id": "7bbe4ef4-7b37-57cc-b96b-417cef69b49a",
+                          "name": "report.txt",
+                          "sha256": "4cdc1bb779c6ec8b54f3f2601d7ab33ad727c4b4afad3846536b203515cfb1eb"
+                        }
+                      ],
+                      "id": "ccfac8d7-647f-529b-864b-d10058cfb133",
+                      "note": "已在独立任务目录生成 values.csv 和 report.txt，未改动原有文件。CSV 含 value 列，数值为 2、4、6；实际运行 awk 脚本核对通过，均值为 4。报告明确说明数据为合成数据，并记录命令、输出和文件清单。\n\n首次 Python 尝试因本机开发工具缺失而失败，日志已保留；成功结论来自随后实际运行的 awk 脚本。已将 CSV 和报告列为两个交付文件，传输及接收状态需另行确认。",
+                      "protocol": 1,
+                      "recipient": "a",
+                      "replaces": null,
+                      "sender": "b",
+                      "task": {
+                        "id": "c04aa587-0311-54f3-851b-0d0e814a8209",
+                        "revision": 1
+                      }
+                    },
+                    "transfer_id": "ccfac8d7-647f-529b-864b-d10058cfb133"
+                  },
+                  "body": "已在独立任务目录生成 values.csv 和 report.txt，未改动原有文件。CSV 含 value 列，数值为 2、4、6；实际运行 awk 脚本核对通过，均值为 4。报告明确说明数据为合成数据，并记录命令、输出和文件清单。\n\n首次 Python 尝试因本机开发工具缺失而失败，日志已保留；成功结论来自随后实际运行的 awk 脚本。已将 CSV 和报告列为两个交付文件，传输及接收状态需另行确认。",
+                  "execution_id": "3065ee51-f9ae-586c-bf6c-555bd4e851da",
+                  "files": [
+                    {
+                      "path": "values.csv",
+                      "reason": "生成的合成数据输入及交付 CSV",
+                      "root": 0
+                    },
+                    {
+                      "path": "report.txt",
+                      "reason": "合成数据说明、实际结果与完整执行记录",
+                      "root": 0
+                    },
+                    {
+                      "path": "check_mean.awk",
+                      "reason": "实际成功运行的均值核对脚本",
+                      "root": 0
+                    },
+                    {
+                      "path": "verification.log",
+                      "reason": "成功运行输出：均值 4，退出状态 0",
+                      "root": 0
+                    },
+                    {
+                      "path": "check_mean.py",
+                      "reason": "首次 Python 尝试脚本，保留失败尝试证据",
+                      "root": 0
+                    },
+                    {
+                      "path": "run.log",
+                      "reason": "Python 环境失败输出，退出状态 1",
+                      "root": 0
+                    }
+                  ],
+                  "run_id": "97b2fc61-475f-4fc0-b577-56c4caef8cc8",
+                  "sources": [
+                    {
+                      "bytes": 12,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "values.csv",
+                      "root": 0,
+                      "sha256": "4bf52ef5f6a4bb4d36efed5a331d561e4f0a7d2d25f77f48345f89ba364374e0"
+                    },
+                    {
+                      "bytes": 1388,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "report.txt",
+                      "root": 0,
+                      "sha256": "4cdc1bb779c6ec8b54f3f2601d7ab33ad727c4b4afad3846536b203515cfb1eb"
+                    },
+                    {
+                      "bytes": 403,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "check_mean.awk",
+                      "root": 0,
+                      "sha256": "f8c62b3276b3c614d7057e9c9461aa8c1815e23cd06982fe35b5b99c43658c74"
+                    },
+                    {
+                      "bytes": 104,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "verification.log",
+                      "root": 0,
+                      "sha256": "db7b2e418d0c04614a5be7198722ed32e2bb60ef58bf222a1ab7cb17ef93d3cb"
+                    },
+                    {
+                      "bytes": 538,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "check_mean.py",
+                      "root": 0,
+                      "sha256": "be19aa6ac536c91797aa90a11ac4d9d90730f6f8e857838bb295c04655e5611b"
+                    },
+                    {
+                      "bytes": 165,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "run.log",
+                      "root": 0,
+                      "sha256": "050d75eeabb35792f88a6564f833102fd606b31977edf57ab4a2e5e2357f2a67"
+                    }
+                  ]
+                },
+                "revision": 1
+              }
+            ],
+            "completed_at": 1791423026,
+            "revision": 1
+          }
+        }
+      ],
+      "runs": [],
+      "commands": [
+        {
+          "action": "send_files",
+          "state": "done",
+          "error": null
+        },
+        {
+          "action": "chat",
+          "state": "failed",
+          "error": "local agent 的需求整理连续 3 次返回了无法识别的格式。任务和已有结果已保留，可重试该步骤。"
+        },
+        {
+          "action": "retry_task",
+          "state": "done",
+          "error": null
+        },
+        {
+          "action": "confirm_task",
+          "state": "done",
+          "error": null
+        }
+      ],
+      "transfers": [
+        {
+          "id": "313ea331-88a2-5b34-a4a1-345efbb395ca",
+          "direction": "out",
+          "task_id": null,
+          "revision": null,
+          "state": "delivered",
+          "manifest": {
+            "protocol": 1,
+            "id": "313ea331-88a2-5b34-a4a1-345efbb395ca",
+            "sender": "a",
+            "recipient": "b",
+            "note": "发送所选文件给 @b",
+            "files": [
+              {
+                "id": "614d6a21-9bf7-557f-9f94-10cdfd85d77f",
+                "name": "pressure.csv",
+                "bytes": 26,
+                "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa"
+              },
+              {
+                "id": "d5ffa5ab-c7c7-5c65-bd9a-199d738a8110",
+                "name": "pressure.png",
+                "bytes": 221,
+                "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1"
+              }
+            ],
+            "task": null,
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "pressure.csv",
+              "bytes": 26,
+              "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa",
+              "matches": true
+            },
+            {
+              "name": "pressure.png",
+              "bytes": 221,
+              "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1",
+              "matches": true
+            }
+          ]
+        },
+        {
+          "id": "ccfac8d7-647f-529b-864b-d10058cfb133",
+          "direction": "in",
+          "task_id": "c04aa587-0311-54f3-851b-0d0e814a8209",
+          "revision": 1,
+          "state": "received",
+          "manifest": {
+            "protocol": 1,
+            "id": "ccfac8d7-647f-529b-864b-d10058cfb133",
+            "sender": "b",
+            "recipient": "a",
+            "note": "已在独立任务目录生成 values.csv 和 report.txt，未改动原有文件。CSV 含 value 列，数值为 2、4、6；实际运行 awk 脚本核对通过，均值为 4。报告明确说明数据为合成数据，并记录命令、输出和文件清单。\n\n首次 Python 尝试因本机开发工具缺失而失败，日志已保留；成功结论来自随后实际运行的 awk 脚本。已将 CSV 和报告列为两个交付文件，传输及接收状态需另行确认。",
+            "files": [
+              {
+                "id": "e50261f2-c721-5b6d-bea2-7070db6b62d3",
+                "name": "values.csv",
+                "bytes": 12,
+                "sha256": "4bf52ef5f6a4bb4d36efed5a331d561e4f0a7d2d25f77f48345f89ba364374e0"
+              },
+              {
+                "id": "7bbe4ef4-7b37-57cc-b96b-417cef69b49a",
+                "name": "report.txt",
+                "bytes": 1388,
+                "sha256": "4cdc1bb779c6ec8b54f3f2601d7ab33ad727c4b4afad3846536b203515cfb1eb"
+              }
+            ],
+            "task": {
+              "id": "c04aa587-0311-54f3-851b-0d0e814a8209",
+              "revision": 1
+            },
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "values.csv",
+              "bytes": 12,
+              "sha256": "4bf52ef5f6a4bb4d36efed5a331d561e4f0a7d2d25f77f48345f89ba364374e0",
+              "matches": true
+            },
+            {
+              "name": "report.txt",
+              "bytes": 1388,
+              "sha256": "4cdc1bb779c6ec8b54f3f2601d7ab33ad727c4b4afad3846536b203515cfb1eb",
+              "matches": true
+            }
+          ]
+        }
+      ],
+      "service_status": {
+        "alive": true,
+        "error": null,
+        "instance": "22100f73-fcb3-4244-9013-87100e7ae5e8",
+        "log_path": "/Users/shenyaojin/Documents/gitproject/xXASSXx/smoke-output/file-transfer-real-f994327d/a/member.sqlite3.service/butler.log",
+        "pid": 49962,
+        "state": "running",
+        "updated_at": 1791426634
+      }
+    },
+    {
+      "member": "b",
+      "binary_sha256": "c3b26fdaf8fd33d3ba510cf11e67c069bba161535fb1ac03c3eb9b3d5dcf7a6e",
+      "schema": 9,
+      "tasks": [
+        {
+          "id": "8491b62c-2057-5820-9d6b-dd2346dd7f79",
+          "revision": 1,
+          "state": "completed",
+          "result": {
+            "body": "压力（pressure）列的最小值为 10，最大值为 30，平均值为 20（即 (10+20+30)÷3）。这些数字基于对所选 CSV 的完整读取，共 3 条数据记录，pressure 无缺失值；文件里没有标注单位。\n\n需要说明的是：这只是合成数据，并非真实测量结果，仅代表本次所选附件的范围，不能代表其他数据。\n\n完整结果保存在执行记录中（已读取 1 个文件、26 字节），如需原文可查看该附件分析结果。",
+            "candidates": [
+              {
+                "member": "b",
+                "result": {
+                  "attachment": null,
+                  "body": "pressure 的最小值为 10，最大值为 30，平均值为 20（(10+20+30)÷3）。已只读检查所选 CSV 的全部 3 条数据记录，pressure 无缺失值；文件未注明单位。这只是合成数据，不代表真实测量结果。分析范围仅限本次所选附件。",
+                  "execution_id": "ac928c3c-fd39-597b-a298-7676b61716a0",
+                  "files": [
+                    {
+                      "path": "614d6a21-9bf7-557f-9f94-10cdfd85d77f/pressure.csv",
+                      "reason": "已读取完整 CSV；pressure 列的 3 个值为 10、20、30，是上述统计的依据。",
+                      "root": 0
+                    }
+                  ],
+                  "run_id": "a3997a13-a6fc-4706-b800-758f7f01b8ba",
+                  "sources": [
+                    {
+                      "bytes": 26,
+                      "evidence": "received fixed attachment",
+                      "file_id": "614d6a21-9bf7-557f-9f94-10cdfd85d77f",
+                      "member": "a",
+                      "path": "614d6a21-9bf7-557f-9f94-10cdfd85d77f/pressure.csv",
+                      "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa",
+                      "transfer_id": "313ea331-88a2-5b34-a4a1-345efbb395ca"
+                    }
+                  ]
+                },
+                "revision": 1
+              }
+            ],
+            "completed_at": 1791421057,
+            "revision": 1
+          }
+        },
+        {
+          "id": "c04aa587-0311-54f3-851b-0d0e814a8209",
+          "revision": 1,
+          "state": "completed",
+          "result": {
+            "body": "任务已完成。@b 在其独立任务目录里生成了三个产物：values.csv（含 value 列，数值 2、4、6，共 12 字节）、核对均值的脚本 check_mean.awk，以及报告 report.txt（1388 字节，明确写明为合成数据，并记录了命令、输出和文件清单）。均值核对结果为 4，与要求一致；原有文件均未改动。\n\n两个交付文件 values.csv 和 report.txt 已由对方发出并保存到你的电脑，可以直接查看。一个小提示：对方首次用 Python 跑脚本时因本机开发工具缺失而失败，随后改用 awk 脚本实际运行并核对通过，成功结论来自这次真实运行；失败日志也保留在报告记录里，不影响交付结果。\n\n报告文件里包含完整的命令、输出和文件清单，这里不再逐条列出。",
+            "candidates": [
+              {
+                "member": "b",
+                "result": {
+                  "attachment": {
+                    "manifest": {
+                      "files": [
+                        {
+                          "bytes": 12,
+                          "id": "e50261f2-c721-5b6d-bea2-7070db6b62d3",
+                          "name": "values.csv",
+                          "sha256": "4bf52ef5f6a4bb4d36efed5a331d561e4f0a7d2d25f77f48345f89ba364374e0"
+                        },
+                        {
+                          "bytes": 1388,
+                          "id": "7bbe4ef4-7b37-57cc-b96b-417cef69b49a",
+                          "name": "report.txt",
+                          "sha256": "4cdc1bb779c6ec8b54f3f2601d7ab33ad727c4b4afad3846536b203515cfb1eb"
+                        }
+                      ],
+                      "id": "ccfac8d7-647f-529b-864b-d10058cfb133",
+                      "note": "已在独立任务目录生成 values.csv 和 report.txt，未改动原有文件。CSV 含 value 列，数值为 2、4、6；实际运行 awk 脚本核对通过，均值为 4。报告明确说明数据为合成数据，并记录命令、输出和文件清单。\n\n首次 Python 尝试因本机开发工具缺失而失败，日志已保留；成功结论来自随后实际运行的 awk 脚本。已将 CSV 和报告列为两个交付文件，传输及接收状态需另行确认。",
+                      "protocol": 1,
+                      "recipient": "a",
+                      "replaces": null,
+                      "sender": "b",
+                      "task": {
+                        "id": "c04aa587-0311-54f3-851b-0d0e814a8209",
+                        "revision": 1
+                      }
+                    },
+                    "transfer_id": "ccfac8d7-647f-529b-864b-d10058cfb133"
+                  },
+                  "body": "已在独立任务目录生成 values.csv 和 report.txt，未改动原有文件。CSV 含 value 列，数值为 2、4、6；实际运行 awk 脚本核对通过，均值为 4。报告明确说明数据为合成数据，并记录命令、输出和文件清单。\n\n首次 Python 尝试因本机开发工具缺失而失败，日志已保留；成功结论来自随后实际运行的 awk 脚本。已将 CSV 和报告列为两个交付文件，传输及接收状态需另行确认。",
+                  "execution_id": "3065ee51-f9ae-586c-bf6c-555bd4e851da",
+                  "files": [
+                    {
+                      "path": "values.csv",
+                      "reason": "生成的合成数据输入及交付 CSV",
+                      "root": 0
+                    },
+                    {
+                      "path": "report.txt",
+                      "reason": "合成数据说明、实际结果与完整执行记录",
+                      "root": 0
+                    },
+                    {
+                      "path": "check_mean.awk",
+                      "reason": "实际成功运行的均值核对脚本",
+                      "root": 0
+                    },
+                    {
+                      "path": "verification.log",
+                      "reason": "成功运行输出：均值 4，退出状态 0",
+                      "root": 0
+                    },
+                    {
+                      "path": "check_mean.py",
+                      "reason": "首次 Python 尝试脚本，保留失败尝试证据",
+                      "root": 0
+                    },
+                    {
+                      "path": "run.log",
+                      "reason": "Python 环境失败输出，退出状态 1",
+                      "root": 0
+                    }
+                  ],
+                  "run_id": "97b2fc61-475f-4fc0-b577-56c4caef8cc8",
+                  "sources": [
+                    {
+                      "bytes": 12,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "values.csv",
+                      "root": 0,
+                      "sha256": "4bf52ef5f6a4bb4d36efed5a331d561e4f0a7d2d25f77f48345f89ba364374e0"
+                    },
+                    {
+                      "bytes": 1388,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "report.txt",
+                      "root": 0,
+                      "sha256": "4cdc1bb779c6ec8b54f3f2601d7ab33ad727c4b4afad3846536b203515cfb1eb"
+                    },
+                    {
+                      "bytes": 403,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "check_mean.awk",
+                      "root": 0,
+                      "sha256": "f8c62b3276b3c614d7057e9c9461aa8c1815e23cd06982fe35b5b99c43658c74"
+                    },
+                    {
+                      "bytes": 104,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "verification.log",
+                      "root": 0,
+                      "sha256": "db7b2e418d0c04614a5be7198722ed32e2bb60ef58bf222a1ab7cb17ef93d3cb"
+                    },
+                    {
+                      "bytes": 538,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "check_mean.py",
+                      "root": 0,
+                      "sha256": "be19aa6ac536c91797aa90a11ac4d9d90730f6f8e857838bb295c04655e5611b"
+                    },
+                    {
+                      "bytes": 165,
+                      "captured_at": 1791423022,
+                      "evidence": "generated artifact",
+                      "member": "b",
+                      "path": "run.log",
+                      "root": 0,
+                      "sha256": "050d75eeabb35792f88a6564f833102fd606b31977edf57ab4a2e5e2357f2a67"
+                    }
+                  ]
+                },
+                "revision": 1
+              }
+            ],
+            "completed_at": 1791423026,
+            "revision": 1
+          }
+        }
+      ],
+      "runs": [
+        {
+          "task_id": "8491b62c-2057-5820-9d6b-dd2346dd7f79",
+          "revision": 1,
+          "phase": "attachment",
+          "id": "a3997a13-a6fc-4706-b800-758f7f01b8ba",
+          "state": "succeeded",
+          "turn_completed": 1,
+          "exit_code": 0,
+          "submissions": 1
+        },
+        {
+          "task_id": "c04aa587-0311-54f3-851b-0d0e814a8209",
+          "revision": 1,
+          "phase": "execute",
+          "id": "97b2fc61-475f-4fc0-b577-56c4caef8cc8",
+          "state": "succeeded",
+          "turn_completed": 1,
+          "exit_code": 0,
+          "submissions": 1
+        }
+      ],
+      "commands": [
+        {
+          "action": "analyze_attachment",
+          "state": "done",
+          "error": null
+        },
+        {
+          "action": "confirm_task",
+          "state": "done",
+          "error": null
+        }
+      ],
+      "transfers": [
+        {
+          "id": "313ea331-88a2-5b34-a4a1-345efbb395ca",
+          "direction": "in",
+          "task_id": null,
+          "revision": null,
+          "state": "received",
+          "manifest": {
+            "protocol": 1,
+            "id": "313ea331-88a2-5b34-a4a1-345efbb395ca",
+            "sender": "a",
+            "recipient": "b",
+            "note": "发送所选文件给 @b",
+            "files": [
+              {
+                "id": "614d6a21-9bf7-557f-9f94-10cdfd85d77f",
+                "name": "pressure.csv",
+                "bytes": 26,
+                "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa"
+              },
+              {
+                "id": "d5ffa5ab-c7c7-5c65-bd9a-199d738a8110",
+                "name": "pressure.png",
+                "bytes": 221,
+                "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1"
+              }
+            ],
+            "task": null,
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "pressure.csv",
+              "bytes": 26,
+              "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa",
+              "matches": true
+            },
+            {
+              "name": "pressure.png",
+              "bytes": 221,
+              "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1",
+              "matches": true
+            }
+          ]
+        },
+        {
+          "id": "ccfac8d7-647f-529b-864b-d10058cfb133",
+          "direction": "out",
+          "task_id": "c04aa587-0311-54f3-851b-0d0e814a8209",
+          "revision": 1,
+          "state": "delivered",
+          "manifest": {
+            "protocol": 1,
+            "id": "ccfac8d7-647f-529b-864b-d10058cfb133",
+            "sender": "b",
+            "recipient": "a",
+            "note": "已在独立任务目录生成 values.csv 和 report.txt，未改动原有文件。CSV 含 value 列，数值为 2、4、6；实际运行 awk 脚本核对通过，均值为 4。报告明确说明数据为合成数据，并记录命令、输出和文件清单。\n\n首次 Python 尝试因本机开发工具缺失而失败，日志已保留；成功结论来自随后实际运行的 awk 脚本。已将 CSV 和报告列为两个交付文件，传输及接收状态需另行确认。",
+            "files": [
+              {
+                "id": "e50261f2-c721-5b6d-bea2-7070db6b62d3",
+                "name": "values.csv",
+                "bytes": 12,
+                "sha256": "4bf52ef5f6a4bb4d36efed5a331d561e4f0a7d2d25f77f48345f89ba364374e0"
+              },
+              {
+                "id": "7bbe4ef4-7b37-57cc-b96b-417cef69b49a",
+                "name": "report.txt",
+                "bytes": 1388,
+                "sha256": "4cdc1bb779c6ec8b54f3f2601d7ab33ad727c4b4afad3846536b203515cfb1eb"
+              }
+            ],
+            "task": {
+              "id": "c04aa587-0311-54f3-851b-0d0e814a8209",
+              "revision": 1
+            },
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "values.csv",
+              "bytes": 12,
+              "sha256": "4bf52ef5f6a4bb4d36efed5a331d561e4f0a7d2d25f77f48345f89ba364374e0",
+              "matches": true
+            },
+            {
+              "name": "report.txt",
+              "bytes": 1388,
+              "sha256": "4cdc1bb779c6ec8b54f3f2601d7ab33ad727c4b4afad3846536b203515cfb1eb",
+              "matches": true
+            }
+          ]
+        }
+      ],
+      "service_status": {
+        "alive": true,
+        "error": null,
+        "instance": "8fefe1ae-7fe2-4717-93ad-bf36020de63f",
+        "log_path": "/Users/shenyaojin/Documents/gitproject/xXASSXx/smoke-output/file-transfer-real-f994327d/b/member.sqlite3.service/butler.log",
+        "pid": 49964,
+        "state": "running",
+        "updated_at": 1791426634
+      }
+    }
+  ],
+  "cross_machine": [
+    {
+      "member": "a",
+      "binary_sha256": "3a792b4ae5bf3dbf87dc7a4d2f415741c241461117b6fb6e763fab1d770681a0",
+      "schema": 9,
+      "tasks": [
+        {
+          "id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+          "revision": 2,
+          "state": "completed",
+          "result": {
+            "body": "已收到并校验 1 个文件，已保存到本机。\n\nlakota.csv（12 字节，来自 @b）\n\n按 CtrlF 查看附件，可打开、另存为或继续分析。这些是发送时的固定副本；发送方后续修改不会改变本次附件。",
+            "candidates": [
+              {
+                "member": "b",
+                "result": {
+                  "attachment": {
+                    "manifest": {
+                      "files": [
+                        {
+                          "bytes": 12,
+                          "id": "b6c7e2c6-6247-59b7-87c0-704a2ff19696",
+                          "name": "lakota.csv",
+                          "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1"
+                        }
+                      ],
+                      "id": "8f48fdce-8e10-54d5-9bd3-0d53f6784f0a",
+                      "note": "已确认工作目录中的 lakota.csv 原始文件存在，已提交该文件用于再次发送。未读取分析内容，也未修改、转换或重命名文件；发送及接收状态尚未确认。",
+                      "protocol": 1,
+                      "recipient": "a",
+                      "replaces": null,
+                      "sender": "b",
+                      "task": {
+                        "id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+                        "revision": 2
+                      }
+                    },
+                    "transfer_id": "8f48fdce-8e10-54d5-9bd3-0d53f6784f0a"
+                  },
+                  "body": "已确认工作目录中的 lakota.csv 原始文件存在，已提交该文件用于再次发送。未读取分析内容，也未修改、转换或重命名文件；发送及接收状态尚未确认。",
+                  "execution_id": "38468797-f1ce-5d74-aa52-025519cb8484",
+                  "files": [
+                    {
+                      "path": "lakota.csv",
+                      "reason": "用户要求再次原样发送的工作目录内原始文件；已确认是普通文件，大小为 12 字节。",
+                      "root": 0
+                    }
+                  ],
+                  "run_id": "07aac99d-f505-4b76-bebf-6288ec8e77d7",
+                  "sources": [
+                    {
+                      "evidence": "live path discovery only; not fixed-content analysis",
+                      "member": "b",
+                      "scope": "confirmed local allowlist",
+                      "search_time": 1791426181
+                    }
+                  ]
+                },
+                "revision": 2
+              }
+            ],
+            "completed_at": 1791426314,
+            "revision": 2
+          }
+        }
+      ],
+      "runs": [],
+      "commands": [
+        {
+          "action": "send_files",
+          "state": "failed",
+          "error": "复制时文件发生变化，请重新选择"
+        },
+        {
+          "action": "send_files",
+          "state": "failed",
+          "error": "复制时文件发生变化，请重新选择"
+        },
+        {
+          "action": "chat",
+          "state": "done",
+          "error": null
+        },
+        {
+          "action": "confirm_task",
+          "state": "done",
+          "error": null
+        },
+        {
+          "action": "send_files",
+          "state": "done",
+          "error": null
+        },
+        {
+          "action": "receive_files",
+          "state": "done",
+          "error": null
+        },
+        {
+          "action": "reopen_task",
+          "state": "done",
+          "error": null
+        },
+        {
+          "action": "confirm_task",
+          "state": "done",
+          "error": null
+        },
+        {
+          "action": "receive_files",
+          "state": "done",
+          "error": null
+        }
+      ],
+      "transfers": [
+        {
+          "id": "f6c23076-f99a-5c5f-affe-22ab7b792507",
+          "direction": "in",
+          "task_id": null,
+          "revision": null,
+          "state": "received",
+          "manifest": {
+            "protocol": 1,
+            "id": "f6c23076-f99a-5c5f-affe-22ab7b792507",
+            "sender": "b",
+            "recipient": "a",
+            "note": "发送所选文件给 @a",
+            "files": [
+              {
+                "id": "5908d6de-9a49-5e11-bf7a-eb4db9f76f55",
+                "name": "lakota.csv",
+                "bytes": 12,
+                "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1"
+              }
+            ],
+            "task": null,
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "lakota.csv",
+              "bytes": 12,
+              "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1",
+              "matches": true
+            }
+          ]
+        },
+        {
+          "id": "55c49342-4605-4043-b17f-7de4b2d31230",
+          "direction": "out",
+          "task_id": null,
+          "revision": null,
+          "state": "delivered",
+          "manifest": {
+            "protocol": 1,
+            "id": "55c49342-4605-4043-b17f-7de4b2d31230",
+            "sender": "a",
+            "recipient": "b",
+            "note": "",
+            "files": [
+              {
+                "id": "41472813-9932-5765-b049-8160d876b478",
+                "name": "pressure.csv",
+                "bytes": 26,
+                "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa"
+              },
+              {
+                "id": "a525e902-9313-544e-872e-b88dc323e034",
+                "name": "pressure.png",
+                "bytes": 221,
+                "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1"
+              }
+            ],
+            "task": null,
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "pressure.csv",
+              "bytes": 26,
+              "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa",
+              "matches": true
+            },
+            {
+              "name": "pressure.png",
+              "bytes": 221,
+              "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1",
+              "matches": true
+            }
+          ]
+        },
+        {
+          "id": "6338f6fb-a393-5378-b745-4a004e2e526a",
+          "direction": "in",
+          "task_id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+          "revision": 1,
+          "state": "received",
+          "manifest": {
+            "protocol": 1,
+            "id": "6338f6fb-a393-5378-b745-4a004e2e526a",
+            "sender": "b",
+            "recipient": "a",
+            "note": "已在 b 的工作目录中找到 lakota.csv，为普通文件，大小 12 字节。已提交该原始文件的引用；未读取或分析内容，也未修改文件。尚未确认附件发送或接收完成。",
+            "files": [
+              {
+                "id": "6fa3fbfb-82c6-5011-ad84-4a98005d3001",
+                "name": "lakota.csv",
+                "bytes": 12,
+                "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1"
+              }
+            ],
+            "task": {
+              "id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+              "revision": 1
+            },
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "lakota.csv",
+              "bytes": 12,
+              "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1",
+              "matches": true
+            }
+          ]
+        },
+        {
+          "id": "719d58c2-3eb7-5ef9-b959-bfec65bf6db8",
+          "direction": "out",
+          "task_id": null,
+          "revision": null,
+          "state": "delivered",
+          "manifest": {
+            "protocol": 1,
+            "id": "719d58c2-3eb7-5ef9-b959-bfec65bf6db8",
+            "sender": "a",
+            "recipient": "b",
+            "note": "发送所选文件给 @b",
+            "files": [
+              {
+                "id": "34e2f2f8-8f9e-5b8a-bfef-8e605e10cb2a",
+                "name": "pressure.csv",
+                "bytes": 26,
+                "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa"
+              },
+              {
+                "id": "eca2c658-d1ad-593a-a83e-49a80dabc4b6",
+                "name": "pressure.png",
+                "bytes": 221,
+                "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1"
+              }
+            ],
+            "task": null,
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "pressure.csv",
+              "bytes": 26,
+              "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa",
+              "matches": true
+            },
+            {
+              "name": "pressure.png",
+              "bytes": 221,
+              "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1",
+              "matches": true
+            }
+          ]
+        },
+        {
+          "id": "8f48fdce-8e10-54d5-9bd3-0d53f6784f0a",
+          "direction": "in",
+          "task_id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+          "revision": 2,
+          "state": "received",
+          "manifest": {
+            "protocol": 1,
+            "id": "8f48fdce-8e10-54d5-9bd3-0d53f6784f0a",
+            "sender": "b",
+            "recipient": "a",
+            "note": "已确认工作目录中的 lakota.csv 原始文件存在，已提交该文件用于再次发送。未读取分析内容，也未修改、转换或重命名文件；发送及接收状态尚未确认。",
+            "files": [
+              {
+                "id": "b6c7e2c6-6247-59b7-87c0-704a2ff19696",
+                "name": "lakota.csv",
+                "bytes": 12,
+                "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1"
+              }
+            ],
+            "task": {
+              "id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+              "revision": 2
+            },
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "lakota.csv",
+              "bytes": 12,
+              "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1",
+              "matches": true
+            }
+          ]
+        }
+      ],
+      "service_status": {
+        "alive": true,
+        "error": null,
+        "instance": "c73d83fe-90c7-4910-839e-702e0b5ad950",
+        "log_path": "/Users/shenyaojin/Documents/gitproject/xXASSXx/smoke-output/file-transfer-cross-56d2e303/a/member.sqlite3.service/butler.log",
+        "pid": 59362,
+        "state": "running",
+        "updated_at": 1791426635
+      }
+    },
+    {
+      "member": "b",
+      "binary_sha256": "1be1ad2bf1cb47c7eef4992ecf7dace4aeeceb4c6583369f3a83f8fbee36fc63",
+      "schema": 9,
+      "tasks": [
+        {
+          "id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+          "revision": 2,
+          "state": "completed",
+          "result": {
+            "body": "已收到并校验 1 个文件，已保存到本机。\n\nlakota.csv（12 字节，来自 @b）\n\n按 CtrlF 查看附件，可打开、另存为或继续分析。这些是发送时的固定副本；发送方后续修改不会改变本次附件。",
+            "candidates": [
+              {
+                "member": "b",
+                "result": {
+                  "attachment": {
+                    "manifest": {
+                      "files": [
+                        {
+                          "bytes": 12,
+                          "id": "b6c7e2c6-6247-59b7-87c0-704a2ff19696",
+                          "name": "lakota.csv",
+                          "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1"
+                        }
+                      ],
+                      "id": "8f48fdce-8e10-54d5-9bd3-0d53f6784f0a",
+                      "note": "已确认工作目录中的 lakota.csv 原始文件存在，已提交该文件用于再次发送。未读取分析内容，也未修改、转换或重命名文件；发送及接收状态尚未确认。",
+                      "protocol": 1,
+                      "recipient": "a",
+                      "replaces": null,
+                      "sender": "b",
+                      "task": {
+                        "id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+                        "revision": 2
+                      }
+                    },
+                    "transfer_id": "8f48fdce-8e10-54d5-9bd3-0d53f6784f0a"
+                  },
+                  "body": "已确认工作目录中的 lakota.csv 原始文件存在，已提交该文件用于再次发送。未读取分析内容，也未修改、转换或重命名文件；发送及接收状态尚未确认。",
+                  "execution_id": "38468797-f1ce-5d74-aa52-025519cb8484",
+                  "files": [
+                    {
+                      "path": "lakota.csv",
+                      "reason": "用户要求再次原样发送的工作目录内原始文件；已确认是普通文件，大小为 12 字节。",
+                      "root": 0
+                    }
+                  ],
+                  "run_id": "07aac99d-f505-4b76-bebf-6288ec8e77d7",
+                  "sources": [
+                    {
+                      "evidence": "live path discovery only; not fixed-content analysis",
+                      "member": "b",
+                      "scope": "confirmed local allowlist",
+                      "search_time": 1791426181
+                    }
+                  ]
+                },
+                "revision": 2
+              }
+            ],
+            "completed_at": 1791426314,
+            "revision": 2
+          }
+        }
+      ],
+      "runs": [
+        {
+          "task_id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+          "revision": 1,
+          "phase": "discover",
+          "id": "708681b4-50cd-4ce7-bcce-e2be9778c4bf",
+          "state": "succeeded",
+          "turn_completed": 1,
+          "exit_code": 0,
+          "submissions": 1
+        },
+        {
+          "task_id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+          "revision": 2,
+          "phase": "discover",
+          "id": "07aac99d-f505-4b76-bebf-6288ec8e77d7",
+          "state": "succeeded",
+          "turn_completed": 1,
+          "exit_code": 0,
+          "submissions": 1
+        }
+      ],
+      "commands": [
+        {
+          "action": "send_files",
+          "state": "done",
+          "error": null
+        },
+        {
+          "action": "allow_files",
+          "state": "done",
+          "error": null
+        },
+        {
+          "action": "allow_files",
+          "state": "done",
+          "error": null
+        }
+      ],
+      "transfers": [
+        {
+          "id": "f6c23076-f99a-5c5f-affe-22ab7b792507",
+          "direction": "out",
+          "task_id": null,
+          "revision": null,
+          "state": "delivered",
+          "manifest": {
+            "protocol": 1,
+            "id": "f6c23076-f99a-5c5f-affe-22ab7b792507",
+            "sender": "b",
+            "recipient": "a",
+            "note": "发送所选文件给 @a",
+            "files": [
+              {
+                "id": "5908d6de-9a49-5e11-bf7a-eb4db9f76f55",
+                "name": "lakota.csv",
+                "bytes": 12,
+                "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1"
+              }
+            ],
+            "task": null,
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "lakota.csv",
+              "bytes": 12,
+              "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1",
+              "matches": true
+            }
+          ]
+        },
+        {
+          "id": "55c49342-4605-4043-b17f-7de4b2d31230",
+          "direction": "in",
+          "task_id": null,
+          "revision": null,
+          "state": "received",
+          "manifest": {
+            "protocol": 1,
+            "id": "55c49342-4605-4043-b17f-7de4b2d31230",
+            "sender": "a",
+            "recipient": "b",
+            "note": "",
+            "files": [
+              {
+                "id": "41472813-9932-5765-b049-8160d876b478",
+                "name": "pressure.csv",
+                "bytes": 26,
+                "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa"
+              },
+              {
+                "id": "a525e902-9313-544e-872e-b88dc323e034",
+                "name": "pressure.png",
+                "bytes": 221,
+                "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1"
+              }
+            ],
+            "task": null,
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "pressure.csv",
+              "bytes": 26,
+              "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa",
+              "matches": true
+            },
+            {
+              "name": "pressure.png",
+              "bytes": 221,
+              "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1",
+              "matches": true
+            }
+          ]
+        },
+        {
+          "id": "6338f6fb-a393-5378-b745-4a004e2e526a",
+          "direction": "out",
+          "task_id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+          "revision": 1,
+          "state": "delivered",
+          "manifest": {
+            "protocol": 1,
+            "id": "6338f6fb-a393-5378-b745-4a004e2e526a",
+            "sender": "b",
+            "recipient": "a",
+            "note": "已在 b 的工作目录中找到 lakota.csv，为普通文件，大小 12 字节。已提交该原始文件的引用；未读取或分析内容，也未修改文件。尚未确认附件发送或接收完成。",
+            "files": [
+              {
+                "id": "6fa3fbfb-82c6-5011-ad84-4a98005d3001",
+                "name": "lakota.csv",
+                "bytes": 12,
+                "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1"
+              }
+            ],
+            "task": {
+              "id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+              "revision": 1
+            },
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "lakota.csv",
+              "bytes": 12,
+              "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1",
+              "matches": true
+            }
+          ]
+        },
+        {
+          "id": "719d58c2-3eb7-5ef9-b959-bfec65bf6db8",
+          "direction": "in",
+          "task_id": null,
+          "revision": null,
+          "state": "received",
+          "manifest": {
+            "protocol": 1,
+            "id": "719d58c2-3eb7-5ef9-b959-bfec65bf6db8",
+            "sender": "a",
+            "recipient": "b",
+            "note": "发送所选文件给 @b",
+            "files": [
+              {
+                "id": "34e2f2f8-8f9e-5b8a-bfef-8e605e10cb2a",
+                "name": "pressure.csv",
+                "bytes": 26,
+                "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa"
+              },
+              {
+                "id": "eca2c658-d1ad-593a-a83e-49a80dabc4b6",
+                "name": "pressure.png",
+                "bytes": 221,
+                "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1"
+              }
+            ],
+            "task": null,
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "pressure.csv",
+              "bytes": 26,
+              "sha256": "438e4e63af023daa1dca339c2dccab12602333f1b3c5f0718df342c449e889fa",
+              "matches": true
+            },
+            {
+              "name": "pressure.png",
+              "bytes": 221,
+              "sha256": "b90f0583ad2c8e2547a5368cfa3f84bfbbc3802a4b3aac9bc89c0553460ee6c1",
+              "matches": true
+            }
+          ]
+        },
+        {
+          "id": "8f48fdce-8e10-54d5-9bd3-0d53f6784f0a",
+          "direction": "out",
+          "task_id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+          "revision": 2,
+          "state": "delivered",
+          "manifest": {
+            "protocol": 1,
+            "id": "8f48fdce-8e10-54d5-9bd3-0d53f6784f0a",
+            "sender": "b",
+            "recipient": "a",
+            "note": "已确认工作目录中的 lakota.csv 原始文件存在，已提交该文件用于再次发送。未读取分析内容，也未修改、转换或重命名文件；发送及接收状态尚未确认。",
+            "files": [
+              {
+                "id": "b6c7e2c6-6247-59b7-87c0-704a2ff19696",
+                "name": "lakota.csv",
+                "bytes": 12,
+                "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1"
+              }
+            ],
+            "task": {
+              "id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+              "revision": 2
+            },
+            "replaces": null
+          },
+          "file_checks": [
+            {
+              "name": "lakota.csv",
+              "bytes": 12,
+              "sha256": "2461c4c8fd9864afc0e1648b16c2bba8a46c261dd889511bca4876d5f90243e1",
+              "matches": true
+            }
+          ]
+        }
+      ],
+      "service_status": {
+        "alive": true,
+        "error": null,
+        "instance": "606b0be1-2803-43cb-9990-c8acdac6af3a",
+        "log_path": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/file-transfer-e683d0f0/acceptance/b/member.sqlite3.service/butler.log",
+        "pid": 2510553,
+        "state": "running",
+        "updated_at": 1791426635
+      }
+    }
+  ],
+  "automated": {
+    "passed": 127,
+    "failed": 0,
+    "ignored": 2,
+    "log": "smoke-output/file-transfer-final-tests.log",
+    "clippy_log": "smoke-output/file-transfer-clippy.log"
+  },
+  "download_wait_before_receipt": {
+    "tasks": [
+      {
+        "id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+        "revision": 2,
+        "state": "waiting",
+        "next_owner": "a",
+        "waiting_reason": "结果已准备，等待附件允许发送或接收；按 CtrlF 查看"
+      }
+    ],
+    "delivery": [
+      {
+        "task_id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+        "revision": 1,
+        "required": 1,
+        "review_saved": 0
+      },
+      {
+        "task_id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+        "revision": 2,
+        "required": 1,
+        "review_saved": 1
+      }
+    ],
+    "transfers": [
+      {
+        "id": "f6c23076-f99a-5c5f-affe-22ab7b792507",
+        "task_id": null,
+        "revision": null,
+        "state": "received",
+        "requested": 0
+      },
+      {
+        "id": "55c49342-4605-4043-b17f-7de4b2d31230",
+        "task_id": null,
+        "revision": null,
+        "state": "delivered",
+        "requested": 0
+      },
+      {
+        "id": "6338f6fb-a393-5378-b745-4a004e2e526a",
+        "task_id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+        "revision": 1,
+        "state": "received",
+        "requested": 0
+      },
+      {
+        "id": "719d58c2-3eb7-5ef9-b959-bfec65bf6db8",
+        "task_id": null,
+        "revision": null,
+        "state": "delivered",
+        "requested": 0
+      },
+      {
+        "id": "8f48fdce-8e10-54d5-9bd3-0d53f6784f0a",
+        "task_id": "eecc92a9-f54f-5484-b9d8-b4f750b81a52",
+        "revision": 2,
+        "state": "offered",
+        "requested": 0
+      }
+    ]
+  },
+  "workspace_binary_sha256": "3a792b4ae5bf3dbf87dc7a4d2f415741c241461117b6fb6e763fab1d770681a0",
+  "cleanup": {
+    "isolated_services_stopped": true,
+    "record": "smoke-output/file-transfer-cleanup.json",
+    "test_files_and_terminal_records_preserved": true
+  }
+}

@@ -79,6 +79,11 @@ enum Panel {
     AccessPath,
     AccessDependency,
     AccessTimeout,
+    Attachments,
+    AttachmentDetail,
+    AttachmentRecipient,
+    AttachmentSave,
+    AttachmentAnalyze,
 }
 struct AccessForm {
     task: String,
@@ -89,6 +94,7 @@ struct AccessForm {
     roots: Vec<PathBuf>,
     read_dirs: Vec<PathBuf>,
     timeout_secs: u64,
+    deliver_files: bool,
 }
 pub struct Ui {
     pub input: Editor,
@@ -109,6 +115,9 @@ pub struct Ui {
     owner: String,
     pending_command: Option<String>,
     access_form: Option<AccessForm>,
+    send_to: Option<String>,
+    transfer_id: Option<String>,
+    transfer_file: Option<String>,
 }
 impl Ui {
     pub fn new(store: &Store, project: Value) -> Result<Self> {
@@ -135,6 +144,9 @@ impl Ui {
             owner,
             pending_command: None,
             access_form: None,
+            send_to: None,
+            transfer_id: None,
+            transfer_file: None,
         })
     }
     pub fn recipient(&self, store: &Store) -> Result<String> {
@@ -238,7 +250,15 @@ impl Ui {
         let mut session = self.session.clone();
         let task = if matches!(
             action.as_str(),
-            "root_add" | "root_remove" | "project_allow"
+            "root_add"
+                | "root_remove"
+                | "project_allow"
+                | "send_files"
+                | "allow_files"
+                | "receive_files"
+                | "revoke_files"
+                | "retry_files"
+                | "analyze_attachment"
         ) {
             None
         } else {
@@ -288,7 +308,15 @@ impl Ui {
         self.session = session;
         if !matches!(
             i.action.as_str(),
-            "root_add" | "root_remove" | "project_allow"
+            "root_add"
+                | "root_remove"
+                | "project_allow"
+                | "send_files"
+                | "allow_files"
+                | "receive_files"
+                | "revoke_files"
+                | "retry_files"
+                | "analyze_attachment"
         ) {
             self.selected_task = i.task_id.clone();
         }
@@ -300,6 +328,7 @@ impl Ui {
         self.refresh(store)
     }
     fn open_files(&mut self, store: &Store) -> Result<()> {
+        self.send_to = None;
         if self.current_task().is_some_and(|t| t["protocol"] == 2) {
             return self.open_task_access();
         }
@@ -335,6 +364,7 @@ impl Ui {
             roots: serde_json::from_value(permission["read_roots"].clone())?,
             read_dirs: vec![],
             timeout_secs: 1800,
+            deliver_files: false,
         });
         self.input.clear();
         self.panel = Panel::TaskAccess;
@@ -357,7 +387,7 @@ impl Ui {
         if self.panel == Panel::TaskAccess {
             match key.code {
                 KeyCode::Up => self.index = self.index.saturating_sub(1),
-                KeyCode::Down | KeyCode::Tab => self.index = (self.index + 1) % 6,
+                KeyCode::Down | KeyCode::Tab => self.index = (self.index + 1) % 7,
                 KeyCode::Enter => match self.index {
                     0 => {
                         let form = self.access_form.as_ref().context("请重新打开授权范围")?;
@@ -371,6 +401,9 @@ impl Ui {
                                 timeout_secs: form.timeout_secs,
                             },
                         )?;
+                        if form.deliver_files {
+                            crate::transfers::allow_task(store, &form.task, form.revision)?;
+                        }
                         self.access_form = None;
                         self.panel = Panel::Chat;
                         self.notice = "已允许并排队，助手会自动开始；发起方无需重试。".into();
@@ -380,6 +413,11 @@ impl Ui {
                         self.panel = Panel::Chat;
                         self.access_form = None;
                         self.notice = "暂未允许，任务保留；准备好后按 CtrlG。".into();
+                    }
+                    6 => {
+                        if let Some(form) = self.access_form.as_mut() {
+                            form.deliver_files = !form.deliver_files;
+                        }
                     }
                     2 => {
                         self.input.clear();
@@ -514,9 +552,10 @@ impl Ui {
         if ctrl {
             match key.code {
                 KeyCode::Char('s')
-                    if self
-                        .current_task()
-                        .is_some_and(|t| t["protocol"] == 2 && t["state"] == "draft") =>
+                    if matches!(self.panel, Panel::Chat | Panel::Tasks)
+                        && self
+                            .current_task()
+                            .is_some_and(|t| t["protocol"] == 2 && t["state"] == "draft") =>
                 {
                     self.enqueue(
                         store,
@@ -539,6 +578,12 @@ impl Ui {
                     ensure!(self.current_task().is_some(), "请先选择任务");
                     self.panel = Panel::Questions;
                     self.index = 0;
+                    return Ok(false);
+                }
+                KeyCode::Char('f') => {
+                    self.panel = Panel::Attachments;
+                    self.index = 0;
+                    self.scroll = 0;
                     return Ok(false);
                 }
                 KeyCode::Char('o') => {
@@ -754,9 +799,116 @@ impl Ui {
                 }
                 return Ok(false);
             }
+            Panel::Attachments => {
+                let items = self.data["attachments"].as_array().unwrap();
+                match key.code {
+                    KeyCode::Up => self.index = self.index.saturating_sub(1),
+                    KeyCode::Down => {
+                        self.index = (self.index + 1).min(items.len().saturating_sub(1))
+                    }
+                    KeyCode::Char('n') => {
+                        self.panel = Panel::AttachmentRecipient;
+                        self.index = 0;
+                        self.send_to = None;
+                        self.chosen.clear();
+                    }
+                    KeyCode::Enter => {
+                        if let Some(v) = items.get(self.index) {
+                            self.transfer_id = v["id"].as_str().map(str::to_string);
+                            self.panel = Panel::AttachmentDetail;
+                            self.index = 0;
+                        }
+                    }
+                    _ => {}
+                }
+                return Ok(false);
+            }
+            Panel::AttachmentRecipient => {
+                let contacts = self.data["contacts"].as_array().unwrap();
+                match key.code {
+                    KeyCode::Up => self.index = self.index.saturating_sub(1),
+                    KeyCode::Down => {
+                        self.index = (self.index + 1).min(contacts.len().saturating_sub(1))
+                    }
+                    KeyCode::Enter => {
+                        if let Some(c) = contacts.get(self.index) {
+                            self.send_to = Some(c["member_id"].as_str().unwrap().into());
+                            self.files=store.file_roots()?.iter().map(|p|json!({"name":p.to_string_lossy(),"path":p,"directory":true})).collect();
+                            self.folder = None;
+                            self.index = 0;
+                            self.panel = Panel::Files;
+                        }
+                    }
+                    _ => {}
+                }
+                return Ok(false);
+            }
+            Panel::AttachmentDetail => {
+                let id = self.transfer_id.clone().context("请选择附件")?;
+                let v = crate::transfers::get(store, &id)?;
+                let m = &v["manifest"];
+                let files = m["files"].as_array().unwrap();
+                match key.code {
+                    KeyCode::Up => self.index = self.index.saturating_sub(1),
+                    KeyCode::Down => {
+                        self.index = (self.index + 1).min(files.len().saturating_sub(1))
+                    }
+                    KeyCode::Char('a')
+                    | KeyCode::Char('d')
+                    | KeyCode::Char('r')
+                    | KeyCode::Char('x') => {
+                        let action = match key.code {
+                            KeyCode::Char('a') => "allow_files",
+                            KeyCode::Char('d') => "receive_files",
+                            KeyCode::Char('r') => "retry_files",
+                            _ => "revoke_files",
+                        };
+                        self.enqueue(
+                            store,
+                            action,
+                            "处理所选附件".into(),
+                            json!({"transfer_id":id}),
+                        )?;
+                    }
+                    KeyCode::Enter | KeyCode::Char('o') => {
+                        if let Some(f) = files.get(self.index) {
+                            let path = crate::transfers::local_path(
+                                store,
+                                &id,
+                                f["id"].as_str().unwrap(),
+                            )?;
+                            self.notice = open_attachment(&path)?;
+                        }
+                    }
+                    KeyCode::Char('s') | KeyCode::Char('c') => {
+                        if let Some(f) = files.get(self.index) {
+                            self.transfer_file = f["id"].as_str().map(str::to_string);
+                            self.input.clear();
+                            self.panel = if key.code == KeyCode::Char('s') {
+                                Panel::AttachmentSave
+                            } else {
+                                Panel::AttachmentAnalyze
+                            };
+                        }
+                    }
+                    _ => {}
+                }
+                return Ok(false);
+            }
             Panel::Files => {
                 if ctrl && key.code == KeyCode::Char('s') {
                     ensure!(!self.chosen.is_empty(), "尚未选择文件");
+                    if let Some(to) = self.send_to.take() {
+                        self.enqueue(
+                            store,
+                            "send_files",
+                            format!("发送所选文件给 @{to}"),
+                            json!({"to":to,"files":self.chosen}),
+                        )?;
+                        self.panel = Panel::Attachments;
+                        self.index = 0;
+                        return Ok(false);
+                    }
                     self.enqueue(
                         store,
                         "authorize",
@@ -792,7 +944,10 @@ impl Ui {
                             } else if let Some(n) = self.chosen.iter().position(|p| *p == path) {
                                 self.chosen.remove(n);
                             } else {
-                                ensure!(self.chosen.len() < 8, "最多选择 8 个文件");
+                                ensure!(
+                                    self.chosen.len() < if self.send_to.is_some() { 40 } else { 8 },
+                                    "文件选择数量超限"
+                                );
                                 self.chosen.push(path);
                             }
                         }
@@ -835,6 +990,24 @@ impl Ui {
                         json!({"path":expand(&text)}),
                     )?;
                     self.panel = Panel::Roots;
+                }
+                Panel::AttachmentSave => {
+                    let id = self.transfer_id.as_deref().context("请选择附件")?;
+                    let file = self.transfer_file.as_deref().context("请选择文件")?;
+                    let v = crate::transfers::save(store, id, file, &expand(&text))?;
+                    self.notice = format!("已另存为 {}", v["saved"].as_str().unwrap_or(""));
+                    self.panel = Panel::AttachmentDetail;
+                }
+                Panel::AttachmentAnalyze => {
+                    let id = self.transfer_id.clone().context("请选择附件")?;
+                    let file = self.transfer_file.clone().context("请选择文件")?;
+                    self.enqueue(
+                        store,
+                        "analyze_attachment",
+                        text,
+                        json!({"transfer_id":id,"file_ids":[file]}),
+                    )?;
+                    self.panel = Panel::Chat;
                 }
                 Panel::Revise => {
                     let action = if self.current_task().is_some_and(|t| t["archived"] == true) {
@@ -1102,7 +1275,13 @@ impl Ui {
         );
         if matches!(
             self.panel,
-            Panel::Chat | Panel::ProjectPath | Panel::RootPath | Panel::NewTask | Panel::Revise
+            Panel::Chat
+                | Panel::ProjectPath
+                | Panel::RootPath
+                | Panel::NewTask
+                | Panel::Revise
+                | Panel::AttachmentSave
+                | Panel::AttachmentAnalyze
         ) && inner.width > 0
             && inner.height > 0
         {
@@ -1171,7 +1350,13 @@ impl Ui {
         }
         if !matches!(
             self.panel,
-            Panel::Chat | Panel::ProjectPath | Panel::RootPath | Panel::NewTask | Panel::Revise
+            Panel::Chat
+                | Panel::ProjectPath
+                | Panel::RootPath
+                | Panel::NewTask
+                | Panel::Revise
+                | Panel::AttachmentSave
+                | Panel::AttachmentAnalyze
         ) {
             self.panel(f, body, store);
         }
@@ -1277,7 +1462,15 @@ impl Ui {
                     lines.push(
                         "只在新任务文件夹里修改副本和运行程序；原文件和依赖只读，不联网。".into(),
                     );
-                    lines.push("允许后自动开始，结果自动返回发起方。".into());
+                    lines.push(format!(
+                        "交付本任务目录内选定结果文件：{}",
+                        if form.deliver_files {
+                            "允许"
+                        } else {
+                            "暂不允许；产物准备好后可单独允许发送"
+                        }
+                    ));
+                    lines.push("允许后自动开始，结果说明返回发起方。".into());
                     lines.push(String::new());
                     if self.panel == Panel::TaskAccess {
                         for (n, label) in [
@@ -1287,6 +1480,7 @@ impl Ui {
                             "添加只读依赖目录（可选）",
                             "修改运行时限",
                             "清空额外依赖目录",
+                            "切换：允许交付本任务结果附件",
                         ]
                         .iter()
                         .enumerate()
@@ -1437,16 +1631,131 @@ impl Ui {
                 }
                 "导入白名单"
             }
+            Panel::Attachments => {
+                lines.push("n 选择文件发送 · ↑↓ 选择 · Enter 查看 · Esc 返回".into());
+                for (n, v) in self.data["attachments"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .enumerate()
+                {
+                    let m = &v["manifest"];
+                    lines.push(format!(
+                        "{} {} → {} · {}",
+                        if n == self.index { "▶" } else { " " },
+                        m["sender"].as_str().unwrap_or(""),
+                        m["recipient"].as_str().unwrap_or(""),
+                        v["label"].as_str().unwrap_or("")
+                    ));
+                    lines.push(format!(
+                        "  {}",
+                        m["files"]
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .map(|f| f["name"].as_str().unwrap_or(""))
+                            .collect::<Vec<_>>()
+                            .join("、")
+                    ));
+                }
+                "附件"
+            }
+            Panel::AttachmentRecipient => {
+                lines.push("选择接收人，Enter 后选择本机文件".into());
+                for (n, c) in self.data["contacts"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .enumerate()
+                {
+                    lines.push(format!(
+                        "{} @{} · {}",
+                        if n == self.index { "▶" } else { " " },
+                        c["member_id"].as_str().unwrap_or(""),
+                        c["display_name"].as_str().unwrap_or("")
+                    ));
+                }
+                "发送附件给谁"
+            }
+            Panel::AttachmentDetail | Panel::AttachmentSave | Panel::AttachmentAnalyze => {
+                if let Some(v) = self.data["attachments"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|v| v["id"].as_str() == self.transfer_id.as_deref())
+                {
+                    let m = &v["manifest"];
+                    lines.push(format!(
+                        "{} → {} · {}",
+                        m["sender"].as_str().unwrap_or(""),
+                        m["recipient"].as_str().unwrap_or(""),
+                        v["label"].as_str().unwrap_or("")
+                    ));
+                    lines.push(m["note"].as_str().unwrap_or("").into());
+                    if let Some(err) = v["error"].as_str() {
+                        lines.push(format!("需处理：{err}"));
+                    }
+                    for (n, file) in m["files"].as_array().into_iter().flatten().enumerate() {
+                        lines.push(format!(
+                            "{} {} · {} 字节",
+                            if self.index == n { "▶" } else { " " },
+                            file["name"].as_str().unwrap_or(""),
+                            file["bytes"]
+                        ));
+                        if let Some(local) = v["local_files"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .find(|p| p["id"] == file["id"])
+                        {
+                            lines.push(format!("  已传 {} 字节", local["bytes_transferred"]));
+                            if v["state"] == "received" {
+                                lines.push(format!("  {}", local["path"].as_str().unwrap_or("")));
+                            }
+                        }
+                    }
+                    if self.panel == Panel::AttachmentDetail {
+                        lines.push("a 允许发送所列固定文件 · d 下载 · r 重试 · x 撤销发送".into());
+                        lines.push(
+                            "↑↓ 选文件 · Enter/o 打开 · s 另存为 · c 继续分析 · Esc 返回".into(),
+                        );
+                    } else {
+                        lines.push(
+                            if self.panel == Panel::AttachmentSave {
+                                "输入另存为的完整路径（不覆盖已有文件）："
+                            } else {
+                                "希望如何分析这个附件？"
+                            }
+                            .into(),
+                        );
+                        lines.push(format!("> {}▏", self.input.text));
+                    }
+                }
+                "附件详情"
+            }
             Panel::Files => {
                 lines.push("↑↓ 选择 · Enter 进入目录 · 空格勾选文件 · Backspace 回根目录".into());
-                lines.push("CtrlS 确认只读分析授权 · Esc 取消；最多 8 个文件，每个 256 KiB".into());
-                if let Some(t) = self.current_task() {
-                    lines.push(format!("授权目标：{}", t["goal"].as_str().unwrap_or("")));
+                lines.push(if let Some(to) = &self.send_to {
+                    format!("CtrlS 将所选固定副本发送给 @{to} · 最多 40 个 · Esc 取消")
+                } else {
+                    "CtrlS 确认只读分析授权 · Esc 取消；最多 8 个文件，每个 256 KiB".into()
+                });
+                if self.send_to.is_none() {
+                    if let Some(t) = self.current_task() {
+                        lines.push(format!("授权目标：{}", t["goal"].as_str().unwrap_or("")));
+                    }
                 }
-                lines.push(format!(
-                    "已选 {} 个；不自动共享，只授予此任务的固定版本",
-                    self.chosen.len()
-                ));
+                lines.push(if self.send_to.is_some() {
+                    format!(
+                        "已选 {} 个；确认后发送这些文件的固定副本，原文件保持不变",
+                        self.chosen.len()
+                    )
+                } else {
+                    format!(
+                        "已选 {} 个；不自动共享，只授予此任务的固定版本",
+                        self.chosen.len()
+                    )
+                });
                 for (n, file) in self.files.iter().enumerate() {
                     let path = PathBuf::from(file["path"].as_str().unwrap_or(""));
                     lines.push(format!(
@@ -1465,7 +1774,11 @@ impl Ui {
                 if self.files.is_empty() {
                     lines.push("无可选文件。CtrlR 添加白名单目录；不会自动扫描子目录。".into());
                 }
-                "明确选择任务材料"
+                if self.send_to.is_some() {
+                    "选择发送的文件"
+                } else {
+                    "明确选择任务材料"
+                }
             }
             Panel::Detail => {
                 if let Some(t) = self.current_task() {
@@ -1616,7 +1929,13 @@ impl Ui {
         };
         let scroll = if matches!(
             self.panel,
-            Panel::Files | Panel::Roots | Panel::Projects | Panel::Tasks | Panel::Chats
+            Panel::Files
+                | Panel::Roots
+                | Panel::Projects
+                | Panel::Tasks
+                | Panel::Chats
+                | Panel::Attachments
+                | Panel::AttachmentRecipient
         ) {
             self.index
                 .saturating_sub(area.height.saturating_sub(7) as usize)
@@ -1625,6 +1944,38 @@ impl Ui {
         };
         draw_lines(f, area, title, &lines, scroll, false);
     }
+}
+fn open_attachment(path: &Path) -> Result<String> {
+    let ext = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if ![
+        "png", "jpg", "jpeg", "gif", "webp", "pdf", "txt", "md", "csv", "tsv", "json",
+    ]
+    .contains(&ext.as_str())
+    {
+        return Ok(format!("已保存：{}；请用合适的应用打开", path.display()));
+    }
+    #[cfg(target_os = "macos")]
+    let program = "open";
+    #[cfg(not(target_os = "macos"))]
+    let program = "xdg-open";
+    if cfg!(target_os = "linux")
+        && std::env::var_os("DISPLAY").is_none()
+        && std::env::var_os("WAYLAND_DISPLAY").is_none()
+    {
+        return Ok(format!("已保存：{}；当前终端无图形环境", path.display()));
+    }
+    let status = std::process::Command::new(program)
+        .arg(path)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()?;
+    ensure!(status.success(), "无法打开；文件保存在 {}", path.display());
+    Ok(format!("已请求系统应用打开 {}", path.display()))
 }
 fn expand(text: &str) -> PathBuf {
     if let Some(rest) = text.strip_prefix("~/") {
@@ -1665,7 +2016,7 @@ fn draw_lines(
         .collect::<Vec<_>>();
     f.render_widget(Paragraph::new(text), inner);
 }
-const HELP: &str = "大部分实质任务会交给 Codex；可直接让它找文件或解释材料。\n默认输入给自己的助手；@test 明确选择 test的助手。\nTab / ShiftTab 切换查看状态卡。\n@ 候选打开时：↑↓选择，Tab 确认，此时不会发送。\nEnter 发送；CtrlJ 或 AltEnter 换行；粘贴不会自动发送。\n方向键/Home/End 编辑；PageUp/PageDown 或滚轮查看历史。\nCtrlO 查看所有会话和未读消息；n 新建独立对话。\nCtrlT 选择任务；待你允许的任务按 Enter 查看范围，再选允许并开始。\nCtrlN 新建任务（@成员 指定执行人）。\nCtrlS 确认任务意图；CtrlB 选问题；CtrlE 修改或重开。\nCtrlU 仅用于兼容旧任务的固定材料授权；新任务不逐项授权。\nCtrlD 展开来源、结果位置、错误和原始往返。\nCtrlX 停止本端后续调度（需确认）；CtrlY 显式重试原任务。\nCtrlP 选择工作目录：Enter 选择，n 输入其他路径。\nCtrlR 管理白名单目录：n 添加，Delete 移除。\n选择工作目录不授权读取；白名单允许 Codex 按本地或团队请求只读查询。\nCtrlQ / CtrlC 退出界面，后台助手 继续工作。\n/identity、/status、/contacts 不调用模型。\n写入或运行：执行方 CtrlT → Enter 查看范围 → 允许并开始，发起方无需重试。\nCtrlG 打开当前任务的执行授权；可调整保存位置、依赖目录和运行时限。";
+const HELP: &str = "CtrlF 附件：n 选择接收人和文件，CtrlS 发送；Enter 查看和处理附件。\n大部分实质任务会交给 Codex；可直接让它找文件或解释材料。\n默认输入给自己的助手；@test 明确选择 test的助手。\nTab / ShiftTab 切换查看状态卡。\n@ 候选打开时：↑↓选择，Tab 确认，此时不会发送。\nEnter 发送；CtrlJ 或 AltEnter 换行；粘贴不会自动发送。\n方向键/Home/End 编辑；PageUp/PageDown 或滚轮查看历史。\nCtrlO 查看所有会话和未读消息；n 新建独立对话。\nCtrlT 选择任务；待你允许的任务按 Enter 查看范围，再选允许并开始。\nCtrlN 新建任务（@成员 指定执行人）。\nCtrlS 确认任务意图；CtrlB 选问题；CtrlE 修改或重开。\nCtrlU 仅用于兼容旧任务的固定材料授权；新任务不逐项授权。\nCtrlD 展开来源、结果位置、错误和原始往返。\nCtrlX 停止本端后续调度（需确认）；CtrlY 显式重试原任务。\nCtrlP 选择工作目录：Enter 选择，n 输入其他路径。\nCtrlR 管理白名单目录：n 添加，Delete 移除。\n选择工作目录不授权读取；白名单允许 Codex 按本地或团队请求只读查询。\nCtrlQ / CtrlC 退出界面，后台助手 继续工作。\n/identity、/status、/contacts 不调用模型。\n写入或运行：执行方 CtrlT → Enter 查看范围 → 允许并开始，发起方无需重试。\nCtrlG 打开当前任务的执行授权；可调整保存位置、依赖目录和运行时限。";
 
 pub async fn open(args: OpenArgs) -> Result<()> {
     let default_directory = args.directory.is_none();
@@ -1765,6 +2116,8 @@ pub async fn open(args: OpenArgs) -> Result<()> {
                             | Panel::AccessPath
                             | Panel::AccessDependency
                             | Panel::AccessTimeout
+                            | Panel::AttachmentSave
+                            | Panel::AttachmentAnalyze
                     ) {
                         ui.input
                             .insert(&text.replace("\r\n", "\n").replace('\r', "\n"));

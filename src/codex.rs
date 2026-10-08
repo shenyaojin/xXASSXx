@@ -251,8 +251,19 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
         // Deny the actual private files, not the whole parent: an explicitly
         // selected working directory may be a sibling below that parent. A broad
         // parent denial also prevents Codex from resolving its authorized cwd.
-        for path in [store.path.clone(), store.content_root()] {
+        for path in [
+            store.path.clone(),
+            store.content_root(),
+            crate::transfers::base(store),
+        ] {
             fs.insert(path.to_string_lossy().into_owned(), string("deny"));
+        }
+        let attachment_inputs = store.path.with_extension("attachment-inputs");
+        if !roots.iter().any(|r| r.starts_with(&attachment_inputs)) {
+            fs.insert(
+                attachment_inputs.to_string_lossy().into_owned(),
+                string("deny"),
+            );
         }
         for suffix in ["-wal", "-shm", ".service", ".run-locks"] {
             fs.insert(

@@ -6,6 +6,11 @@ use std::path::{Path, PathBuf};
 
 #[derive(Subcommand)]
 pub enum Commands {
+    /// Immutable file attachments, local grants and resumable delivery.
+    Files {
+        #[command(subcommand)]
+        action: crate::transfers::Command,
+    },
     /// Shared durable owner commands, chats, tasks and events (also a test adapter).
     App {
         #[command(subcommand)]
@@ -242,6 +247,7 @@ pub async fn execute(db: &Path, command: Commands) -> Result<()> {
         Store::open(db)?
     };
     let value: Value = match command {
+        Commands::Files { action } => crate::transfers::execute(&store, action).await?,
         Commands::Client { .. } | Commands::Server { .. } => unreachable!(),
         Commands::App { action } => crate::app_cli::execute(&mut store, action).await?,
         Commands::Roots { action } => crate::file_roots::execute(&store, action)?,

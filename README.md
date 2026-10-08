@@ -10,7 +10,7 @@
 
 ### 1. 安装程序
 
-当前测试版为 [0.2.0 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.2.0-alpha)，提供 Apple 芯片 Mac、Intel Mac 和 Linux x86_64 安装包。
+当前测试版为 [0.3.0 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.3.0-alpha)，提供 Apple 芯片 Mac、Intel Mac 和 Linux x86_64 安装包。
 
 解压安装包，进入包含 `install.sh` 和 `SHA256SUMS` 的目录：
 
@@ -134,6 +134,10 @@ xxassxx client task-access revoke TASK_ID --revision 1
 
 撤销会阻止新的访问、停止在途执行并保留生成文件。再次执行请重开确认新版本，不覆盖旧目录。授权面板与上述命令使用相同的本地、逐任务、逐版本检查。
 
+## 交换文件
+
+0.3.0 Alpha 增加 **CtrlF** 附件入口：选择成员和文件后发送，查看接收状态、另存为，或使用收到的附件继续只读分析。任务也可以交付实际结果文件，执行方需单独允许导出。需要双方个人端和信箱均升级到 0.3.0 Alpha；旧版尚不支持附件。详见[附件操作说明](docs/file-transfer.md)。
+
 ## 团队部署
 
 以下使用一台带 systemd 的 Linux 服务器、一个域名和 Caddy。服务器只运行团队信箱，不需要 Codex 登录或模型密钥。
@@ -247,7 +251,7 @@ curl -i https://team.example.com/v1/whoami
 3. 用匹配本机架构的新安装包重新执行 `install.sh --from .`，或安装本机源码构建的新程序。
 4. 运行 `xxassxx client doctor`，然后用 `xxassxx open /自己的工作目录` 打开界面。工作目录用 Ctrl+P 切换，允许读取的目录用 Ctrl+R 单独管理。
 
-当前个人数据库版本为 8，首次打开自动迁移并保留历史记录；未完成的旧任务会暂停，检查执行记录后再显式恢复。旧程序不能读取 schema 8，不能只换回旧程序或手工调低数据库版本。成员数据默认位于 `~/.local/share/xxassxx/client/`，团队数据位于 `~/.local/share/xxassxx/server/`；不要删除后重建。
+当前个人数据库版本为 9，首次打开自动迁移并保留历史记录；未完成的旧任务会暂停，检查执行记录后再显式恢复。旧程序不能读取 schema 9，不能只换回旧程序或手工调低数据库版本。成员数据默认位于 `~/.local/share/xxassxx/client/`，团队数据位于 `~/.local/share/xxassxx/server/`；不要删除后重建。
 
 ## 遇到问题
 

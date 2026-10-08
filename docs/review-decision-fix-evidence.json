@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-07",
+  "timezone": "America/Denver",
+  "issue": "invalid review decision after a peer candidate result",
+  "changed_files": [
+    "src/task_coordinator.rs",
+    "tests/task_workflow.rs"
+  ],
+  "tests": {
+    "passed": 114,
+    "failed": 0,
+    "ignored": 2,
+    "fmt": "passed",
+    "clippy": "passed",
+    "release_build": "passed",
+    "fault_injection": "simulated model sends wrong-stage review action; two failures then recovery and separate exhaustion/explicit retry are covered"
+  },
+  "real_terminal": {
+    "kind": "real DeepSeek and official Codex through an interactive PTY; isolated same-machine clients",
+    "task_id": "2943cc63-d74e-5a0d-9c96-fe8cdb962b95",
+    "revision": 1,
+    "states": {
+      "a": "completed",
+      "b": "completed"
+    },
+    "final_body": "结果已确认：fast.py 的 iterations 为 10，precise.py 的 iterations 为 100；precise.py 更大，两者相差 90（100 − 10 = 90）。\n\n仅凭配置无法判断哪个更准确：iterations 只是设定的重复计算次数，并不说明误差更小。两个文件里都没有算法、测试数据、正确答案或误差评估结果，其说明文字也明确未作准确性声明，因此配置本身不能证明准确性，也不做方案推荐。\n\n读取证据：执行方完整读取了 fast.py（2 行、96 字节）和 precise.py（2 行、95 字节），共 191 字节，只读、未运行程序、未修改文件，也未统计整个目录。以上数值与证据仅来自这两个已读取文件的范围。",
+    "initiator_file_runs": 0,
+    "executor_runs": [
+      {
+        "id": "2799b8e4-eeba-4ab3-896b-0518ac295d24",
+        "state": "succeeded",
+        "session_id": "01a118bf-a15d-70d2-864a-bc36ddfac07a",
+        "resumed_session_id": null,
+        "mcp_initialized": 1,
+        "reads": 1,
+        "submissions": 1,
+        "turn_completed": 1,
+        "exit_code": 0
+      },
+      {
+        "id": "dc8947c8-d176-42f5-941d-9e89acce4fe8",
+        "state": "succeeded",
+        "session_id": "01a118bf-a15d-70d2-864a-bc36ddfac07a",
+        "resumed_session_id": "01a118bf-a15d-70d2-864a-bc36ddfac07a",
+        "mcp_initialized": 1,
+        "reads": 1,
+        "submissions": 1,
+        "turn_completed": 1,
+        "exit_code": 0
+      },
+      {
+        "id": "5c910356-20be-467f-b0b1-9333376735ea",
+        "state": "succeeded",
+        "session_id": "01a118c1-0a9e-7f82-90db-c6fa0a6f7683",
+        "resumed_session_id": null,
+        "mcp_initialized": 1,
+        "reads": 1,
+        "submissions": 1,
+        "turn_completed": 1,
+        "exit_code": 0
+      }
+    ],
+    "rendered_screens": 7,
+    "source_hashes_independently_verified": true,
+    "interruption": "first freeze reported source metadata change; preserved failure and resumed through actual CtrlY in TUI",
+    "model_invalid_action_reproduced_naturally": false,
+    "binary_sha256": "50b8a797a49fcfcd2d6f94d438d58e089f386c2b1eb8b113c8e6bd4f6cfef035"
+  },
+  "release_binary_sha256": "8e4a45f6c30770f9d35c3f5f4d396a54a8168b62fcfed6f3b9d566b1b5bd547e",
+  "source_sha256": {
+    "src/task_coordinator.rs": "cbf360eb9bfb9911f014383aa89d3016bf35cd5db74aea1f0f0f3de637664583",
+    "tests/task_workflow.rs": "1527983f29b851bf4ebcd51b66e55ec3eb6993b629bd6ae0b039ad4c29963eb1"
+  },
+  "limitations": [
+    "Friend initiator model response not accessible; exact invalid action is unknown.",
+    "Friend original task was not retried or marked complete by this test.",
+    "No deployment or GitHub release performed."
+  ]
+}

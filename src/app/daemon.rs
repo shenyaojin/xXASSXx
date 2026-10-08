@@ -20,6 +20,7 @@ pub async fn run(
     let mut wire = Store::open(db)?;
     let mut owner = Store::open(db)?;
     let mut worker = Store::open(db)?;
+    let files = Store::open(db)?;
     let mut runtime = crate::service::Runtime::acquire(&wire)?;
     let mut interrupt = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
     let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
@@ -172,6 +173,19 @@ pub async fn run(
         Ok::<_, anyhow::Error>(())
     };
     let joined = async {
+        let attachments = async {
+            while !stopping.load(Ordering::Relaxed) {
+                if let Err(e) = crate::transfers::sync(&files).await {
+                    eprintln!("attachments: {e}");
+                }
+                for _ in 0..20 {
+                    if stopping.load(Ordering::Relaxed) {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+            }
+        };
         let guarded_transport = async {
             let r = transport.await;
             if r.is_err() {
@@ -186,7 +200,8 @@ pub async fn run(
             }
             r
         };
-        let (a, b, c) = tokio::join!(guarded_transport, dialogue, guarded_execution);
+        let (a, b, c, _) =
+            tokio::join!(guarded_transport, dialogue, guarded_execution, attachments);
         a?;
         b?;
         c?;

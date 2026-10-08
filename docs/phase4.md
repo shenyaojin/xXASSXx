@@ -133,7 +133,7 @@ Trader 使用 `xxassxx.shenyaojin.com`，DNS A 记录指向 Trader，Cloudflare 
 
 ## 当前团队与邀请
 
-本次 Trader 实例使用团队 `xxassxx`，入口为 `https://xxassxx.shenyaojin.com`。当前正式成员只有 `owner`、`pengchao`、`test`。2026-10-06 已移除早期验收成员 `a`、`b`，同步服务器、Mac/Lakota 联系人和现有邀请；其旧凭据不再被正式信箱接受，历史记录与备份保留。`test` 在 Lakota 常驻运行，白名单为 Mariner 的 scripts 目录。服务器邀请保存在 `~/.local/share/xxassxx/server/invitations/`。本机有权限 600 的副本 `smoke-output/phase4-private/pengchao.json`，仅交付朋友自己的邀请；该目录被 Git 忽略，不包含在安装包中。
+本次 Trader 实例使用团队 `xxassxx`，入口为 `https://xxassxx.shenyaojin.com`。当前成员为 `owner`、`pengchao`、`test`、`mba`；`mba` 于 2026-10-07 为用户的 MacBook Air 新增，当前交付情况见 [接续摘要](current-state.md)。2026-10-06 已移除早期验收成员 `a`、`b`，同步服务器、Mac/Lakota 联系人和现有邀请；其旧凭据不再被正式信箱接受，历史记录与备份保留。`test` 在 Lakota 常驻运行，白名单为 Mariner 的 scripts 目录。服务器邀请保存在 `~/.local/share/xxassxx/server/invitations/`。本机有权限 600 的副本 `smoke-output/phase4-private/pengchao.json`，仅交付朋友自己的邀请；该目录被 Git 忽略，不包含在安装包中。
 
 这台 Mac 已导入 `owner.json` 并启动日常个人端，显示名称为 `Shenyao "Keith" Jin`，通信用户名仍为 `owner`；团队服务配置、邀请和 Lakota test 的联系人已同步显示名称，成员凭据保持不变。程序位于 `~/.local/bin/xxassxx`，数据位于 `~/.local/share/xxassxx/client`，本机白名单为空。DeepSeek 工具调用、Codex 登录和公网身份检查均通过，配置记录见本机 `smoke-output/mac-owner-ready.json`；首次 owner/test 业务协作仍由用户发起。
 

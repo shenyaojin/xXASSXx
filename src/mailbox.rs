@@ -33,17 +33,19 @@ pub struct RelayConfig {
     pub members: Vec<RelayMember>,
     #[serde(default)]
     pub secrets_file: Option<PathBuf>,
+    #[serde(default)]
+    pub transfers: crate::transfers::relay::Limits,
 }
 #[derive(Clone)]
 struct Relay {
     db: PathBuf,
     team: String,
 }
-type ApiError = (StatusCode, Json<Value>);
-fn problem(status: StatusCode, text: &str) -> ApiError {
+pub(crate) type ApiError = (StatusCode, Json<Value>);
+pub(crate) fn problem(status: StatusCode, text: &str) -> ApiError {
     (status, Json(json!({"error":text})))
 }
-fn connection(db: &FsPath) -> Result<Connection> {
+pub(crate) fn connection(db: &FsPath) -> Result<Connection> {
     let c = Connection::open(db)?;
     c.busy_timeout(Duration::from_secs(5))?;
     Ok(c)
@@ -51,7 +53,7 @@ fn connection(db: &FsPath) -> Result<Connection> {
 fn digest(token: &str) -> String {
     format!("{:x}", Sha256::digest(token.as_bytes()))
 }
-fn auth(c: &Connection, headers: &HeaderMap) -> std::result::Result<String, ApiError> {
+pub(crate) fn auth(c: &Connection, headers: &HeaderMap) -> std::result::Result<String, ApiError> {
     let value = headers
         .get("authorization")
         .and_then(|v| v.to_str().ok())
@@ -143,7 +145,8 @@ pub fn router(db: &FsPath, cfg: &RelayConfig) -> Result<Router> {
         .route("/v1/ack/{id}", post(ack))
         .route("/v1/status/{id}", get(status))
         .layer(DefaultBodyLimit::max(65536))
-        .with_state(relay))
+        .with_state(relay)
+        .merge(crate::transfers::relay::router(db, &cfg.transfers)?))
 }
 async fn send(
     State(relay): State<Arc<Relay>>,
@@ -261,7 +264,7 @@ async fn whoami(
         .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "storage unavailable"))?;
     let me = auth(&c, &headers)?;
     Ok(Json(
-        json!({"team_id":relay.team,"member_id":me,"task_protocol":2}),
+        json!({"team_id":relay.team,"member_id":me,"task_protocol":2,"file_transfer_protocol":1}),
     ))
 }
 

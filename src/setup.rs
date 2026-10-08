@@ -37,6 +37,11 @@ pub enum ServerCommand {
 
 #[derive(Subcommand)]
 pub enum ClientCommand {
+    /// Send and receive immutable file attachments.
+    Files {
+        #[command(subcommand)]
+        action: crate::transfers::Command,
+    },
     /// Import your private team invitation and configure your own butler.
     Init {
         #[arg(long)]
@@ -232,6 +237,7 @@ pub fn init_server(root: &Path, team: &str, public_url: &str, members: &[String]
     let secrets_file = root.join("secrets.env");
     private_write(&secrets_file, secrets.as_bytes())?;
     let config = RelayConfig {
+        transfers: Default::default(),
         schedule: Default::default(),
         team_id: team.into(),
         members: relay_members,
@@ -496,6 +502,7 @@ pub async fn client(root: &Path, command: ClientCommand) -> Result<()> {
     }
     let mut store = Store::open(&root.join("member.sqlite3"))?;
     let value = match command {
+        ClientCommand::Files { action } => crate::transfers::execute(&store, action).await?,
         ClientCommand::Doctor { probe_model } => {
             let report = doctor(&store, probe_model).await?;
             println!("{}", serde_json::to_string_pretty(&report)?);

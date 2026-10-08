@@ -414,7 +414,12 @@ pub fn reconcile(store: &mut Store) -> Result<()> {
         }
         let t = tasks::get(store, id)?;
         if t["state"] == "completed" {
-            let path = store.workflow_artifact_path(&format!("app-{id}"));
+            let artifact_id = if t["protocol"] == 2 {
+                format!("app-{id}-r{}", t["revision"])
+            } else {
+                format!("app-{id}")
+            };
+            let path = store.workflow_artifact_path(&artifact_id);
             std::fs::create_dir_all(path.parent().unwrap())?;
             let value = json!({"task_id":id,"title":t["title"],"project":t["project"],"peer":t["peer"],"result":t["result"]});
             let data = serde_json::to_vec_pretty(&value)?;

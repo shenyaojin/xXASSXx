@@ -119,6 +119,9 @@ pub(super) fn message_kind(kind: &str) -> &str {
 }
 
 pub(super) fn task_location(task: &Value, owner: &str) -> String {
+    if let Some(path) = task["attachment_input_directory"].as_str() {
+        return format!("本机只读附件材料：{path}");
+    }
     if task["protocol"] == 2 {
         let initiator = task["initiator"].as_str().unwrap_or(owner);
         let peers = task["participants"]

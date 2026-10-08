@@ -184,11 +184,20 @@ fn bounded_snapshot_survives_live_edits_and_respects_revocation() {
     assert!(task_materials::verify(&s, &snapshot).is_err());
 }
 async fn model_server() -> (String, tokio::task::JoinHandle<()>) {
-    let router=axum::Router::new().route("/chat/completions",axum::routing::post(|axum::Json(v):axum::Json<Value>|async move{
+    model_server_with_invalid_reviews(0).await
+}
+async fn model_server_with_invalid_reviews(
+    invalid_reviews: usize,
+) -> (String, tokio::task::JoinHandle<()>) {
+    use std::sync::{Arc, Mutex};
+    let remaining = Arc::new(Mutex::new(invalid_reviews));
+    let router=axum::Router::new().route("/chat/completions",axum::routing::post(move |axum::Json(v):axum::Json<Value>| {
+        let remaining=remaining.clone();
+        async move {
         let ctx:Value=serde_json::from_str(v["messages"][1]["content"].as_str().unwrap()).unwrap();
         let body=ctx["extra"]["body"].as_str().unwrap_or("");
         assert_eq!(ctx["collaboration"]["executor_members"], json!(["b"]));
-        let result=match ctx["stage"].as_str().unwrap(){
+        let mut result=match ctx["stage"].as_str().unwrap(){
             "resolve" if body.starts_with("请调查") && ctx["task"]["original"].as_str().unwrap().contains("跨端调查回归") && ctx["local_member"]=="b" => json!({"action":"escalate","body":body}),
             "resolve" if body.starts_with("请调查")=>{
                 if body.contains("补充原目录") {
@@ -208,7 +217,17 @@ async fn model_server() -> (String, tokio::task::JoinHandle<()>) {
             "review"=>json!({"action":"complete","body":"选择 precise.py；iterations=100。fast.py 为10。依据两份固定快照，已补齐所有交付项。"}),
             "prepare"=>json!({"action":"prepare","body":"需求复述","goal":"入口比较","deliverables":["入口","参数"],"questions":[],"constraints":"只读","mode":"analysis"}),
             _=>panic!("unexpected stage {ctx}")};
+        if ctx["stage"]=="review" {
+            assert_eq!(v["tools"][0]["function"]["parameters"]["properties"]["action"]["enum"],json!(["complete","continue","escalate","investigate"]));
+            let mut remaining=remaining.lock().unwrap();
+            if *remaining>0 {
+                *remaining-=1;
+                // Valid JSON, but this belongs to the resolve stage, not review.
+                result["action"]=json!("answer");
+            }
+        }
         axum::Json(json!({"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"decision","type":"function","function":{"name":"task_decision","arguments":result.to_string()}}]}}]}))
+        }
     }));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
@@ -216,11 +235,112 @@ async fn model_server() -> (String, tokio::task::JoinHandle<()>) {
     (url, handle)
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn exhausted_review_preserves_candidates_and_recovers_without_restarting_execution() {
+    let t = Team::new();
+    files(&t, "b");
+    let (url, server) = model_server_with_invalid_reviews(3).await;
+    for member in ["a", "b"] {
+        let mut store = t.store(member);
+        let mut cfg = store.member_config().unwrap();
+        cfg.model = json!({"provider":"compatible","base_url":url,"model":"simulation","api_key_env":"","allow_insecure_http":true,"thinking":false});
+        store.configure_member(&cfg).unwrap();
+    }
+    let (i, id) = draft(&t, "@b 选择实验入口脚本，说明参数、候选差异与依据");
+    let mut a = t.store("a");
+    let mut b = t.store("b");
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    for _ in 0..35 {
+        transfer(&a, &mut b);
+        transfer(&b, &mut a);
+        tasks::tick(&b, Path::new(BIN)).await.unwrap();
+        tasks::tick(&a, Path::new(BIN)).await.unwrap();
+        let task = tasks::get(&a, &id).unwrap();
+        if task["state"] == "needs_attention" {
+            break;
+        }
+        for question in task["questions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|q| q["state"] == "user")
+        {
+            let mut answer = action(&i, &id, "answer_question", 1, "精确结果");
+            answer.payload["question_id"] = question["id"].clone();
+            tasks::answer(&a, &answer).unwrap();
+        }
+    }
+    let task = tasks::get(&a, &id).unwrap();
+    assert_eq!(task["state"], "needs_attention", "{task:#}");
+    assert!(
+        task["error"]
+            .as_str()
+            .unwrap()
+            .contains("结果检查连续 3 次")
+    );
+    assert_eq!(task["archived"], false);
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM task_model_attempts WHERE stage='review' AND state='failed'"
+        ),
+        3
+    );
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM task_model_attempts WHERE stage='review' AND state='succeeded'"
+        ),
+        0
+    );
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM task_journal WHERE kind='agent_review'"
+        ),
+        0
+    );
+    assert_eq!(count(&a, "SELECT count(*) FROM task_candidates"), 1);
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM app_messages WHERE kind='task_completed'"
+        ),
+        0
+    );
+    let executions = tasks::get(&b, &id).unwrap()["executions"].clone();
+    tasks::recover(&a, &action(&i, &id, "retry_task", 1, "重试结果检查")).unwrap();
+    tasks::tick(&a, Path::new(BIN)).await.unwrap();
+    assert_eq!(tasks::get(&b, &id).unwrap()["executions"], executions);
+    assert_eq!(count(&a, "SELECT count(*) FROM task_executions"), 0);
+    for _ in 0..20 {
+        transfer(&a, &mut b);
+        transfer(&b, &mut a);
+        tasks::tick(&b, Path::new(BIN)).await.unwrap();
+        tasks::tick(&a, Path::new(BIN)).await.unwrap();
+        if tasks::get(&a, &id).unwrap()["state"] == "completed" {
+            break;
+        }
+    }
+    let completed = tasks::get(&a, &id).unwrap();
+    assert_eq!(completed["state"], "completed", "{completed:#}");
+    assert_eq!(completed["revision"], 1);
+    assert_eq!(completed["archived"], true);
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM app_messages WHERE kind='task_completed'"
+        ),
+        1
+    );
+    server.abort();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn multi_round_mcp_resume_review_archive_reopen_and_tui() {
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     let t = Team::new();
     files(&t, "b");
-    let (url, server) = model_server().await;
+    let (url, server) = model_server_with_invalid_reviews(2).await;
     for m in ["a", "b"] {
         let mut s = t.store(m);
         let mut cfg = s.member_config().unwrap();
@@ -283,6 +403,13 @@ async fn multi_round_mcp_resume_review_archive_reopen_and_tui() {
     }
     let final_task = tasks::get(&a, &id).unwrap();
     assert_eq!(final_task["state"], "completed", "{final_task:#}");
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM task_model_attempts WHERE stage='review' AND state='failed'"
+        ),
+        2
+    );
     assert!(answered && live_changed);
     assert_eq!(final_task["archived"], true);
     assert_eq!(
@@ -1367,4 +1494,72 @@ fn completed_remote_task_card_has_no_waiting_or_initiator_directory() {
         "工作目录：{}",
         t.dir.path().join("a/work").display()
     )));
+}
+
+#[test]
+fn file_task_waits_for_peer_capability_and_resumes_when_registered() {
+    let t = Team::new();
+    let (i, id) = draft(&t, "@b 把实际文件发来");
+    let a = t.store("a");
+    tasks::prepare(
+        &a,
+        &id,
+        json!({"goal":"获取文件","deliverables":["原始文件"],"questions":[],"mode":"files"}),
+    )
+    .unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    t.cli("a", &["butler", "sync"]);
+    assert_eq!(tasks::get(&a, &id).unwrap()["state"], "waiting");
+    assert!(
+        tasks::get(&a, &id).unwrap()["waiting_for"]
+            .as_str()
+            .unwrap()
+            .contains("新版")
+    );
+    assert!(t.store("b").messages(None).unwrap().is_empty());
+    t.cli("b", &["files", "sync"]);
+    t.cli("a", &["butler", "sync"]);
+    t.cli("b", &["butler", "sync"]);
+    assert!(
+        t.store("b")
+            .messages(None)
+            .unwrap()
+            .iter()
+            .any(|m| m.message.operation == "task_v2")
+    );
+}
+
+#[test]
+fn result_archives_are_immutable_per_revision_after_reopening() {
+    let t = Team::new();
+    let (i, id) = draft(&t, "@b 检查结果");
+    let mut a = t.store("a");
+    let c = rusqlite::Connection::open(&a.path).unwrap();
+    c.execute(
+        "UPDATE app_tasks SET state='completed',result=?2 WHERE id=?1",
+        rusqlite::params![id, json!({"body":"first","revision":1}).to_string()],
+    )
+    .unwrap();
+    app::bridge::reconcile(&mut a).unwrap();
+    let first = tasks::get(&a, &id).unwrap()["artifact"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let original = std::fs::read(&first).unwrap();
+    tasks::revise(&a, &action(&i, &id, "reopen_task", 1, "再次检查")).unwrap();
+    c.execute(
+        "UPDATE app_tasks SET state='completed',result=?2 WHERE id=?1",
+        rusqlite::params![id, json!({"body":"second","revision":2}).to_string()],
+    )
+    .unwrap();
+    app::bridge::reconcile(&mut a).unwrap();
+    app::bridge::reconcile(&mut a).unwrap();
+    let second = tasks::get(&a, &id).unwrap()["artifact"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert_ne!(first, second);
+    assert_eq!(std::fs::read(first).unwrap(), original);
+    let result: Value = serde_json::from_slice(&std::fs::read(second).unwrap()).unwrap();
+    assert_eq!(result["result"]["body"], "second");
 }
