@@ -1498,6 +1498,7 @@ impl Ui {
                             }
                             .into(),
                         );
+                        lines.push(format!("> {}▏", self.input.text));
                         lines.push("Enter 保存并返回检查 · Esc 放弃此项修改".into());
                     }
                 }

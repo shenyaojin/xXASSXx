@@ -1,6 +1,6 @@
 [package]
 name = "xxassxx"
-version = "0.3.1-alpha"
+version = "0.3.2-alpha"
 edition = "2024"
 rust-version = "1.85"
 description = "Local versioned knowledge and personal butler collaboration with task-scoped Codex execution"
