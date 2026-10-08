@@ -1,6 +1,6 @@
 # 版本构建与发布
 
-本轮发布版本为 `0.3.0-alpha`，对应 Git 标签 `v0.3.0-alpha`。版本来源是 `Cargo.toml`；`Cargo.lock` 中本包版本保持一致，CLI 和 MCP 自动使用该版本。
+本轮发布版本为 `0.3.1-alpha`，对应 Git 标签 `v0.3.1-alpha`。版本来源是 `Cargo.toml`；`Cargo.lock` 中本包版本保持一致，CLI 和 MCP 自动使用该版本。
 
 ## 发布前验收
 
@@ -26,9 +26,9 @@ cargo test --locked
 cargo clippy --locked --all-targets -- -D warnings
 cargo build --release --locked
 ./target/release/xxassxx --version
-sh scripts/package.sh target/release/xxassxx aarch64-apple-darwin dist/v0.3.0-alpha
-cat dist/v0.3.0-alpha/*.tar.gz.sha256 > dist/v0.3.0-alpha/SHA256SUMS
-cp scripts/install.sh dist/v0.3.0-alpha/install.sh
+sh scripts/package.sh target/release/xxassxx aarch64-apple-darwin dist/v0.3.1-alpha
+cat dist/v0.3.1-alpha/*.tar.gz.sha256 > dist/v0.3.1-alpha/SHA256SUMS
+cp scripts/install.sh dist/v0.3.1-alpha/install.sh
 ```
 
 示例打包目标为 Apple Silicon；其他平台必须使用对应目标的真实二进制。依赖已缓存时可追加 `--offline`。产物按版本隔离，`dist/` 和含私有运行数据的 `smoke-output/` 不提交。
@@ -36,8 +36,8 @@ cp scripts/install.sh dist/v0.3.0-alpha/install.sh
 安装验证使用临时目录，不覆盖日常个人端：
 
 ```sh
-sh scripts/install.sh --from dist/v0.3.0-alpha --prefix /tmp/xxassxx-030-check
-/tmp/xxassxx-030-check/bin/xxassxx --version
+sh scripts/install.sh --from dist/v0.3.1-alpha --prefix /tmp/xxassxx-031-check
+/tmp/xxassxx-031-check/bin/xxassxx --version
 ```
 
 核对安装后版本、二进制哈希及终端入口。升级日常个人端或团队信箱时，先确认没有在途任务，保留已有身份、配置和数据库，停止旧后台后更换并重新启动。1.0.0 前属于小规模测试，本轮按用户要求不创建备份，不重新初始化。
@@ -53,7 +53,7 @@ sh scripts/install.sh --from dist/v0.3.0-alpha --prefix /tmp/xxassxx-030-check
 5. 检查草稿的五项产物、校验值、平台/版本对应关系以及安装结果，再发布草稿。用户已明确要求发布时无需再次索要同一项许可；权限或外部环境阻塞则准确报告状态。
 6. 确认 Release 已公开、不是 draft、保持 prerelease，并验证公开下载可用，记录提交、标签、CI 和 Release 链接。
 
-手动触发只生成 Actions 产物。标签推送成功不等于 Release 已发布；单个平台成功也不等于发布完成。Alpha 安装显式传入 `--version v0.3.0-alpha`，不依赖稳定版 latest。
+手动触发只生成 Actions 产物。标签推送成功不等于 Release 已发布；单个平台成功也不等于发布完成。Alpha 安装显式传入 `--version v0.3.1-alpha`，不依赖稳定版 latest。
 
 ## 0.2.0-alpha 发布结果
 

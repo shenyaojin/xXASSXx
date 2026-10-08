@@ -996,6 +996,7 @@ impl Ui {
                     let file = self.transfer_file.as_deref().context("请选择文件")?;
                     let v = crate::transfers::save(store, id, file, &expand(&text))?;
                     self.notice = format!("已另存为 {}", v["saved"].as_str().unwrap_or(""));
+                    self.input.clear();
                     self.panel = Panel::AttachmentDetail;
                 }
                 Panel::AttachmentAnalyze => {
@@ -1234,6 +1235,8 @@ impl Ui {
             Panel::AccessPath => "输入保存位置 · Enter 返回检查 · Esc 放弃修改".into(),
             Panel::AccessDependency => "输入只读依赖目录 · Enter 返回检查 · Esc 放弃修改".into(),
             Panel::AccessTimeout => "输入运行时限（分钟）· Enter 返回检查".into(),
+            Panel::AttachmentSave => "输入另存为的完整路径 · Enter 保存 · Esc 取消".into(),
+            Panel::AttachmentAnalyze => "输入附件分析问题 · Enter 创建待确认任务 · Esc 取消".into(),
             _ => "正在与自己的助手 对话 · @成员 指定参与人 · Enter 发送".into(),
         };
         let title = if let Some(t) = self.current_task().filter(|_| self.panel == Panel::Chat) {
@@ -1350,13 +1353,7 @@ impl Ui {
         }
         if !matches!(
             self.panel,
-            Panel::Chat
-                | Panel::ProjectPath
-                | Panel::RootPath
-                | Panel::NewTask
-                | Panel::Revise
-                | Panel::AttachmentSave
-                | Panel::AttachmentAnalyze
+            Panel::Chat | Panel::ProjectPath | Panel::RootPath | Panel::NewTask | Panel::Revise
         ) {
             self.panel(f, body, store);
         }
@@ -1501,7 +1498,6 @@ impl Ui {
                             }
                             .into(),
                         );
-                        lines.push(format!("> {}▏", self.input.text));
                         lines.push("Enter 保存并返回检查 · Esc 放弃此项修改".into());
                     }
                 }

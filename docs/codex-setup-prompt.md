@@ -13,7 +13,7 @@
 
 先确认系统和 CPU 架构。当前提供的包支持 macOS Apple 芯片（arm64），不要在 Intel 上强行安装。阅读包里的安装说明和命令帮助，使用随包 install.sh --from 安装包目录，安装到 ~/.local/bin，并校验 SHA-256；不需要 Rust 或 sudo。使用已提供的离线包，不假设 GitHub 上已经有包含最新功能的 Release。将 ~/.local/bin 加入当前会话 PATH；如果登录 shell 的 PATH 缺失，幂等地加入对应 shell 配置，保留已有内容。
 
-先检查是否已有个人端（默认 ~/.local/share/xxassxx/client）。已有个人端就检查身份并保留其数据、白名单和配置，不重新 init、不替换身份、不删除数据库；旧版升级前先确认无运行任务，停止后台并退出旧界面；保留数据和身份，不重新初始化。0.3.0-alpha 的数据库版本为 9，旧二进制不能直接读取升级后的数据库。
+先检查是否已有个人端（默认 ~/.local/share/xxassxx/client）。已有个人端就检查身份并保留其数据、白名单和配置，不重新 init、不替换身份、不删除数据库；旧版升级前先确认无运行任务，停止后台并退出旧界面；保留数据和身份，不重新初始化。0.3.1-alpha 的数据库版本为 9，旧二进制不能直接读取升级后的数据库。
 
 邀请已绑定团队 xxassxx、用户名 pengchao、显示名称 pengchao，服务器地址为 https://xxassxx.shenyaojin.com。用户名不能通过修改邀请自行更换。当前邀请中的联系人应为 owner（Shenyao "Keith" Jin）、test（Lakota）和 mba（Keith 的 MacBook Air）；不得添加 a、b。已有个人端若使用旧邀请，更新联系人时保留其身份、模型和执行配置，不重新初始化。不要输出邀请正文或其中的凭据，不把邀请打进公共安装包。
 

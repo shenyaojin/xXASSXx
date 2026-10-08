@@ -54,6 +54,48 @@ fn fixed_binary_offline_receipt_and_no_overwrite() {
     );
 }
 #[test]
+fn attachment_input_keeps_file_context_and_names_the_action() {
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    let t = Team::new();
+    sync(&t, "b");
+    let source = file(&t, "a", "result.bin", b"fixed result");
+    send(&t, &source);
+    sync(&t, "a");
+    sync(&t, "b");
+    let mut store = t.store("b");
+    let project = xxassxx::app::project(&store, &t.dir.path().join("b/work")).unwrap();
+    let mut ui = xxassxx::tui::Ui::new(&store, project).unwrap();
+    let key = |code| KeyEvent::new(code, KeyModifiers::NONE);
+    ui.key(
+        &mut store,
+        KeyEvent::new(KeyCode::Char('f'), KeyModifiers::CONTROL),
+    )
+    .unwrap();
+    ui.key(&mut store, key(KeyCode::Enter)).unwrap();
+    let render = |ui: &xxassxx::tui::Ui, store: &xxassxx::store::Store| {
+        let mut terminal =
+            ratatui::Terminal::new(ratatui::backend::TestBackend::new(150, 43)).unwrap();
+        terminal.draw(|f| ui.render(f, store)).unwrap();
+        format!("{:?}", terminal.backend().buffer())
+    };
+    ui.key(&mut store, key(KeyCode::Char('s'))).unwrap();
+    let screen = render(&ui, &store);
+    assert!(screen.contains("result.bin") && screen.contains("a → b"));
+    assert!(screen.contains("输入另存为的完整路径"));
+    assert!(!screen.contains("正在与自己的助手 对话"));
+    let saved = t.dir.path().join("saved-result.bin");
+    ui.input.insert(saved.to_str().unwrap());
+    ui.key(&mut store, key(KeyCode::Enter)).unwrap();
+    assert_eq!(std::fs::read(saved).unwrap(), b"fixed result");
+    assert!(ui.input.text.is_empty());
+    ui.key(&mut store, key(KeyCode::Char('c'))).unwrap();
+    let screen = render(&ui, &store);
+    assert!(screen.contains("result.bin") && screen.contains("a → b"));
+    assert!(screen.contains("输入附件分析问题"));
+    assert!(screen.contains("Enter 创建待确认任务"));
+    assert!(!screen.contains("正在与自己的助手 对话"));
+}
+#[test]
 fn resume_after_mailbox_restart_and_lost_receipt() {
     let mut t = Team::new();
     sync(&t, "b");
