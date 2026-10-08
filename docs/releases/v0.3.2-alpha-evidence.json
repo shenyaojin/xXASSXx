@@ -1,0 +1,327 @@
+{
+  "version": "0.3.2-alpha",
+  "tag": "v0.3.2-alpha",
+  "source_commit": "8f0cfce8ecae42d7ce103f8632994319776685ea",
+  "release_url": "https://github.com/shenyaojin/xXASSXx/releases/tag/v0.3.2-alpha",
+  "published_at": "2026-10-08T03:29:24Z",
+  "is_draft": false,
+  "is_prerelease": true,
+  "ci_url": "https://github.com/shenyaojin/xXASSXx/actions/runs/37722009460",
+  "ci_tests": {
+    "mac-arm": {
+      "passed": 128,
+      "failed": 0,
+      "ignored": 2
+    },
+    "mac-intel": {
+      "passed": 128,
+      "failed": 0,
+      "ignored": 2
+    },
+    "linux": {
+      "passed": 128,
+      "failed": 0,
+      "ignored": 2
+    }
+  },
+  "local_checks": {
+    "tests": {
+      "passed": 128,
+      "failed": 0,
+      "ignored": 2
+    },
+    "format": true,
+    "clippy": true,
+    "release_build": true
+  },
+  "packages": [
+    {
+      "asset": "xxassxx-aarch64-apple-darwin.tar.gz",
+      "archive_sha256": "7da496ae6768800f768c6bd32a6a17535f11ceaa271c69f98d1ae862cd7a0c58",
+      "binary_sha256": "4112293a7a934faf4ab796a61848631756dd2be8733191e16c2851d31cc77629",
+      "architecture": "Mach-O 64-bit executable arm64"
+    },
+    {
+      "asset": "xxassxx-x86_64-apple-darwin.tar.gz",
+      "archive_sha256": "37ae29bb7c0a8c7d011af1b5a1caffe7b42155ad9aa1fab6c283a7e95a01af40",
+      "binary_sha256": "78625ee267495ada48d6e57258f95479ad234d1fac1ee034e51d65fc60dfa360",
+      "architecture": "Mach-O 64-bit executable x86_64"
+    },
+    {
+      "asset": "xxassxx-x86_64-unknown-linux-musl.tar.gz",
+      "archive_sha256": "b03632cc367f2ae1d250aa70ff5ebc571b8e6b515945b2dee39224bdd2a19d77",
+      "binary_sha256": "4aca3052013988c8a507246619a231426da9a4ae7c11c5bd408975fa5cd161e9",
+      "architecture": "ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), static-pie linked, BuildID[sha1]=97b0b654af8414873a1b660c307b5fdc30440938, not stripped"
+    }
+  ],
+  "public_downloads": [
+    {
+      "name": "SHA256SUMS",
+      "url": "https://github.com/shenyaojin/xXASSXx/releases/download/v0.3.2-alpha/SHA256SUMS",
+      "status": 200,
+      "bytes": 310,
+      "sha256": "c2488ef5e4bea964045845c0de73ad90e4da0b51dccec035fcb3dac08afe168d",
+      "matches_verified_draft": true
+    },
+    {
+      "name": "install.sh",
+      "url": "https://github.com/shenyaojin/xXASSXx/releases/download/v0.3.2-alpha/install.sh",
+      "status": 200,
+      "bytes": 3067,
+      "sha256": "79b9819c57d7f2684bb4b5033344dbb72be95559e92c925ba1f7850f1537e580",
+      "matches_verified_draft": true
+    },
+    {
+      "name": "xxassxx-aarch64-apple-darwin.tar.gz",
+      "url": "https://github.com/shenyaojin/xXASSXx/releases/download/v0.3.2-alpha/xxassxx-aarch64-apple-darwin.tar.gz",
+      "status": 200,
+      "bytes": 5699254,
+      "sha256": "7da496ae6768800f768c6bd32a6a17535f11ceaa271c69f98d1ae862cd7a0c58",
+      "matches_verified_draft": true
+    },
+    {
+      "name": "xxassxx-x86_64-apple-darwin.tar.gz",
+      "url": "https://github.com/shenyaojin/xXASSXx/releases/download/v0.3.2-alpha/xxassxx-x86_64-apple-darwin.tar.gz",
+      "status": 200,
+      "bytes": 5983576,
+      "sha256": "37ae29bb7c0a8c7d011af1b5a1caffe7b42155ad9aa1fab6c283a7e95a01af40",
+      "matches_verified_draft": true
+    },
+    {
+      "name": "xxassxx-x86_64-unknown-linux-musl.tar.gz",
+      "url": "https://github.com/shenyaojin/xXASSXx/releases/download/v0.3.2-alpha/xxassxx-x86_64-unknown-linux-musl.tar.gz",
+      "status": 200,
+      "bytes": 6586310,
+      "sha256": "b03632cc367f2ae1d250aa70ff5ebc571b8e6b515945b2dee39224bdd2a19d77",
+      "matches_verified_draft": true
+    }
+  ],
+  "deployment": {
+    "mac": {
+      "member_id": "owner",
+      "version": "xxassxx 0.3.2-alpha",
+      "schema_before": 9,
+      "schema": 9,
+      "sha256": "4112293a7a934faf4ab796a61848631756dd2be8733191e16c2851d31cc77629",
+      "history_counts": {
+        "app_sessions": 7,
+        "app_tasks": 6,
+        "tasks": 5,
+        "runs": 12,
+        "messages": 78
+      },
+      "identity_config_history_roots_preserved": true,
+      "integrity": "ok",
+      "foreign_keys": "ok",
+      "backup_created": false,
+      "running": true,
+      "doctor_ready": true
+    },
+    "lakota": {
+      "member_id": "test",
+      "version": "xxassxx 0.3.2-alpha",
+      "schema_before": 9,
+      "schema": 9,
+      "sha256": "4aca3052013988c8a507246619a231426da9a4ae7c11c5bd408975fa5cd161e9",
+      "history_counts": {
+        "app_sessions": 9,
+        "app_tasks": 6,
+        "tasks": 20,
+        "runs": 25,
+        "messages": 72
+      },
+      "identity_config_history_roots_preserved": true,
+      "integrity": "ok",
+      "foreign_keys": "ok",
+      "backup_created": false,
+      "running": true,
+      "doctor_ready": true
+    },
+    "trader": {
+      "version": "xxassxx 0.3.2-alpha",
+      "old_sha256": "92e4171c1a7a2a1d97bd0f2db0c13e17fb9c8686776a586e32697bf7c4ea2faa",
+      "sha256": "4aca3052013988c8a507246619a231426da9a4ae7c11c5bd408975fa5cd161e9",
+      "service": "active",
+      "https": "active",
+      "members": [
+        "mba",
+        "owner",
+        "pengchao",
+        "test"
+      ],
+      "existing_messages": 87,
+      "identity_credentials_messages_config_preserved": true,
+      "file_transfer_protocol": 1,
+      "backup_created": false
+    }
+  },
+  "initial_schema_migration": {
+    "mac": {
+      "version": "xxassxx 0.3.0-alpha",
+      "schema_before": 8,
+      "schema": 9,
+      "identity_config_history_roots_preserved": true,
+      "integrity": "ok",
+      "foreign_keys": "ok"
+    },
+    "lakota": {
+      "version": "xxassxx 0.3.0-alpha",
+      "schema_before": 8,
+      "schema": 9,
+      "identity_config_history_roots_preserved": true,
+      "integrity": "ok",
+      "foreign_keys": "ok"
+    }
+  },
+  "installed_transfer_checks": {
+    "mac": [
+      {
+        "id": "c4060d39-8322-4acb-91f2-924d1b54050e",
+        "direction": "in",
+        "state": "received",
+        "sender": "test",
+        "recipient": "owner",
+        "files": [
+          {
+            "name": "upgrade-check-032-return.dat",
+            "bytes": 9437184,
+            "sha256": "b8b5dabaa3454f7fa46a97c51cec9ccd118ffc0d61df6e46d845ef200a2fd1bb",
+            "byte_verified": true
+          }
+        ]
+      },
+      {
+        "id": "887b8146-b813-54c1-8c93-e643a31e42d2",
+        "direction": "out",
+        "state": "delivered",
+        "sender": "owner",
+        "recipient": "test",
+        "files": [
+          {
+            "name": "upgrade-check-9MiB.dat",
+            "bytes": 9437184,
+            "sha256": "b8b5dabaa3454f7fa46a97c51cec9ccd118ffc0d61df6e46d845ef200a2fd1bb",
+            "byte_verified": true
+          },
+          {
+            "name": "upgrade-check.csv",
+            "bytes": 28,
+            "sha256": "e87475d3feaf9c5972263f6d4ba724014582d6b98708be43ae41c4fcc528fd5b",
+            "byte_verified": true
+          }
+        ]
+      }
+    ],
+    "lakota": [
+      {
+        "id": "c4060d39-8322-4acb-91f2-924d1b54050e",
+        "direction": "out",
+        "state": "delivered",
+        "sender": "test",
+        "recipient": "owner",
+        "files": [
+          {
+            "name": "upgrade-check-032-return.dat",
+            "bytes": 9437184,
+            "sha256": "b8b5dabaa3454f7fa46a97c51cec9ccd118ffc0d61df6e46d845ef200a2fd1bb",
+            "byte_verified": true
+          }
+        ]
+      },
+      {
+        "id": "887b8146-b813-54c1-8c93-e643a31e42d2",
+        "direction": "in",
+        "state": "received",
+        "sender": "owner",
+        "recipient": "test",
+        "files": [
+          {
+            "name": "upgrade-check-9MiB.dat",
+            "bytes": 9437184,
+            "sha256": "b8b5dabaa3454f7fa46a97c51cec9ccd118ffc0d61df6e46d845ef200a2fd1bb",
+            "byte_verified": true
+          },
+          {
+            "name": "upgrade-check.csv",
+            "bytes": 28,
+            "sha256": "e87475d3feaf9c5972263f6d4ba724014582d6b98708be43ae41c4fcc528fd5b",
+            "byte_verified": true
+          }
+        ]
+      }
+    ]
+  },
+  "terminal_validation": {
+    "version": "0.3.2-alpha",
+    "mode": "Actual interactive PTY on installed Mac and Lakota clients; live authenticated Trader HTTPS relay",
+    "checks": {
+      "mac": {
+        "received": {
+          "verified": true,
+          "screen": "screen-a-1791429813303909000-11.txt"
+        },
+        "delivered": {
+          "verified": true,
+          "screen": "screen-a-1791429813303909000-08.txt"
+        },
+        "save_prompt": {
+          "verified": true,
+          "screen": "screen-a-1791429813303909000-09.txt"
+        },
+        "analysis_prompt": {
+          "verified": true,
+          "screen": "screen-a-1791429813303909000-11.txt"
+        },
+        "saved": {
+          "verified": true,
+          "screen": "screen-a-1791429813303909000-11.txt"
+        }
+      },
+      "lakota": {
+        "received": {
+          "verified": true,
+          "screen": "screen-b-1791429814426893000-06.txt"
+        },
+        "delivered": {
+          "verified": true,
+          "screen": "screen-b-1791429814426893000-08.txt"
+        },
+        "save_prompt": {
+          "verified": true,
+          "screen": "screen-b-1791429814426893000-04.txt"
+        },
+        "analysis_prompt": {
+          "verified": true,
+          "screen": "screen-b-1791429814426893000-06.txt"
+        },
+        "saved": {
+          "verified": true,
+          "screen": "screen-b-1791429814426893000-08.txt"
+        }
+      }
+    },
+    "new_model_calls": false,
+    "saved_file_verification": {
+      "bytes": 9437184,
+      "sha256": "b8b5dabaa3454f7fa46a97c51cec9ccd118ffc0d61df6e46d845ef200a2fd1bb",
+      "mac": true,
+      "lakota": true
+    }
+  },
+  "prior_real_model_and_task_validation": "docs/file-transfer-evidence.json",
+  "not_repeated": "No new scientific simulation or model analysis was performed for this packaging release. Prior real model and task-delivery evidence remains separate.",
+  "candidate_history": [
+    {
+      "tag": "v0.3.0-alpha",
+      "published": false,
+      "ci": "https://github.com/shenyaojin/xXASSXx/actions/runs/37720103267",
+      "result": "Three platforms passed; installed HTTPS round trip passed; attachment input hint defect found during real TUI verification."
+    },
+    {
+      "tag": "v0.3.1-alpha",
+      "published": false,
+      "ci": "https://github.com/shenyaojin/xXASSXx/actions/runs/37721860392",
+      "result": "Superseded before publication to preserve the existing permission-input feedback; tags were not overwritten."
+    }
+  ]
+}

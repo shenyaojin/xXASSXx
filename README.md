@@ -10,7 +10,7 @@
 
 ### 1. 安装程序
 
-当前测试版为 [0.3.0 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.3.2-alpha)，提供 Apple 芯片 Mac、Intel Mac 和 Linux x86_64 安装包。
+当前测试版为 [0.3.2 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.3.2-alpha)，提供 Apple 芯片 Mac、Intel Mac 和 Linux x86_64 安装包。
 
 解压安装包，进入包含 `install.sh` 和 `SHA256SUMS` 的目录：
 

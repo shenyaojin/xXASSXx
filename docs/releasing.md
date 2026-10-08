@@ -55,6 +55,17 @@ sh scripts/install.sh --from dist/v0.3.2-alpha --prefix /tmp/xxassxx-032-check
 
 手动触发只生成 Actions 产物。标签推送成功不等于 Release 已发布；单个平台成功也不等于发布完成。Alpha 安装显式传入 `--version v0.3.2-alpha`，不依赖稳定版 latest。
 
+## 0.3.2-alpha 发布结果
+
+2026-10-08T03:29:24Z，[v0.3.2-alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.3.2-alpha) 已公开发布，prerelease、非 draft。源码标签指向 `8f0cfce8ecae42d7ce103f8632994319776685ea`。
+
+- [GitHub Actions](https://github.com/shenyaojin/xXASSXx/actions/runs/37722009460) 三平台各 128 项测试通过、2 项旧 opt-in 忽略，优化构建、安装及版本检查通过。
+- 三个安装包及 SHA256SUMS、install.sh 均已核对，公开匿名下载内容与已验证草稿产物一致。
+- Mac、Lakota 与 Trader 已使用最终发布包升级至 0.3.2-alpha，身份、配置、历史和白名单保留。个人端 schema 9，后台及 HTTPS 服务正常。
+- 最终安装包的真实 PTY、9 MiB 文件与 CSV 的 HTTPS 往返、接收回执及另存结果已经验证。实机发现的附件输入提示问题已修复并增加回归测试；原候选标签保留、未覆盖。
+
+精简证据见 [发布与升级验证](releases/v0.3.2-alpha-evidence.json)。完整日志和安装包保存在 Git 忽略的 `dist/v0.3.2-alpha/`，真实终端记录在 `smoke-output/file-transfer-v032-installed/`。此前真实模型与科研计算证据分别保留，本次未重新运行科学计算。
+
 ## 0.2.0-alpha 发布结果
 
 2026-10-07 22:25:43 UTC，[v0.2.0-alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.2.0-alpha) 已公开发布，标记为 prerelease，非 draft。标签指向代码提交 `fdeae034b1979ec8ac206e326ebebfb5e19a4e3d`。
