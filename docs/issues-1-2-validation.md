@@ -1,6 +1,8 @@
 # Issue #1 / #2：等待进度与附件责任人
 
-日期：2026-10-08（America/Denver）。本轮改动未提交、推送或发布；按用户授权，MBA `mba` 与 Lakota `test` 已安装本地补丁构建（版本字符串仍为 `0.3.2-alpha`，具体二进制哈希见跨机证据）。owner、Trader 信箱和 pengchao 本轮未更新。
+日期：2026-10-08（America/Denver）。功能验收当时尚未提交、推送或发布；按用户授权，MBA `mba` 与 Lakota `test` 安装本地补丁构建（版本字符串仍为 `0.3.2-alpha`，具体二进制哈希见跨机证据）。owner、Trader 信箱和 pengchao 在该阶段未更新。
+
+后续同日已随 `0.4.0-alpha` 提交、推送并公开发布，MBA 已安装最终发布包；以下实测记录及哈希保持当时事实。发布、三平台 CI 和本机升级见 [发布证据](releases/v0.4.0-alpha-evidence.json)，成员目录阶段的后续部署见 [成员目录验收](member-directory-validation.md)。
 
 ## 问题与改动
 

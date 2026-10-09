@@ -55,6 +55,18 @@ sh scripts/install.sh --from dist/v0.4.0-alpha --prefix /tmp/xxassxx-040-check
 
 手动触发只生成 Actions 产物。标签推送成功不等于 Release 已发布；单个平台成功也不等于发布完成。Alpha 安装显式传入 `--version v0.4.0-alpha`，不依赖稳定版 latest。
 
+## 0.4.0-alpha 发布结果
+
+2026-10-09T03:15:02Z（America/Denver 10 月 8 日），[v0.4.0-alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.4.0-alpha) 已公开发布，prerelease、非 draft。源码标签指向 `987fdf0900235d171998bc37871797241c284374`，包含本轮全部实现和测试。
+
+- [GitHub Actions](https://github.com/shenyaojin/xXASSXx/actions/runs/37877675033) 三平台各 136 项测试通过、2 项既有 opt-in 忽略，优化构建和离线安装检查通过。
+- 三个安装包及 SHA256SUMS、install.sh 已核对，五个文件的公开匿名下载与已验证产物哈希一致。
+- 本机 MBA 从最终 Apple Silicon 包原位升级为 `0.4.0-alpha`，身份、完整配置、任务数、团队消息数与白名单保持，schema 9，数据库完整性和外键检查通过。后台正常，实际 PTY 打开并得到 `/contacts` 回复。
+- Downloads 中已生成 `xxassxx-v0.4.0-alpha-offline.zip`、外部校验文件与解压目录 `xXASSXx-v0.4.0-alpha/`，包含三平台包和安装说明，已核对 ZIP 完整性及内部文件。`dist/` 最新通用包同步更新，历史分发包保留。
+- 本次发布未再次升级 Trader、Lakota、owner 或 pengchao。Trader 与 Lakota 保持本日此前验证的功能补丁构建，其他机器由用户随后安装。
+
+功能源码与此前成员目录验收的 63 个 Rust 源码和测试文件逐字节一致；本次仅完成版本、发布与安装说明整理。真实模型/终端验收分别引用 [图片交付](lakota-image-ui-evidence.json) 和 [成员目录](member-directory-evidence.json)，不将最终包启动检查当作重跑业务任务。精简证据见 [发布与本机安装验证](releases/v0.4.0-alpha-evidence.json)，原始日志位于 `dist/v0.4.0-alpha/validation/` 和 `smoke-output/release-v0.4.0-alpha/`。
+
 ## 0.3.2-alpha 发布结果
 
 2026-10-08T03:29:24Z，[v0.3.2-alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.3.2-alpha) 已公开发布，prerelease、非 draft。源码标签指向 `8f0cfce8ecae42d7ce103f8632994319776685ea`。

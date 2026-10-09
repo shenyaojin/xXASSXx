@@ -1,10 +1,14 @@
 # 项目理念与接续摘要
 
-更新日期：2026-10-08（America/Denver）。已发布版本为 `0.3.2-alpha`；本日 Trader 信箱、MBA `mba` 与 Lakota `test` 已安装未发布补丁构建，包含 issue #1/#2 修复和团队成员目录自动同步，版本字符串未变，最终哈希见下节成员目录证据。owner 与 pengchao 本轮未升级。个人端 schema 9，信箱支持 task protocol 2 和 file transfer protocol 1。三平台安装包已公开发布，真实 HTTPS 双向文件交付已验收，本日附件补丁另完成 Lakota → MBA 图片交付实测。此前逐任务授权、独立目录写入/运行及 Lakota MOOSE 对照正演的证据继续保留。1.0.0 正式版前均为小规模测试环境；本次按既有约定未创建备份，保留身份、配置与历史。本文件是新开发对话的必读背景，入口见 [AGENTS.md](../AGENTS.md)。历史阶段记录不替代本节最新部署状态，本文件不包含密钥。
+更新日期：2026-10-08（America/Denver）。已公开发布 `0.4.0-alpha` 三平台安装包，包含 issue #1/#2、实际 PNG 交付修复和团队成员目录自动同步；本机 MBA `mba` 已安装最终发布包。Trader 信箱与 Lakota `test` 保持本日此前已验证的补丁构建（版本字符串仍为 `0.3.2-alpha`，哈希见成员目录证据），本次发布未再次升级远端，其他机器由用户随后安装；owner 与 pengchao 本轮未升级。个人端 schema 9，信箱支持 task protocol 2 和 file transfer protocol 1。真实 HTTPS 双向文件交付及本日 Lakota → MBA 图片交付实测已验收。此前逐任务授权、独立目录写入/运行及 Lakota MOOSE 对照正演的证据继续保留。1.0.0 正式版前均为小规模测试环境；本次按既有约定未创建备份，保留身份、配置与历史。本文件是新开发对话的必读背景，入口见 [AGENTS.md](../AGENTS.md)。历史阶段记录不替代本节最新部署状态，本文件不包含密钥。
 
-## 0.4.0-alpha 发布准备（2026-10-08）
+## 0.4.0-alpha 已发布并更新本机安装包（2026-10-08）
 
-用户已要求发布全部改动并更新本地安装包。本轮整理为 `0.4.0-alpha`，包含 issue #1/#2、实际 PNG 交付修复及成员目录同步；沿用已完成的真实模型/终端证据，不改写其当时构建哈希。计划由标签触发三平台测试、构建和安装检查，验证后公开 Release，并在本机 Downloads 提供完整离线分发包。发布结果及最终安装包证据将在完成后更新；此段尚不表示 Release 已公开。
+全部实现、测试、文档和版本改动已提交推送；标签 `v0.4.0-alpha` 指向 `987fdf0900235d171998bc37871797241c284374`。[Release](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.4.0-alpha) 已公开，prerelease、非 draft；[三平台 CI](https://github.com/shenyaojin/xXASSXx/actions/runs/37877675033) 在 Apple Silicon macOS、Intel macOS 和 Linux x86_64 各通过 136 项测试、忽略 2 项既有 opt-in，并完成优化构建和离线安装检查。三个安装包、校验文件和安装器的匿名下载及 SHA-256 全部核对通过。
+
+本机 `~/.local/xxassxx/bin/xxassxx` 已替换为最终 Apple Silicon 发布包并重启后台；真实 PTY 打开及 `/contacts` 回复正常，显示现用团队其他三名成员。身份、完整配置、任务数、团队消息数和空白名单均保留，schema 9，数据库完整性和外键检查通过。最终二进制与 CI 产物哈希一致。本次打包沿用本日同一功能源码的真实模型/终端证据，不改写当时哈希，也未重跑科研计算或跨机图片任务。
+
+本机完整离线分发包为 `~/Downloads/xxassxx-v0.4.0-alpha-offline.zip`，已解压目录为 `~/Downloads/xXASSXx-v0.4.0-alpha/`，同时保存在 Git 忽略的 `dist/v0.4.0-alpha/`。包含三平台包、自动选平台的安装器、校验文件和安装说明，无邀请或密钥；已有用户按说明停止旧后台、保留原安装前缀升级，无需重新初始化。发布及本机安装证据见 [验证记录](releases/v0.4.0-alpha-evidence.json)。
 
 ## 团队成员目录自动同步（2026-10-08）
 
@@ -12,13 +16,13 @@
 
 真实 PTY 保持 Alice 界面打开后，在隔离信箱管理员配置中加入 Carol 并重新加载信箱，亲眼看到成员列表与正在打开的 `@` 候选增加 Carol；客户端进程未重启、未重新配置。随后从该界面确认任务 `1abb1471-cdf8-57e6-bb3d-42181b5be177`，真实 DeepSeek 和官方 Codex 完成 Carol 侧 discovery/analysis 两阶段只读执行，最终回复测试文件中的 `CAROL-8247`、来源与实际 42 字节，双方界面完成。该新增成员实验是同机隔离团队，不是在现用团队添加虚构用户。
 
-Trader 信箱、MBA、Lakota 已原位更新；现用 HTTPS 实际返回 owner/pengchao/test/mba 四人名单，两端真实界面及 `/contacts` 正常。身份、非联系人配置和原任务数核对保持不变，后台运行。136 项自动回归通过、2 项既有 opt-in 忽略，格式、Clippy、Mac/Linux 发布构建通过；未提交、推送或发布新安装包。其他成员需要更新客户端后才能自动同步。当前仍无自助注册或成员增删 CLI，管理员登记和既有九人成员上限不变。实现和实测边界见 [成员目录验收](member-directory-validation.md) 与 [证据](member-directory-evidence.json)。
+功能验收阶段 Trader 信箱、MBA、Lakota 已原位更新补丁；现用 HTTPS 实际返回 owner/pengchao/test/mba 四人名单，两端真实界面及 `/contacts` 正常。身份、非联系人配置和原任务数核对保持不变，后台运行。136 项自动回归通过、2 项既有 opt-in 忽略，格式、Clippy、Mac/Linux 发布构建通过；随后已随上节 `0.4.0-alpha` 提交、推送并公开发布。其他成员需要更新客户端后才能自动同步。当前仍无自助注册或成员增删 CLI，管理员登记和既有九人成员上限不变。实现和实测边界见 [成员目录验收](member-directory-validation.md) 与 [证据](member-directory-evidence.json)。
 
 ## MBA 安装与 GitHub issue #1 / #2（2026-10-08）
 
 本机 MacBook Air 已使用 `~/Downloads/mba.json` 安装并配置 `0.3.2-alpha`，随后按用户要求替换为本轮补丁构建，身份 `mba`，Codex 已登录，DeepSeek `deepseek-flash` 工具调用检查通过，现用信箱身份匹配，后台运行。白名单为空。因 `~/.local/bin` 属于 root，程序安装于 `~/.local/xxassxx/bin/xxassxx`，已在 `.zshrc` 追加 PATH；邀请与密钥未输出或提交。
 
-本地源码已处理 GitHub #1 的真实等待进度，以及 #2 的附件状态/下一步责任提示：状态由持久事件与实际传输记录提供，发送方未授权时不会引导接收方下载；旧发送端状态未知时如实提示。真实跨机实测又发现并修复了“待导出授权被审核模型误判为继续执行”的问题：已准备附件先等待实际收件，再审核内容。未增加 schema，未提交、推送或发布。
+本地源码已处理 GitHub #1 的真实等待进度，以及 #2 的附件状态/下一步责任提示：状态由持久事件与实际传输记录提供，发送方未授权时不会引导接收方下载；旧发送端状态未知时如实提示。真实跨机实测又发现并修复了“待导出授权被审核模型误判为继续执行”的问题：已准备附件先等待实际收件，再审核内容。未增加 schema；随后已随上节 `0.4.0-alpha` 提交、推送并公开发布。
 
 MBA 与 Lakota 已安装最终补丁，使用现用 HTTPS 信箱、真实 DeepSeek/Codex 和两端实际 PTY，从自然语言请求、CtrlS 确认、Lakota 允许固定 PNG 导出，完整走到 MBA 收件与明确最终答复。最终任务 `7799ce35-a91e-598b-a853-b83ba66b6762`：Lakota 执行一次、MBA 无执行；PNG 348017 字节、2400 × 3600，原图至 Downloads 副本哈希一致，并实际打开看到了图片。132 项回归通过、2 项既有 opt-in 忽略，格式、Clippy 和 Mac/Linux 优化构建通过。原生 Terminal/Preview 界面工具不可用，分别采用项目允许的真实 PTY 与本地图片查看工具，未声称接管原生窗口。验证结果、已知文案边界及复跑方式见 [issue 验收记录](issues-1-2-validation.md) 和 [跨机图片证据](lakota-image-ui-evidence.json)。此前现用三端与科研交付的事实继续保留，以下为历史部署记录。
 
@@ -30,7 +34,7 @@ MBA 与 Lakota 已安装最终补丁，使用现用 HTTPS 信箱、真实 DeepSe
 
 已在最终安装版本的两端真实 PTY 验证 CtrlF 发送、接收、另存为及分析输入提示；9 MiB 文件经现用 Trader HTTPS 信箱往返 Mac 与 Lakota，CSV 一并交付，发送/接收副本及另存副本均独立校验 SHA-256，界面明确显示已保存到本机/对方电脑。没有把单元测试或仅有数据库完成状态当作端到端验收。此前真实 Codex 生成结果、已有文件交付和只读分析的证据保留于附件验收页，本次没有重新运行科研计算。
 
-0.3.0-alpha 候选已通过三平台构建和实机传输，但实机发现附件输入页沿用聊天提示；修复后最终使用 0.3.2-alpha。0.3.0-alpha / 0.3.1-alpha 均未公开为 Release，历史标签保留，未覆盖已有发布。该发布版尚无成员自动同步；本日未发布补丁的实现与部署见本文开头。
+0.3.0-alpha 候选已通过三平台构建和实机传输，但实机发现附件输入页沿用聊天提示；修复后最终使用 0.3.2-alpha。0.3.0-alpha / 0.3.1-alpha 均未公开为 Release，历史标签保留，未覆盖已有发布。该历史发布版尚无成员自动同步；当前 `0.4.0-alpha` 的实现与部署见本文开头。
 
 ## 现用 Lakota 模拟并交付实际文件（2026-10-07）
 
@@ -112,10 +116,10 @@ MBA 与 Lakota 已安装最终补丁，使用现用 HTTPS 信箱、真实 DeepSe
 - `test` 显示名 `test (Lakota)`，Lakota 常驻。唯一白名单是 `/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts`，此次原样保留。旧 executor.workdir 在该范围外；升级时通过新版 TUI 明确选择此 scripts 目录作为当前工作位置，不修改模型配置或授权范围。
 - 原先的 `friend` 已统一改为 `pengchao`（用户名和显示名相同），服务器、Mac/Lakota 联系人、现有邀请与安装提示词已同步。改名之前该身份没有消息或心跳使用记录；改名后邀请鉴权已验证。
 - 朋友安装提示词：`docs/codex-setup-prompt.md`。
-- 此前单独交付朋友的离线包：`dist/xxassxx-pengchao-macos-arm64-20261006.zip`，仅 Apple 芯片 Mac。包内有安装提示词和安装器，不含邀请或密钥；Intel Mac 包尚未准备。朋友的 CPU 架构尚未确认。当前通用 0.3.2-alpha 包覆盖两种 Mac 和 Linux x86_64，见本文开头的 Release 链接。
+- 此前单独交付朋友的离线包：`dist/xxassxx-pengchao-macos-arm64-20261006.zip`，仅 Apple 芯片 Mac。包内有安装提示词和安装器，不含邀请或密钥；当时未准备 Intel Mac 包。朋友的 CPU 架构尚未确认。当前通用 0.4.0-alpha 包覆盖两种 Mac 和 Linux x86_64，见本文开头的 Release 链接。
 - 私人邀请：`smoke-output/phase4-private/pengchao.json`，权限 600、Git 忽略，不打印正文。
 - 给用户的两个文件已经放在 `/Users/shenyaojin/Downloads/xXASSXx-发给朋友/`，分别是上述 ZIP 和 `pengchao.json`。旧 friend 文件已归档。
-- 启动更新检查、开机自动启动、TG 接入仍待实现。当前已发布 0.3.2-alpha，见本文开头的发布记录。
+- 启动更新检查、开机自动启动、TG 接入仍待实现。当前已发布 0.4.0-alpha，见本文开头的发布记录。
 
 ## 开发接续要点
 

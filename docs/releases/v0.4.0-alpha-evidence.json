@@ -1,0 +1,153 @@
+{
+  "version": "0.4.0-alpha",
+  "tag": "v0.4.0-alpha",
+  "source_commit": "987fdf0900235d171998bc37871797241c284374",
+  "release_url": "https://github.com/shenyaojin/xXASSXx/releases/tag/v0.4.0-alpha",
+  "published_at": "2026-10-09T03:15:02Z",
+  "is_draft": false,
+  "is_prerelease": true,
+  "ci_url": "https://github.com/shenyaojin/xXASSXx/actions/runs/37877675033",
+  "ci_conclusion": "success",
+  "ci_tests": [
+    {
+      "name": "build (macos-15-intel, x86_64-apple-darwin)",
+      "job_id": 113649883578,
+      "passed": 136,
+      "failed": 0,
+      "ignored": 2
+    },
+    {
+      "name": "build (ubuntu-22.04, x86_64-unknown-linux-musl)",
+      "job_id": 113649883724,
+      "passed": 136,
+      "failed": 0,
+      "ignored": 2
+    },
+    {
+      "name": "build (macos-15, aarch64-apple-darwin)",
+      "job_id": 113649883738,
+      "passed": 136,
+      "failed": 0,
+      "ignored": 2
+    }
+  ],
+  "packages": [
+    {
+      "name": "xxassxx-aarch64-apple-darwin.tar.gz",
+      "target": "aarch64-apple-darwin",
+      "bytes": 5718898,
+      "sha256": "a9c05b07346931bff056462f07df7de8349d260223bed0f102450ee95438338b",
+      "binary_sha256": "20af61573c59000bd35b00830638a9cfa27cd2d8af07d34b2e0f5a2f1bc6c402",
+      "architecture": "Mach-O 64-bit executable arm64"
+    },
+    {
+      "name": "xxassxx-x86_64-apple-darwin.tar.gz",
+      "target": "x86_64-apple-darwin",
+      "bytes": 6010332,
+      "sha256": "a504bad8ba7ccf5b2c80bd11ea1db4ec8e36648a9b2a521ed48a2d7d38b7564d",
+      "binary_sha256": "4b65d3046d52de7e1700a8f84164651b8e5358d128c308ea17f33e5454d042b4",
+      "architecture": "Mach-O 64-bit executable x86_64"
+    },
+    {
+      "name": "xxassxx-x86_64-unknown-linux-musl.tar.gz",
+      "target": "x86_64-unknown-linux-musl",
+      "bytes": 6617619,
+      "sha256": "b13e520aaa7277f634db0e0a567009b739f53b7dfa035c2a6a4cc0c845a66bc9",
+      "binary_sha256": "683327e4b431961cba89dbdae94b8582443581c5c1a898e163a221246cf32bc3",
+      "architecture": "ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), static-pie linked, BuildID[sha1]=a05ee4622f997cbbabce180e68997e963de0ef46, not stripped"
+    }
+  ],
+  "installer_sha256": "7e57db0332f1a221a5b9f104696b20401ed9800f4aba7fc0b1a6d45f2d859ee2",
+  "public_downloads": [
+    {
+      "name": "install.sh",
+      "bytes": 3067,
+      "sha256": "7e57db0332f1a221a5b9f104696b20401ed9800f4aba7fc0b1a6d45f2d859ee2",
+      "anonymous_download": "passed"
+    },
+    {
+      "name": "SHA256SUMS",
+      "bytes": 310,
+      "sha256": "b8207bf34bde4823753328d768c280c9a44e8f369c0b2e5f96d57df4a0b32b0d",
+      "anonymous_download": "passed"
+    },
+    {
+      "name": "xxassxx-aarch64-apple-darwin.tar.gz",
+      "bytes": 5718898,
+      "sha256": "a9c05b07346931bff056462f07df7de8349d260223bed0f102450ee95438338b",
+      "anonymous_download": "passed"
+    },
+    {
+      "name": "xxassxx-x86_64-apple-darwin.tar.gz",
+      "bytes": 6010332,
+      "sha256": "a504bad8ba7ccf5b2c80bd11ea1db4ec8e36648a9b2a521ed48a2d7d38b7564d",
+      "anonymous_download": "passed"
+    },
+    {
+      "name": "xxassxx-x86_64-unknown-linux-musl.tar.gz",
+      "bytes": 6617619,
+      "sha256": "b13e520aaa7277f634db0e0a567009b739f53b7dfa035c2a6a4cc0c845a66bc9",
+      "anonymous_download": "passed"
+    }
+  ],
+  "local_distribution": {
+    "directory": "~/Downloads/xXASSXx-v0.4.0-alpha",
+    "zip": "~/Downloads/xxassxx-v0.4.0-alpha-offline.zip",
+    "zip_bytes": 18361951,
+    "zip_sha256": "8327d2812cc94cfb015854e512be7b9e0a0de44cec7fe65a14c98ae1b0a31e71",
+    "files": [
+      "CODEX_INSTALL.md",
+      "INSTALL.md",
+      "RELEASE_NOTES.md",
+      "SHA256SUMS",
+      "install.sh",
+      "xxassxx-aarch64-apple-darwin.tar.gz",
+      "xxassxx-x86_64-apple-darwin.tar.gz",
+      "xxassxx-x86_64-unknown-linux-musl.tar.gz"
+    ],
+    "zip_contents_verified": true,
+    "private_invitations_or_keys_included": false
+  },
+  "local_installation": {
+    "member_id": "mba",
+    "executable": "~/.local/xxassxx/bin/xxassxx",
+    "version": "xxassxx 0.4.0-alpha",
+    "binary_sha256": "20af61573c59000bd35b00830638a9cfa27cd2d8af07d34b2e0f5a2f1bc6c402",
+    "schema_before": 9,
+    "schema_after": 9,
+    "identity_and_complete_config_preserved": true,
+    "history_counts_before_and_after": {
+      "app_tasks": 2,
+      "messages": 19
+    },
+    "active_runs_at_upgrade": 0,
+    "allowed_directories_before_and_after": [],
+    "database_integrity": "ok",
+    "foreign_key_violations": [],
+    "backend_running": true,
+    "actual_interactive_pty": true,
+    "contacts_response_members": [
+      "owner",
+      "pengchao",
+      "test"
+    ],
+    "terminal_evidence": "smoke-output/release-v0.4.0-alpha/a-v040-contacts-result.txt",
+    "own_validation_ui_exited_with_ctrl_q": true,
+    "backend_kept_running": true,
+    "verification_script_correction": "The initial roots check expected an array at the JSON top level. The CLI returns an object containing directories; corrected assertion checks roots.directories == []. No application data was changed to make the assertion pass."
+  },
+  "functional_evidence": {
+    "unchanged_rust_source_and_test_files_from_member_directory_validation": 63,
+    "source_comparison": "Byte-for-byte match against the prior validated source archive; release version and documentation edits are separate.",
+    "progress_and_attachment_tests": "docs/issues-1-2-evidence.json",
+    "real_lakota_to_mba_png": "docs/lakota-image-ui-evidence.json",
+    "real_dynamic_directory_and_new_member_task": "docs/member-directory-evidence.json",
+    "scientific_calculation_or_cross_machine_png_task_repeated_for_packaging": false
+  },
+  "other_machines": {
+    "upgraded_during_this_release": [],
+    "trader_and_lakota": "Retain the previously verified member-directory patch builds labelled 0.3.2-alpha; hashes are recorded in docs/member-directory-evidence.json.",
+    "owner_and_pengchao": "Not upgraded in this round.",
+    "next_installations": "The user will install the published packages on other machines."
+  }
+}

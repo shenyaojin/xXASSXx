@@ -1,6 +1,8 @@
 # 团队成员目录同步验收
 
-日期：2026-10-08（America/Denver）。当前改动未提交、推送或发布；Trader、MBA、Lakota 已安装补丁构建，版本字符串仍为 `0.3.2-alpha`。
+日期：2026-10-08（America/Denver）。功能验收当时尚未提交、推送或发布；Trader、MBA、Lakota 已安装补丁构建，版本字符串仍为 `0.3.2-alpha`。
+
+后续同日已随 `0.4.0-alpha` 提交、推送并公开发布，MBA 已安装最终发布包；Trader 与 Lakota 保持该阶段补丁，其他机器由用户随后升级。以下实测记录和哈希保持当时事实；发布、三平台 CI 和本机升级见 [发布证据](releases/v0.4.0-alpha-evidence.json)。
 
 ## 原因与实现
 
