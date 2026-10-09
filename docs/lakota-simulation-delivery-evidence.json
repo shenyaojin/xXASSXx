@@ -1,0 +1,80 @@
+{
+  "task_id": "36d23785-d0fb-5102-9838-22e4401ca5f4",
+  "revision": 1,
+  "date_local": "2026-10-07",
+  "timezone": "America/Denver",
+  "version": "0.3.2-alpha",
+  "local_sha256": "4112293a7a934faf4ab796a61848631756dd2be8733191e16c2851d31cc77629",
+  "initiator": "owner",
+  "executor": "test (Lakota)",
+  "execution_id": "a070c140-84f2-5470-b470-af57e3282f05",
+  "transport": "existing Trader HTTPS mailbox",
+  "interface": "real macOS and SSH Linux PTYs, not user existing native windows",
+  "authorization": "Lakota terminal task revision 1: isolated execution and selected result attachments allowed; existing read roots unchanged",
+  "initial_blocked_task": "ccecee9c-4409-5cea-8581-639f527ff38b",
+  "outcome": "completed",
+  "remote_sha256": "4aca3052013988c8a507246619a231426da9a4ae7c11c5bd408975fa5cd161e9",
+  "both_task_states": "completed, archived",
+  "owner_execution_count": 0,
+  "lakota_execution_count": 1,
+  "codex": {
+    "codex_version": "codex-cli 0.159.2",
+    "state": "succeeded",
+    "exit_code": 0,
+    "turn_completed": true,
+    "sandbox": "task-workspace",
+    "submissions": 1,
+    "session_id": "01a119aa-79ca-7943-954f-4dc919b01592"
+  },
+  "simulation_command": "python3.12 simulate.py > run.log 2>&1",
+  "simulation_run_count": 1,
+  "simulation_exit_code": 0,
+  "verification_recovery": "Post-run here-document validation failed before execution because shell temporary path was unavailable; Codex reran only validation using python3.12 -c successfully. Simulation was not repeated.",
+  "transfer_id": "d2c3da84-135f-5060-b45f-04d030d50ca8",
+  "transfer_state": "received",
+  "sha256_remote_manifest_received_saved_all_match": true,
+  "visual_check": "Rendered original received SVG with Sharp at native 900x560; five readable curves, labeled axes, units and all five legend entries. Quick Look thumbnail cropped the legend, so used native SVG rendering for inspection.",
+  "limitations": [
+    "Synthetic small heat-diffusion example, not field/model calibration or convergence study.",
+    "Attachment note preserves sender pre-receipt wording; current attachment status and final result show completion. Final model reply unnecessarily suggests downloading although the file receipt was already confirmed."
+  ],
+  "application_source_changes": false,
+  "numerical_check": {
+    "row_count": 505,
+    "stability_r": 0.19999999999999998,
+    "analytic_final_center_C": 90.6018055788923,
+    "numerical_centers_C": {
+      "0": 100.0,
+      "2500": 97.562750819057,
+      "5000": 95.1849034738141,
+      "7500": 92.8650101935172,
+      "10000": 90.6016584931931
+    },
+    "max_abs_error_vs_analytic_C": 0.0001470856991971914,
+    "max_abs_difference_vs_discrete_eigenmode_C": 2.7000623958883807e-13,
+    "files": {
+      "report.md": {
+        "bytes": 2125,
+        "sha256": "d52b4e770493dfb499ab8e7cacace2bcea830f2f3f77513a929afd7bff39a7e9"
+      },
+      "run.log": {
+        "bytes": 385,
+        "sha256": "ae1509afcb3befe43946b531940d6c6aef66c1fd884000fcb2a1cfa053383e47"
+      },
+      "simulate.py": {
+        "bytes": 5082,
+        "sha256": "360692c01ee7b9c80caac45288e7bbfdb70dfc4c587a4edc2e66c2afd1e9963b"
+      },
+      "temperature.csv": {
+        "bytes": 13677,
+        "sha256": "a0fae038f27a0bcb99328ef04a89ae963befee393bf01f2361cfaf33dfd9cea9"
+      },
+      "temperature.svg": {
+        "bytes": 11180,
+        "sha256": "6378bd85421e3a9277a5090a0e44c8c9c22db7b3aca614de5fdc81b57bf999d6"
+      }
+    }
+  },
+  "raw_evidence_directory": "smoke-output/lakota-simulation-delivery-20261007/",
+  "initial_failure": "First unexecuted draft rejected because it included an absolute interpreter path; cancelled it and submitted an equivalent request using python3.12. Validation guard unchanged."
+}

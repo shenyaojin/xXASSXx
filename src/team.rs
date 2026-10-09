@@ -22,6 +22,21 @@ pub struct Contact {
     pub member_id: String,
     pub display_name: String,
 }
+pub(crate) fn validate_contact(contact: &Contact) -> Result<()> {
+    ensure!(
+        !contact.member_id.is_empty()
+            && contact.member_id.len() <= 64
+            && contact
+                .member_id
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+            && !contact.display_name.trim().is_empty()
+            && contact.display_name.len() <= 256
+            && !contact.display_name.chars().any(char::is_control),
+        "invalid directory member"
+    );
+    Ok(())
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ExecutorConfig {
@@ -288,6 +303,50 @@ impl Store {
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?)
+    }
+    fn sync_member_directory(&mut self, identity: &Value) -> Result<()> {
+        // Older servers have no directory. Keep the invitation/last good cache.
+        let Some(directory) = identity.get("member_directory") else {
+            return Ok(());
+        };
+        ensure!(
+            directory["protocol"] == 1,
+            "unsupported member directory protocol"
+        );
+        let members: Vec<Contact> = serde_json::from_value(directory["members"].clone())
+            .map_err(|_| anyhow::anyhow!("invalid member directory"))?;
+        ensure!(
+            !members.is_empty() && members.len() < 10,
+            "invalid member directory size"
+        );
+        let me = self.owner()?;
+        let mut ids = std::collections::HashSet::new();
+        for member in &members {
+            validate_contact(member)?;
+            ensure!(ids.insert(&member.member_id), "duplicate directory member");
+        }
+        let own = members
+            .iter()
+            .find(|m| m.member_id == me)
+            .context("member directory missing local identity")?;
+        let contacts: Vec<_> = members.iter().filter(|m| m.member_id != me).collect();
+        let contacts_json = serde_json::to_string(&contacts)?;
+        let tx = self
+            .conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        // Modify only the directory cache, not model/executor/credential settings.
+        // Read current config inside the transaction to preserve concurrent edits.
+        tx.execute("UPDATE identity SET display_name=?1,config=json_set(config,'$.contacts',json(?2)) WHERE singleton=1 AND (display_name<>?1 OR json_extract(config,'$.contacts')<>?2)", params![own.display_name,contacts_json])?;
+        for c in &contacts {
+            tx.execute("INSERT INTO contacts(member_id,display_name) VALUES(?1,?2) ON CONFLICT(member_id) DO UPDATE SET display_name=excluded.display_name WHERE display_name<>excluded.display_name",params![c.member_id,c.display_name])?;
+        }
+        tx.execute("DELETE FROM contacts WHERE member_id NOT IN (SELECT json_extract(value,'$.member_id') FROM json_each(?1))",[&contacts_json])?;
+        tx.execute(
+            "DELETE FROM app_presence WHERE member_id NOT IN (SELECT member_id FROM contacts)",
+            [],
+        )?;
+        tx.commit()?;
+        Ok(())
     }
     pub fn message(&self, id: &str) -> Result<MessageRecord> {
         let (payload, direction, state, resolved_version, error): (
@@ -651,6 +710,8 @@ pub async fn sync(store: &mut Store) -> Result<Value> {
             && identity["member_id"] == store.owner()?,
         "mailbox identity/team mismatch"
     );
+    // Learn new senders before validating their pending inbox messages.
+    store.sync_member_directory(&identity)?;
     let records = store.messages(None)?;
     let local_facts = {
         let mut q = store

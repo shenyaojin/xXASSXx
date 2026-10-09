@@ -102,6 +102,11 @@ pub fn get(store: &Store, id: &str) -> Result<Value> {
         "SELECT json_object('id',r.id,'execution_id',e.id,'revision',e.revision,'state',r.state,'session_id',r.session_id,'resumed_session_id',r.resumed_session_id,'working_directory',r.workdir,'reads',r.reads,'submissions',r.submissions,'turn_completed',r.turn_completed,'exit_code',r.exit_code,'error_code',r.error_code) FROM runs r JOIN task_executions e ON r.task_id=e.id WHERE e.task_id=?1 ORDER BY r.rowid",
         id,
     )?;
+    // Expose only the tool category, never commands, output or model reasoning.
+    v["active_tool"] = store.conn.query_row(
+        "SELECT CASE WHEN json_extract(e.event,'$.item.status')='in_progress' THEN json_extract(e.event,'$.item.type') ELSE NULL END FROM events e JOIN runs r ON r.id=e.run_id JOIN task_executions x ON x.id=r.task_id WHERE x.task_id=?1 AND x.revision=?2 AND r.state='running' AND json_extract(e.event,'$.item.type') IN ('command_execution','mcp_tool_call') ORDER BY e.rowid DESC LIMIT 1",
+        params![id, revision(&v)], |r| r.get::<_, Option<String>>(0),
+    ).optional()?.flatten().map_or(Value::Null, Value::String);
     v["history"] = rows(
         &store.conn,
         "SELECT json_object('id',id,'revision',revision,'sender',sender,'sequence',sequence,'kind',kind,'payload',json(payload),'created_at',created_at) FROM task_journal WHERE task_id=?1 ORDER BY rowid",
@@ -128,7 +133,66 @@ pub fn get(store: &Store, id: &str) -> Result<Value> {
             )
             .optional()?
     );
+    let review: Option<String> = store
+        .conn
+        .query_row(
+            "SELECT review FROM task_file_delivery WHERE task_id=?1 AND revision=?2",
+            params![id, revision(&v)],
+            |r| r.get(0),
+        )
+        .optional()?
+        .flatten();
+    if let Some(review) = review.filter(|_| v["state"] == "waiting") {
+        let review: Value = serde_json::from_str(&review)?;
+        v["delivery"] = crate::transfers::delivery_status(store, &v, &review["candidates"])?;
+        v["waiting_for"] = v["delivery"]["body"].clone();
+        v["next_owner"] = v["delivery"]["next_owner"].clone();
+    }
     Ok(v)
+}
+
+/// Publish only transport facts from the sending member, using the existing task protocol.
+pub fn attachment_progress(
+    store: &Store,
+    manifest: &crate::transfers::Manifest,
+    status: &str,
+    error: Option<&str>,
+) -> Result<()> {
+    if manifest.sender != store.owner()? {
+        return Ok(());
+    }
+    let Some(reference) = &manifest.task else {
+        return Ok(());
+    };
+    let t = get(store, &reference.id)?;
+    if terminal(&t) || t["revision"] != reference.revision || t["confirmed"] != reference.revision {
+        return Ok(());
+    }
+    let latest = t["history"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .rev()
+        .find(|e| {
+            e["revision"] == reference.revision
+                && e["sender"] == manifest.sender
+                && e["payload"]["stage"] == "attachment"
+                && e["payload"]["transfer_id"] == manifest.id
+        });
+    if latest.is_some_and(|e| {
+        e["payload"]["transfer_state"] == status && e["payload"]["error"].as_str() == error
+    }) {
+        return Ok(());
+    }
+    emit(
+        &store.conn,
+        &t,
+        &manifest.sender,
+        &uuid::Uuid::new_v4().to_string(),
+        "progress",
+        json!({"stage":"attachment","transfer_id":manifest.id,"transfer_state":status,"error":error}),
+        std::slice::from_ref(&manifest.recipient),
+    )
 }
 fn rows(c: &Connection, sql: &str, id: &str) -> Result<Value> {
     let mut q = c.prepare(sql)?;
@@ -1406,7 +1470,7 @@ async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result
     // Earlier model drafts are not owner facts. Do not feed a failed draft back
     // as established scope when the owner has already corrected the location.
     let system = format!(
-        "{system} File attachments: For a request to obtain existing actual files from a peer, use mode files; discovering candidate paths is the executor job and binary files are supported. For execute requests that explicitly ask for result files, set deliver_files=true. The executor grants export separately. In review, a candidate attachment manifest is evidence of prepared fixed files; evaluate the substantive result, then choose complete when adequate. Rust independently waits for actual download before final completion. Never request rerunning successful computation solely because its attachment is still transferring."
+        "{system} File attachments: The extra.delivery field (or task.delivery when present) contains authoritative current transport facts. When extra.delivery.ready=true, attachments are already received; candidate body/attachment.state describe preparation time only and must not trigger continuation for export or download. Use delivery.body and next_owner when explaining what happens next. Only say this owner can download when the matching item has available_here=true and state=offered. A prepared manifest alone is not downloadable. Remote export must be approved on the sender computer, never by the recipient. For a request to obtain existing actual files from a peer, use mode files; discovering candidate paths is the executor job and binary files are supported. For execute requests that explicitly ask for result files, set deliver_files=true. The executor grants export separately. In review, a candidate attachment manifest is evidence of prepared fixed files; evaluate the substantive result, then choose complete when adequate. Rust independently waits for actual download before final completion. Never request rerunning successful computation solely because its attachment is still transferring."
     );
     let model_task = if stage == "prepare" {
         json!({"id":t["id"],"revision":t["revision"],"initiator":t["initiator"],"participants":t["participants"],"original":t["original"]})
@@ -1943,7 +2007,20 @@ async fn process_job(store: &Store, t: &Value, kind: &str, data: Value, key: &st
             if unresolved > 0 {
                 return Ok(());
             }
-            let mut result = decision(store, t, "review", json!({"candidates":current})).await?;
+            // A prepared attachment needs a human export grant and transport, not
+            // more Codex work. Wait for receipt before asking a model to review
+            // substance, so a model cannot turn pending authorization into a rerun.
+            if defer_attachment_review(store, t, &json!(current))? {
+                return Ok(());
+            }
+            let delivery = crate::transfers::delivery_status(store, t, &json!(current))?;
+            let mut result = decision(
+                store,
+                t,
+                "review",
+                json!({"candidates":current,"delivery":delivery}),
+            )
+            .await?;
             use sha2::{Digest, Sha256};
             let candidate_version = format!("{:x}", Sha256::digest(serde_json::to_vec(&current)?));
             if result["action"] == "escalate" {
@@ -1986,20 +2063,22 @@ async fn process_job(store: &Store, t: &Value, kind: &str, data: Value, key: &st
                     if crate::transfers::delivery_ready(store, t, &json!(current))? {
                         finish_delivery(&tx, store, t, key, final_result)?;
                     } else {
+                        let delivery =
+                            crate::transfers::delivery_status(store, t, &json!(current))?;
                         tx.execute("INSERT INTO task_file_delivery(task_id,revision,required,review) VALUES(?1,?2,1,?3) ON CONFLICT(task_id,revision) DO UPDATE SET review=excluded.review", params![t["id"].as_str(), revision(t), final_result.to_string()])?;
                         state(
                             &tx,
                             t,
                             "waiting",
-                            Some(string(t, "initiator")?),
-                            Some("结果已准备，等待附件允许发送或接收；按 CtrlF 查看"),
+                            delivery["next_owner"].as_str(),
+                            delivery["body"].as_str(),
                         )?;
                         notify(
                             &tx,
                             t,
                             &format!("delivery:{}", revision(t)),
                             "task_progress",
-                            "结果已准备，附件交付尚未完成。按 CtrlF 查看发送授权和下载状态；不会重新运行程序。",
+                            delivery["body"].as_str().unwrap_or("附件交付尚未完成"),
                         )?;
                     }
                 }
@@ -2141,6 +2220,39 @@ fn finish_delivery(
     )?;
     Ok(())
 }
+fn defer_attachment_review(store: &Store, t: &Value, candidates: &Value) -> Result<bool> {
+    if crate::transfers::delivery_ready(store, t, candidates)?
+        || !candidates.as_array().is_some_and(|items| {
+            !items.is_empty()
+                && items
+                    .iter()
+                    .all(|c| c["result"]["attachment"]["transfer_id"].is_string())
+        })
+    {
+        return Ok(false);
+    }
+    let delivery = crate::transfers::delivery_status(store, t, candidates)?;
+    let pending = json!({"review_pending":true,"candidates":candidates,"revision":t["revision"]});
+    let tx = store.conn.unchecked_transaction()?;
+    tx.execute("INSERT INTO task_file_delivery(task_id,revision,required,review) VALUES(?1,?2,1,?3) ON CONFLICT(task_id,revision) DO UPDATE SET review=excluded.review", params![t["id"].as_str(),revision(t),pending.to_string()])?;
+    state(
+        &tx,
+        t,
+        "waiting",
+        delivery["next_owner"].as_str(),
+        delivery["body"].as_str(),
+    )?;
+    notify(
+        &tx,
+        t,
+        &stable_id(&pending.to_string(), "await-receipt"),
+        "task_progress",
+        delivery["body"].as_str().unwrap_or("等待附件交付"),
+    )?;
+    tx.commit()?;
+    Ok(true)
+}
+
 fn finish_pending_deliveries(store: &Store) -> Result<()> {
     let mut q=store.conn.prepare("SELECT d.task_id,d.review FROM task_file_delivery d JOIN app_tasks t ON t.id=d.task_id AND t.revision=d.revision WHERE d.review IS NOT NULL AND t.state='waiting'")?;
     let rows = q
@@ -2151,13 +2263,34 @@ fn finish_pending_deliveries(store: &Store) -> Result<()> {
         let result: Value = serde_json::from_str(&raw)?;
         if crate::transfers::delivery_ready(store, &t, &result["candidates"])? {
             let tx = store.conn.unchecked_transaction()?;
-            finish_delivery(
-                &tx,
-                store,
-                &t,
-                &stable_id(&id, &format!("received:{}", revision(&t))),
-                result,
-            )?;
+            if result["review_pending"] == true {
+                tx.execute(
+                    "UPDATE task_file_delivery SET review=NULL WHERE task_id=?1 AND revision=?2",
+                    params![id, revision(&t)],
+                )?;
+                state(
+                    &tx,
+                    &t,
+                    "processing",
+                    Some(&store.owner()?),
+                    Some("附件已收到，正在检查交付结果"),
+                )?;
+                job(
+                    &tx,
+                    &stable_id(&raw, "review-received"),
+                    &t,
+                    "review",
+                    json!({}),
+                )?;
+            } else {
+                finish_delivery(
+                    &tx,
+                    store,
+                    &t,
+                    &stable_id(&id, &format!("received:{}", revision(&t))),
+                    result,
+                )?;
+            }
             tx.commit()?;
         }
     }

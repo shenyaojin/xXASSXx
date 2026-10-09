@@ -10,7 +10,7 @@
 
 ### 1. 安装程序
 
-当前测试版为 [0.3.2 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.3.2-alpha)，提供 Apple 芯片 Mac、Intel Mac 和 Linux x86_64 安装包。
+当前测试版为 [0.4.0 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.4.0-alpha)，提供 Apple 芯片 Mac、Intel Mac 和 Linux x86_64 安装包。
 
 解压安装包，进入包含 `install.sh` 和 `SHA256SUMS` 的目录：
 
@@ -96,6 +96,8 @@ xxassxx open "$HOME/Research/project"
 
 进入界面后，直接输入请求，例如“找一下与 history matching 有关的文件”。联系同伴时输入 `@bob` 加请求正文，检查任务卡后按 Ctrl+S 确认，再开始协作；用户名可用 `xxassxx client contacts` 查看。
 
+使用支持成员目录同步的信箱和客户端时，后台会自动从服务器更新团队名单，界面和 `@` 候选随之刷新。管理员登记新成员后，已有成员无需重新导入邀请或重启界面；离线成员也会保留在名单中。邀请里的联系人只是初始缓存，断网时使用上次同步的名单。旧客户端需要升级后才能自动同步。
+
 | 操作 | 命令或快捷键 |
 | --- | --- |
 | 打开当前目录 | `xxassxx` |
@@ -175,6 +177,8 @@ xxassxx server --directory "$HOME/.local/share/xxassxx/server" init \
 ```
 
 这是首次部署命令。已有团队继续使用原目录，不要重新初始化或重新生成成员凭据。当前没有自助注册或成员增删命令，初始化前先确认名单。
+
+信箱启动时将管理员配置的成员登记到持久化成员表，并向已鉴权的团队客户端同步用户名和显示名；不会下发他人的凭据。后续由管理员更新成员配置并重新加载信箱时，支持同步的客户端会自动取得新名单。更新名单不改变成员本地目录白名单、逐任务执行授权或附件导出许可。
 
 ### 2. 让信箱常驻运行
 

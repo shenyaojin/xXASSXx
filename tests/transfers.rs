@@ -398,6 +398,10 @@ fn delivery_requires_matching_candidate_sender_revision_and_receipt() {
     let mut candidates =
         json!([{"member":"a","result":{"attachment":{"transfer_id":id,"manifest":m}}}]);
     assert!(transfers::delivery_ready(&s, &task, &candidates).unwrap());
+    assert_eq!(
+        transfers::delivery_status(&s, &task, &candidates).unwrap()["ready"],
+        true
+    );
     rusqlite::Connection::open(&s.path)
         .unwrap()
         .execute(
@@ -415,9 +419,44 @@ fn delivery_requires_matching_candidate_sender_revision_and_receipt() {
         .unwrap();
     candidates[0]["member"] = json!("c");
     assert!(!transfers::delivery_ready(&s, &task, &candidates).unwrap());
+    let mismatch = transfers::delivery_status(&s, &task, &candidates).unwrap();
+    assert_eq!(mismatch["items"][0]["state"], "mismatch");
+    assert_eq!(mismatch["items"][0]["available_here"], false);
     candidates[0]["member"] = json!("a");
     candidates[0]["result"]["attachment"]["manifest"]["task"]["revision"] = json!(2);
     assert!(!transfers::delivery_ready(&s, &task, &candidates).unwrap());
+}
+
+#[test]
+fn delivery_distinguishes_remote_authorization_upload_error_and_unknown_old_peer() {
+    use serde_json::json;
+    let team = Team::new();
+    let s = team.store("b");
+    let id = uuid::Uuid::new_v4().to_string();
+    let mut task = json!({"id":uuid::Uuid::new_v4().to_string(),"revision":2,"initiator":"b","participants":["a","b"],"draft":{"mode":"files"},"history":[]});
+    let candidate =
+        json!([{"member":"a","result":{"attachment":{"transfer_id":id,"state":"draft"}}}]);
+    let v = transfers::delivery_status(&s, &task, &candidate).unwrap();
+    assert_eq!(v["next_owner"], "a");
+    assert_eq!(v["items"][0]["available_here"], false);
+    assert!(v["body"].as_str().unwrap().contains("发送方在自己的终端"));
+    // An obsolete revision and another member cannot replace the sender's state.
+    task["history"] = json!([
+        {"revision":2,"sender":"a","payload":{"stage":"attachment","transfer_id":id,"transfer_state":"uploading"}},
+        {"revision":1,"sender":"a","payload":{"stage":"attachment","transfer_id":id,"transfer_state":"draft"}},
+        {"revision":2,"sender":"c","payload":{"stage":"attachment","transfer_id":id,"transfer_state":"available"}}
+    ]);
+    let v = transfers::delivery_status(&s, &task, &candidate).unwrap();
+    assert_eq!(v["items"][0]["state"], "uploading");
+    task["history"].as_array_mut().unwrap().push(json!({"revision":2,"sender":"a","payload":{"stage":"attachment","transfer_id":id,"transfer_state":"failed","error":"磁盘可用空间不足"}}));
+    let v = transfers::delivery_status(&s, &task, &candidate).unwrap();
+    assert_eq!(v["next_owner"], "a");
+    assert!(v["body"].as_str().unwrap().contains("磁盘可用空间不足"));
+    let old_peer = json!([{"member":"a","result":{"attachment":{"transfer_id":uuid::Uuid::new_v4().to_string()}}}]);
+    let v = transfers::delivery_status(&s, &task, &old_peer).unwrap();
+    assert_eq!(v["items"][0]["state"], "unknown");
+    assert!(v["body"].as_str().unwrap().contains("状态尚未同步"));
+    assert!(transfers::list(&s).unwrap().is_empty()); // No fabricated downloadable entry.
 }
 
 #[test]

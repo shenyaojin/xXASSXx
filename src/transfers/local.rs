@@ -221,10 +221,14 @@ pub fn label(state: &str) -> &str {
     }
 }
 pub(crate) fn state(store: &Store, id: &str, state: &str, error: Option<&str>) -> Result<()> {
+    let previous = get(store, id)?;
     store.conn.execute(
         "UPDATE file_transfers SET state=?2,error=?3,updated_at=?4 WHERE id=?1",
         params![id, state, error, now()],
     )?;
+    if previous["state"] != state || previous["error"].as_str() != error {
+        crate::task_coordinator::attachment_progress(store, &manifest(store, id)?, state, error)?;
+    }
     let row: (Option<String>, Option<String>) = store.conn.query_row(
         "SELECT session_id,task_id FROM file_transfers WHERE id=?1",
         [id],
@@ -233,7 +237,7 @@ pub(crate) fn state(store: &Store, id: &str, state: &str, error: Option<&str>) -
     if let Some(session) = row.0 {
         let m = manifest(store, id)?;
         let body = format!(
-            "附件：{} → {} · {}\n{}\n{}",
+            "附件：{} → {} · {}\n发送方准备附件时的说明（历史）：{}\n{}",
             m.sender,
             m.recipient,
             label(state),
@@ -666,9 +670,111 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
     if automatic && !delivering_files && result["state"] == "draft" {
         allow(store, &id)?;
     }
+    let current = get(store, &id)?;
+    crate::task_coordinator::attachment_progress(
+        store,
+        &manifest(store, &id)?,
+        current["state"].as_str().unwrap(),
+        None,
+    )?;
     Ok(Some(
-        json!({"transfer_id":id,"manifest":manifest(store,&id)?}),
+        json!({"transfer_id":id,"manifest":manifest(store,&id)?,"state":current["state"]}),
     ))
+}
+
+/// Receipt facts and the next responsible member, never inferred from model prose.
+pub fn delivery_status(store: &Store, t: &Value, candidates: &Value) -> Result<Value> {
+    let ready = delivery_ready(store, t, candidates)?;
+    let mut items = vec![];
+    for c in candidates.as_array().context("missing candidates")? {
+        let result = c.get("result").unwrap_or(c);
+        let sender = c["member"].as_str().unwrap_or("执行成员");
+        let id = result["attachment"]["transfer_id"].as_str();
+        let local = id.map(|id| get(store, id)).transpose();
+        // An absent row is normal before the sender authorizes and publishes it.
+        let local = match local {
+            Ok(v) => v,
+            Err(e)
+                if e.downcast_ref::<rusqlite::Error>()
+                    .is_some_and(|e| matches!(e, rusqlite::Error::QueryReturnedNoRows)) =>
+            {
+                None
+            }
+            Err(e) => return Err(e),
+        };
+        let remote = t["history"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .rev()
+            .find(|e| {
+                e["revision"] == t["revision"]
+                    && e["sender"] == sender
+                    && e["payload"]["stage"] == "attachment"
+                    && id.is_some_and(|id| e["payload"]["transfer_id"] == id)
+            })
+            .map(|e| &e["payload"]);
+        let matches_candidate = local.as_ref().is_none_or(|v| {
+            v["direction"] == "in"
+                && v["manifest"] == result["attachment"]["manifest"]
+                && v["manifest"]["sender"] == sender
+                && v["manifest"]["recipient"] == t["initiator"]
+                && v["manifest"]["task"]["id"] == t["id"]
+                && v["manifest"]["task"]["revision"] == t["revision"]
+        });
+        let status = local
+            .as_ref()
+            .and_then(|v| v["state"].as_str())
+            .or_else(|| remote.and_then(|v| v["transfer_state"].as_str()))
+            .or_else(|| result["attachment"]["state"].as_str())
+            .unwrap_or("unknown");
+        let error = local
+            .as_ref()
+            .and_then(|v| v["error"].as_str())
+            .or_else(|| {
+                if local.is_none() {
+                    remote.and_then(|v| v["error"].as_str())
+                } else {
+                    None
+                }
+            });
+        let here = local.as_ref().is_some_and(|v| v["direction"] == "in");
+        let recipient = t["initiator"].as_str().unwrap_or("");
+        let (who, body) = if !matches_candidate {
+            (sender, "附件与本任务的发送方、版本或清单不匹配，不能确认交付；请发送方检查，勿重跑已完成的计算。".into())
+        } else if status == "received" && here {
+            (
+                recipient,
+                "附件已收到并校验，已保存到本机；按 CtrlF 查看。".into(),
+            )
+        } else if let Some(error) = error {
+            let who = if here { recipient } else { sender };
+            (
+                who,
+                format!(
+                    "@{who} 的附件传输遇到问题：{error}。请在该成员电脑按 CtrlF 查看；连接恢复后自动续传，暂停项可按 r 重试。"
+                ),
+            )
+        } else {
+            match status {
+                "draft" => (sender, format!("等待 @{sender} 允许发送附件；请发送方在自己的终端按 CtrlF → Enter → 按字母键 a（允许发送）。接收方暂时没有可下载文件，无需重试任务。")),
+                "queued" | "uploading" => (sender, format!("@{sender} 已允许发送，附件正在等待上传或上传中；上传完成后本机会出现接收入口。")),
+                "offered" if here => (recipient, if local.as_ref().is_some_and(|v| v["requested"] == true) { "附件已可接收，等待本机自动下载；按 CtrlF 查看。".into() } else { "附件已可下载；请在本机按 CtrlF → Enter → 按字母键 d（下载）接收。".into() }),
+                "downloading" if here => (recipient, "本机正在接收附件；按 CtrlF 查看传输进度。".into()),
+                "revoked" | "expired" | "revoking" => (sender, format!("@{sender} 的附件{}；请发送方重新准备并允许发送。", label(status))),
+                "failed" | "unsupported" => (if here { recipient } else { sender }, format!("附件{}；请在{}的 CtrlF 中查看原因并恢复。", label(status), if here { "本机".into() } else { format!("@{sender} 电脑") })),
+                "available" | "delivered" => (recipient, "发送方已发布附件，正在等待本机同步接收入口；目前还不能下载，请检查本机后台和信箱连接。".into()),
+                _ => (sender, format!("尚未收到 @{sender} 的可下载附件；发送授权或上传状态尚未同步。请发送方在自己的 CtrlF 检查，接收方无需重复授权或重跑任务。")),
+            }
+        };
+        items.push(json!({"transfer_id":id,"sender":sender,"state":if matches_candidate {status} else {"mismatch"},"next_owner":who,"body":body,"error":error,"available_here":here && matches_candidate}));
+    }
+    let pending = items
+        .iter()
+        .find(|v| v["state"] != "received" || v["available_here"] != true);
+    Ok(
+        json!({"ready":ready,"next_owner":pending.map(|v| &v["next_owner"]),"body":items.iter().filter_map(|v|v["body"].as_str()).collect::<Vec<_>>().join("\n"),"items":items}),
+    )
 }
 pub fn delivery_ready(store: &Store, t: &Value, candidates: &Value) -> Result<bool> {
     if t["draft"]["mode"] != "files" && t["draft"]["deliver_files"] != true {

@@ -83,6 +83,25 @@ pub(super) fn task_status(task: &Value, owner: &str) -> String {
     ) {
         return state.into();
     }
+    if let Some(item) = task["delivery"]["items"]
+        .as_array()
+        .and_then(|items| items.iter().find(|v| v["state"] != "received"))
+    {
+        let who = item["next_owner"].as_str().unwrap_or("执行成员");
+        return format!(
+            "附件：{} · 下一步 @{who}",
+            match item["state"].as_str() {
+                Some("draft") => "待发送方允许",
+                Some("queued" | "uploading") => "待上传完成",
+                Some("offered") => "可在本机接收",
+                Some("downloading") => "本机接收中",
+                Some(
+                    "failed" | "unsupported" | "mismatch" | "expired" | "revoked" | "revoking",
+                ) => "需要处理",
+                _ => "待状态同步",
+            }
+        );
+    }
     if task["execution_permission"]["can_allow"] == true {
         return "需要你允许执行 · Enter 查看范围".into();
     }
@@ -181,5 +200,206 @@ mod prose_tests {
         assert_eq!(message_body(&code), code["body"].as_str().unwrap());
         let user = json!({"sender":"owner","body":"第一段\\n\\n第二段"});
         assert_eq!(message_body(&user), user["body"].as_str().unwrap());
+    }
+}
+
+// All labels derive from durable command/task/transport observations.
+// Time means time since submission/confirmation, never estimated completion.
+pub(super) fn activity(
+    data: &Value,
+    session: &str,
+    selected: Option<&str>,
+    owner: &str,
+    now: i64,
+) -> Vec<String> {
+    let mut messages = data["messages"].as_array().into_iter().flatten();
+    let command = messages.rfind(|m| {
+        m["kind"] == "user"
+            && selected.is_none_or(|id| m["task_id"] == id)
+            && matches!(m["command_state"].as_str(), Some("pending" | "processing"))
+    });
+    let tasks = data["tasks"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|t| {
+            selected.map_or(t["session_id"] == session, |id| t["id"] == id)
+                && !matches!(
+                    t["state"].as_str(),
+                    Some("completed" | "cancelled" | "stopped")
+                )
+        })
+        .collect::<Vec<_>>();
+    let task = tasks.last().copied();
+    let Some(start) = command
+        .map(|m| m["created_at"].as_i64().unwrap_or(now))
+        .or_else(|| {
+            task.map(|t| {
+                t["revisions"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|r| r["revision"] == t["revision"])
+                    .and_then(|r| r["confirmed_at"].as_i64())
+                    .or(t["updated_at"].as_i64())
+                    .unwrap_or(now)
+            })
+        })
+    else {
+        return vec![];
+    };
+    let mut busy = true;
+    let detail = if data["service"]["alive"] == false || data["service"]["state"] == "blocked" {
+        busy = false;
+        "本机后台已停止或受阻；检查后台错误后运行 xxassxx client start。".into()
+    } else if let Some(c) = command {
+        if c["command_state"] == "pending" {
+            "请求已保存，后台排队中".into()
+        } else {
+            "自己的助手正在理解请求并准备答复".into()
+        }
+    } else if let Some(t) = task {
+        if t["state"] == "needs_attention" {
+            busy = false;
+            format!(
+                "任务已暂停：{} · CtrlD 查看原因，处理后 CtrlY 恢复",
+                t["error"]
+                    .as_str()
+                    .or(t["waiting_for"].as_str())
+                    .unwrap_or("需要检查")
+            )
+        } else if t["state"] == "draft" {
+            busy = false;
+            "等待你确认任务 · CtrlS 确认，CtrlE 修改".into()
+        } else if t["state"] == "queued" {
+            busy = false;
+            "任务已确认，等待执行成员接收；信箱送达不代表执行已开始。".into()
+        } else if t["state"] == "waiting"
+            || t["waiting_for"] == crate::task_coordinator::WAIT_ACCESS
+        {
+            busy = false;
+            t["delivery"]["body"]
+                .as_str()
+                .map(str::to_owned)
+                .unwrap_or_else(|| task_status(t, owner))
+        } else if let Some(attempt) = t["model_attempts"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .rev()
+            .find(|a| a["revision"] == t["revision"] && a["state"] == "running")
+        {
+            match attempt["stage"].as_str() {
+                Some("review") => "自己的助手正在检查结果并准备答复".into(),
+                _ => "自己的助手正在整理任务和上下文".into(),
+            }
+        } else if t["runs"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|r| r["revision"] == t["revision"] && r["state"] == "running")
+        {
+            if t["active_tool"].is_string() {
+                "本机 Codex 正在处理工具调用".into()
+            } else {
+                "本机 Codex 正在处理已授权的任务".into()
+            }
+        } else if let Some(peer) = t["next_owner"].as_str().filter(|m| *m != owner) {
+            busy = false;
+            let status = data["presence"]["members"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|p| p["member_id"] == peer);
+            if status.is_some_and(|p| p["presence"]["state"] == "expired") {
+                format!(
+                    "等待 @{peer} · 成员心跳已过期，请对方检查后台；{}。",
+                    presence(&status.unwrap()["presence"])
+                )
+            } else {
+                let last = t["history"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .rev()
+                    .find(|e| {
+                        e["revision"] == t["revision"]
+                            && e["sender"] == peer
+                            && matches!(
+                                e["payload"]["stage"].as_str(),
+                                Some("reading" | "executing")
+                            )
+                    });
+                format!(
+                    "等待 @{peer} 回复 · {}",
+                    last.and_then(|e| e["payload"]["body"].as_str())
+                        .unwrap_or("请求已发出，尚未收到最终回复")
+                )
+            }
+        } else {
+            t["waiting_for"]
+                .as_str()
+                .unwrap_or("后台正在准备下一步")
+                .to_owned()
+        }
+    } else {
+        return vec![];
+    };
+    let elapsed = (now - start).max(0);
+    let marker = if busy {
+        ["◐", "◓", "◑", "◒"][(now.max(0) % 4) as usize]
+    } else {
+        "○"
+    };
+    let mut lines = vec![
+        format!(
+            "{marker} {} · 已等待 {elapsed} 秒{}",
+            if busy {
+                "正在处理"
+            } else {
+                "等待 / 需要处理"
+            },
+            if tasks.len() > 1 {
+                format!(" · 本会话 {} 项任务未结束", tasks.len())
+            } else {
+                String::new()
+            }
+        ),
+        detail,
+    ];
+    if data["presence"]["connection"]["state"] == "unreachable" {
+        lines.push("信箱连接中断，后台正在重连；远端进展可能尚未同步。".into());
+    }
+    lines
+}
+
+#[cfg(test)]
+mod activity_tests {
+    use super::*;
+    use serde_json::json;
+    #[test]
+    fn progress_survives_reopen_is_scoped_and_stops_after_reply() {
+        let mut data = json!({"service":{"alive":true},"messages":[{"kind":"user","created_at":100,"command_state":"pending"}],"tasks":[]});
+        let lines = activity(&data, "s", None, "a", 112).join("\n");
+        assert!(lines.contains("12 秒") && lines.contains("排队"));
+        data["messages"][0]["command_state"] = json!("done");
+        assert!(activity(&data, "s", None, "a", 120).is_empty());
+        data["tasks"] = json!([{"id":"t","session_id":"s","revision":2,"state":"waiting","next_owner":"b","waiting_for":crate::task_coordinator::WAIT_ACCESS,"revisions":[{"revision":1,"confirmed_at":50},{"revision":2,"confirmed_at":100}]}]);
+        let lines = activity(&data, "s", None, "a", 120).join("\n");
+        assert!(lines.contains("等待 @b 允许执行") && lines.contains("20 秒"));
+        assert!(!lines.contains("◐") && !lines.contains("◓"));
+        assert!(activity(&data, "other", None, "a", 120).is_empty());
+        data["tasks"][0]["state"] = json!("completed");
+        assert!(activity(&data, "s", None, "a", 125).is_empty());
+    }
+    #[test]
+    fn failure_connection_and_expired_presence_are_not_fake_activity() {
+        let mut data = json!({"service":{"alive":true},"messages":[],"tasks":[{"id":"t","session_id":"s","revision":1,"state":"processing","next_owner":"b","updated_at":100}],"presence":{"connection":{"state":"unreachable"},"members":[{"member_id":"b","presence":{"state":"expired","age_secs":80}}]}});
+        let lines = activity(&data, "s", None, "a", 115).join("\n");
+        assert!(lines.contains("心跳已过期") && lines.contains("信箱连接中断"));
+        data["tasks"][0]["state"] = json!("needs_attention");
+        data["tasks"][0]["error"] = json!("模型超时");
+        let lines = activity(&data, "s", None, "a", 115).join("\n");
+        assert!(lines.contains("任务已暂停：模型超时") && lines.contains("CtrlY"));
     }
 }

@@ -1563,3 +1563,88 @@ fn result_archives_are_immutable_per_revision_after_reopening() {
     let result: Value = serde_json::from_slice(&std::fs::read(second).unwrap()).unwrap();
     assert_eq!(result["result"]["body"], "second");
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn prepared_attachment_waits_for_receipt_before_model_can_request_more_work() {
+    let team = Team::new();
+    let (i, id) = draft(&team, "@b 请发一张现有图片");
+    let a = team.store("a");
+    tasks::prepare(
+        &a,
+        &id,
+        json!({"goal":"接收原图","deliverables":["一张图片"],"mode":"files"}),
+    )
+    .unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    let mut b = team.store("b");
+    transfer(&a, &mut b);
+    let path = team.dir.path().join("b/work/image.png");
+    std::fs::write(&path, b"immutable attachment fixture").unwrap();
+    let path = path.canonicalize().unwrap();
+    let batch = uuid::Uuid::new_v4().to_string();
+    xxassxx::transfers::prepare(
+        &b,
+        xxassxx::transfers::Prepare {
+            id: batch.clone(),
+            recipient: "a".into(),
+            note: "prepared; not yet sent".into(),
+            paths: vec![path],
+            session: None,
+            task: Some(xxassxx::transfers::TaskRef {
+                id: id.clone(),
+                revision: 1,
+            }),
+            replaces: None,
+        },
+        true,
+    )
+    .unwrap();
+    let manifest = xxassxx::transfers::manifest(&b, &batch).unwrap();
+    let candidate = json!({"body":"原图已准备，尚未授权发送","attachment":{"transfer_id":batch,"manifest":manifest,"state":"draft"}});
+    let db = rusqlite::Connection::open(&a.path).unwrap();
+    db.execute(
+        "INSERT INTO task_candidates(task_id,revision,member,result) VALUES(?1,1,'b',?2)",
+        rusqlite::params![id, candidate.to_string()],
+    )
+    .unwrap();
+    db.execute("INSERT INTO task_jobs(id,task_id,revision,kind,payload,created_at) VALUES(?1,?2,1,'review','{}',0)",rusqlite::params![uuid::Uuid::new_v4().to_string(),id]).unwrap();
+    // No model is configured yet: even a reviewer that would misinterpret draft
+    // transport state must not be called before a receiver has the actual bytes.
+    tasks::tick(&a, Path::new(BIN)).await.unwrap();
+    let waiting = tasks::get(&a, &id).unwrap();
+    assert_eq!(waiting["state"], "waiting");
+    assert_eq!(waiting["next_owner"], "b");
+    assert_eq!(count(&a, "SELECT count(*) FROM task_model_attempts"), 0);
+    assert_eq!(count(&a, "SELECT count(*) FROM task_executions"), 0);
+    tasks::tick(&a, Path::new(BIN)).await.unwrap();
+    assert_eq!(count(&a, "SELECT count(*) FROM task_model_attempts"), 0);
+    team.cli("a", &["files", "sync"]); // Advertise receiver capability before upload.
+    team.cli("b", &["files", "allow", &batch]);
+    team.cli("b", &["files", "sync"]);
+    team.cli("a", &["files", "sync"]);
+    assert_eq!(
+        team.cli("a", &["files", "show", &batch])["state"],
+        "received"
+    );
+    let router=axum::Router::new().route("/chat/completions",axum::routing::post(|axum::Json(v):axum::Json<Value>| async move {
+        let ctx:Value=serde_json::from_str(v["messages"][1]["content"].as_str().unwrap()).unwrap();
+        assert_eq!(ctx["extra"]["delivery"]["ready"],true);
+        // The immutable candidate still truthfully records its preparation time.
+        assert_eq!(ctx["extra"]["candidates"][0]["result"]["attachment"]["state"],"draft");
+        axum::Json(json!({"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"receipt-review","type":"function","function":{"name":"task_decision","arguments":json!({"action":"complete","body":"原图已收到"}).to_string()}}]}}]}))
+    }));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let server = tokio::spawn(async { axum::serve(listener, router).await.unwrap() });
+    let mut a = team.store("a");
+    let mut cfg = a.member_config().unwrap();
+    cfg.model = json!({"provider":"compatible","base_url":url,"model":"simulation","api_key_env":"","allow_insecure_http":true,"thinking":false});
+    a.configure_member(&cfg).unwrap();
+    tasks::tick(&a, Path::new(BIN)).await.unwrap();
+    assert_eq!(tasks::get(&a, &id).unwrap()["state"], "completed");
+    assert_eq!(count(&a, "SELECT count(*) FROM task_model_attempts"), 1);
+    assert_eq!(count(&a, "SELECT count(*) FROM task_executions"), 0);
+    tasks::tick(&a, Path::new(BIN)).await.unwrap();
+    assert_eq!(count(&a, "SELECT count(*) FROM task_model_attempts"), 1);
+    server.abort();
+}

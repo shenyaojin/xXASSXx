@@ -95,6 +95,10 @@ pub fn router(db: &FsPath, cfg: &RelayConfig) -> Result<Router> {
     }
     tx.execute("DELETE FROM relay_members", [])?;
     for member in &cfg.members {
+        crate::team::validate_contact(&crate::team::Contact {
+            member_id: member.member_id.clone(),
+            display_name: member.display_name.clone(),
+        })?;
         crate::team::validate_env_name(&member.credential_env)?;
         let token = if let Some(path) = &cfg.secrets_file {
             crate::secrets::read_field(path, &member.credential_env)?
@@ -263,8 +267,27 @@ async fn whoami(
     let c = connection(&relay.db)
         .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "storage unavailable"))?;
     let me = auth(&c, &headers)?;
+    // This persistent registry is also the authoritative directory. Include all
+    // registered members, even those without a heartbeat; never include tokens.
+    let directory = || -> Result<Vec<crate::team::Contact>> {
+        let mut q = c.prepare("SELECT id,name FROM relay_members ORDER BY id")?;
+        Ok(q.query_map([], |r| {
+            Ok(crate::team::Contact {
+                member_id: r.get(0)?,
+                display_name: r.get(1)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?)
+    };
+    let members = directory().map_err(|_| {
+        problem(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "member directory unavailable",
+        )
+    })?;
     Ok(Json(
-        json!({"team_id":relay.team,"member_id":me,"task_protocol":2,"file_transfer_protocol":1}),
+        json!({"team_id":relay.team,"member_id":me,"task_protocol":2,"file_transfer_protocol":1,
+            "member_directory":{"protocol":1,"members":members}}),
     ))
 }
 

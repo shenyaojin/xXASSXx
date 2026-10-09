@@ -1,0 +1,116 @@
+{
+  "date": "2026-10-08",
+  "timezone": "America/Denver",
+  "recorded_at": "2026-10-09T02:31:00.613842+00:00",
+  "status": "passed",
+  "deployment": {
+    "release_published": false,
+    "reported_version": "0.3.2-alpha",
+    "description": "Unreleased local patch installed on MBA mba and Lakota test; owner, Trader and pengchao unchanged this round.",
+    "mba_binary_sha256": "0b0f8be8dcc2caf1ede7cd9efa9fe37bcfeb20bb9520b6387ee6543c8a4ce23f",
+    "lakota_binary_sha256": "3594a7ae46f6b95c7b31afade20060904292578b12b860cc06275c003d394e0c",
+    "schema": 9,
+    "application_sources_match": true,
+    "source_hash_manifest": "smoke-output/lakota-image-ui-7bedbc2e/source-file-sha256.json",
+    "source_match_note": "All Cargo/src contents match; ignored one macOS AppleDouble metadata file present only in remote extraction."
+  },
+  "environment": {
+    "initiator": "mba",
+    "executor": "test",
+    "remote_host": "lakota",
+    "mailbox": "https://xxassxx.shenyaojin.com",
+    "model": "real DeepSeek",
+    "executor_cli": "real official Codex 0.159.2",
+    "ui": "actual interactive system PTYs running installed xxassxx open on MBA and over SSH on Lakota",
+    "native_ui_limitations": "Terminal access denied by computer-use tool; Preview access not approved. No native-window observation claimed.",
+    "image_view": "Actual received/saved PNG opened with local image viewer tool after xxassxx o requested system open.",
+    "business_file_transport": "xxassxx HTTPS file transfer only; no SSH/scp copy of business image",
+    "database_access": "read-only verification; no manual state changes"
+  },
+  "pre_fix_failure": {
+    "task_id": "406d7294-7671-5952-94e0-25cffedfa217",
+    "failure": "Reviewer requested another Codex round solely because sender export authorization was pending, eventually asking recipient a sender-side authorization question.",
+    "disposition": "Cancelled own test via real TUI; retained failure evidence, fixed coordinator, rebuilt/deployed both clients and repeated same request.",
+    "evidence": "smoke-output/lakota-image-ui-7bedbc2e/pre-fix-real-failure.json"
+  },
+  "successful_task": {
+    "id": "7799ce35-a91e-598b-a853-b83ba66b6762",
+    "revision": 1,
+    "state": "completed",
+    "next_owner": null,
+    "waiting_reason": null,
+    "transfer_id": "b87819da-3245-5369-8a43-680acfe5fd79",
+    "sender_transfer_state": "delivered",
+    "recipient_transfer_state": "received",
+    "auto_received": true,
+    "lakota_runs": [
+      {
+        "id": "5d191c7c-4ff4-5742-b417-80f0192c3f1c",
+        "state": "candidate",
+        "run_id": "d377f291-c3b4-40ed-a492-bf2ee00f9230",
+        "run_state": "succeeded",
+        "turn_completed": 1,
+        "exit_code": 0,
+        "codex_version": "codex-cli 0.159.2",
+        "workdir": "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts"
+      }
+    ],
+    "mba_execution_count": 0,
+    "model_review_before_export": false,
+    "model_attempt_stages": [
+      {
+        "stage": "prepare",
+        "state": "succeeded"
+      },
+      {
+        "stage": "review",
+        "state": "succeeded"
+      }
+    ],
+    "terminal_final_answer": "已收到并校验 1 个文件，已保存到本机。\n\npp_prod_three_scenarios.png（348017 字节，来自 @test）\n\n按 CtrlF 查看附件，可打开、另存为或继续分析。这些是发送时的固定副本；发送方后续修改不会改变本次附件。",
+    "terminal_completed_without_waiting_panel": true
+  },
+  "artifact": {
+    "name": "pp_prod_three_scenarios.png",
+    "bytes": 348017,
+    "dimensions": [
+      2400,
+      3600
+    ],
+    "sha256": "e6174ce1ba7a27a9a6bc5a99881404981b13040214388ff1cafaa50f4330255e",
+    "original_sender_copy_received_and_saved_hashes_match": true,
+    "saved_path": "/Users/shenyaojin/Downloads/Lakota-pp_prod_three_scenarios-20261008.png",
+    "visual_observation": "Three stacked pore-pressure plots titled Porous Kernel Model, Single Diffusion Model and With dual-kernel Model. Image decodes visibly; scientific validity was not reviewed."
+  },
+  "automated_checks": {
+    "passed": 132,
+    "failed": 0,
+    "ignored_opt_in": 2,
+    "fmt": "passed",
+    "clippy_all_targets_deny_warnings": "passed",
+    "release_builds": [
+      "macOS arm64",
+      "Linux x86_64"
+    ],
+    "regression": "prepared_attachment_waits_for_receipt_before_model_can_request_more_work"
+  },
+  "evidence_directory": "smoke-output/lakota-image-ui-7bedbc2e",
+  "screens": {
+    "a-fixed-awaiting-export.txt": "1a784d76aa3d41503ed087dddee17cd1196e9df9e278ac6e0448aa9bb94dd2d7",
+    "b-fixed-lakota-export-details.txt": "9e3319513d48bf8db8c882e3fed0b0cea9aee0ba0500e597e5f77dc7042ce601",
+    "b-fixed-lakota-export-approved.txt": "adb97de0886ad411726cd7a2921eec8304fac2db715a850757ea78c945ce6d50",
+    "a-fixed-file-arrival.txt": "d2f191c24899fbb5451148bb9ba79bea5e177caf98d68ac64d7fa09d2c340845",
+    "a-fixed-final-answer.txt": "28ced38be282d379ba23676839083608d7822690608a77613612ce9dfe230fe1",
+    "a-fixed-received-image-details.txt": "6f265d52e3c58caa2e662ddc190f3cefc3c5e86070ba3acc8a21da75a1557cf1",
+    "a-fixed-image-saved.txt": "0a5c08c4c09a2c90e752f63b7167ef536abeca8a39be58c875b44f12a8b56ffa",
+    "a-fixed-image-opened.txt": "1554412650320b682a8343c8412d017329b5e0b9a41e5768011d109daa4e9ebd",
+    "a-fixed-mba-completed-task.txt": "c874ef4ad8965a16db978c99162c023c5ad8f25bab9cd0d49292acf1354d68fe",
+    "b-fixed-lakota-completed.txt": "0786ff9edbb1e1a4284b89728899a16a2b1baeddaaf6f434554a5e097e290347"
+  },
+  "limitations": [
+    "Only the one existing PNG was transferred; no new scientific computation.",
+    "Sender conversation reuses final result in initiator perspective; its 本机 means MBA. Direction and delivered state are accurate in attachment view.",
+    "Original issue reporter task was not recovered; pengchao task and attachment were not touched.",
+    "No GitHub commit, push, release, comment or issue closure this round."
+  ]
+}

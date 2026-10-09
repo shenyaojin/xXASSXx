@@ -552,10 +552,8 @@ pub async fn sync(store: &Store) -> Result<Value> {
             {
                 state(store, id, status, Some(&error))?;
             } else {
-                store.conn.execute(
-                    "UPDATE file_transfers SET error=?2 WHERE id=?1",
-                    params![id, error],
-                )?;
+                let current = get(store, id)?;
+                state(store, id, current["state"].as_str().unwrap(), Some(&error))?;
             }
             errors.push(error);
         }

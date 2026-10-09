@@ -44,7 +44,7 @@ else
   fi
   case "$version" in
     v[0-9]*) ;;
-    *) echo 'No published release found; use an explicit tag such as --version v0.3.2-alpha for a prerelease.' >&2; exit 1 ;;
+    *) echo 'No published release found; use an explicit tag such as --version v0.4.0-alpha for a prerelease.' >&2; exit 1 ;;
   esac
   case "$version" in *[!A-Za-z0-9._-]*) echo 'Invalid release tag.' >&2; exit 1 ;; esac
   base="https://github.com/$repository/releases/download/$version"

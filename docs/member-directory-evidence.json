@@ -1,0 +1,151 @@
+{
+  "date": "2026-10-08",
+  "timezone": "America/Denver",
+  "recorded_at": "2026-10-09T02:44:49.919794+00:00",
+  "status": "passed",
+  "change": "Server-authoritative directory using existing relay_members; authenticated whoami response; client sync before inbox; live TUI choices preserved by identity.",
+  "version": "0.3.2-alpha (unreleased local patch)",
+  "schema": 9,
+  "builds": {
+    "mac_arm64_sha256": "78c68e3643bc3a8850e82d2005849c02025b525363c8c937d360f930f9eddd6c",
+    "linux_x86_64_sha256": "0ef5501a89f0e2ef18474b3544722728ac40d9dc3c88ac8ab41801614c05eec8",
+    "source_archive_sha256": "4a6242add9c17dc25e3011325666ff942d83f967e6c72b8ce5df0558df67756e",
+    "linux_installed": {
+      "lakota": "0ef5501a89f0e2ef18474b3544722728ac40d9dc3c88ac8ab41801614c05eec8",
+      "trader": "0ef5501a89f0e2ef18474b3544722728ac40d9dc3c88ac8ab41801614c05eec8"
+    }
+  },
+  "automated": {
+    "passed": 136,
+    "failed": 0,
+    "ignored_opt_in": 2,
+    "fmt": "passed",
+    "clippy_all_targets_deny_warnings": "passed",
+    "release_builds": [
+      "macOS arm64",
+      "Linux x86_64"
+    ]
+  },
+  "real_ui": {
+    "environment": "real PTY; real DeepSeek and official Codex; isolated authenticated loopback team on MBA",
+    "native_terminal": "Tool access denied in this conversation; used actual interactive PTYs per docs/debugging.md.",
+    "initial_members": [
+      "a",
+      "b"
+    ],
+    "registered_later": "c",
+    "existing_ui_pid_before": 21356,
+    "existing_ui_pid_after": 21356,
+    "client_restart_or_reimport": false,
+    "server_update": "Changed isolated admin relay config and restarted relay; no SQL writes.",
+    "new_member_visible_before_heartbeat": true,
+    "sidebar_and_open_mention_candidates_updated": true,
+    "task_id": "1abb1471-cdf8-57e6-bb3d-42181b5be177",
+    "revision": 1,
+    "final_state": "completed",
+    "next_owner": null,
+    "final_answer": "已完成。Carol 在她的允许目录中只读查看了 member-check.txt，并按原样回复了交接代码：CAROL-8247（文件中原文为 “Member directory handoff code: CAROL-8247”），来源为允许目录顶层的 member-check.txt。\n\n只做了只读查看，未修改文件、未运行脚本、未发送附件。需要说明的是：本次只读取了 1 个文件（42 字节），它只代表 Carol 允许目录中被检查的这一份材料，不代表目录整体内容。",
+    "initiator_codex_runs": 0,
+    "executor_codex_runs": [
+      {
+        "id": "e3710364-8b02-584f-90d3-9b7816df79cb",
+        "phase": "discover",
+        "state": "succeeded",
+        "turn_completed": 1,
+        "exit_code": 0,
+        "codex_version": "codex-cli 0.162.0"
+      },
+      {
+        "id": "68c73655-773e-5bfe-a148-5b5e7f4feb05",
+        "phase": "analyze",
+        "state": "succeeded",
+        "turn_completed": 1,
+        "exit_code": 0,
+        "codex_version": "codex-cli 0.162.0"
+      }
+    ],
+    "test_file": {
+      "name": "member-check.txt",
+      "bytes": 42,
+      "sha256": "5e4d3b2cedbb215f9c4417d74d9cb71976cee3ffa209ff7cfabcf0ad528341c4",
+      "code": "CAROL-8247"
+    }
+  },
+  "deployed": {
+    "server": "Trader current HTTPS mailbox",
+    "clients": [
+      "MBA mba",
+      "Lakota test"
+    ],
+    "current_https_directory": {
+      "members": [
+        {
+          "display_name": "Shenyao \"Keith\" Jin (MacBook Air)",
+          "member_id": "mba"
+        },
+        {
+          "display_name": "Shenyao \"Keith\" Jin",
+          "member_id": "owner"
+        },
+        {
+          "display_name": "pengchao",
+          "member_id": "pengchao"
+        },
+        {
+          "display_name": "test (Lakota)",
+          "member_id": "test"
+        }
+      ],
+      "protocol": 1
+    },
+    "identity_non_directory_config_and_task_count_preserved": true,
+    "mba_backend": {
+      "alive": true,
+      "error": null,
+      "instance": "a7f331b8-95a9-4f18-84b4-896015e1298a",
+      "log_path": "/Users/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+      "pid": 21590,
+      "state": "running",
+      "updated_at": 1791513757
+    },
+    "lakota_backend": {
+      "alive": true,
+      "error": null,
+      "instance": "6c3cfa7c-2a4f-4c50-97f8-eab2ab0f636a",
+      "log_path": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+      "pid": 2943552,
+      "state": "running",
+      "updated_at": 1791513755
+    },
+    "not_upgraded": [
+      "owner",
+      "pengchao"
+    ],
+    "installed_ui_checked": [
+      "MBA installed open + contacts reply",
+      "Lakota installed open over SSH PTY + contacts reply"
+    ]
+  },
+  "evidence_directory": "smoke-output/member-directory-live-1799d6a2",
+  "screens": {
+    "a-before-join.txt": "3d941463d34a51c88ae1a380819229e9851c5aa87ccdf0ce23d4e9165c01a2db",
+    "a-before-join-candidates.txt": "2d5db053ccc1e8bddcafdd835bfbc70dde063f11a5303348dabdf495e336991d",
+    "a-after-join-live-candidates.txt": "7ea4452f3da1f889454b00a787baa6106b64f8fda688453e659cfef4cd5d1b97",
+    "c-new-member-started.txt": "22ce9e88114ce9f6ada78256aeebb579e1ec5bb1dda6018de29fa103df057e1c",
+    "a-new-member-task-plan.txt": "a89860edb4023bc5684fb1ca41e68f6c1f5084ea76eb5a19ba5ddc1e0a83f223",
+    "a-new-member-task-confirmed.txt": "d033652d68619e90a247368609fef4ba30495700d8087dc87dc64a3948f47972",
+    "a-new-member-final-answer.txt": "53943342bb2632bcde3f70fdd0abeeb0be68901c5815bc149b7bba1de4b8be9a",
+    "c-new-member-completed.txt": "de06801f8fbdccf29c23b97b14924ec3fb5fcace6dffb817447589c9eb6813eb",
+    "a-deployed-mba.txt": "033d26cdde3bce2f53e0d6dcbc1c7912a3cf3314fdd4729fa036fe62dfa1f572",
+    "b-deployed-lakota.txt": "fa1f14e2bd2155016d1ea95b53c05e98c39ffd39bc5edbffe5d0fa855f80cf12",
+    "a-deployed-mba-contacts-result.txt": "a19e14233830d78d8ed76b37dd38242b9d5870e8be6a4fadc0e84db773743973",
+    "b-deployed-lakota-contacts-result.txt": "861189e7f2cec4991547524f231d791507c55231a9d45889bf87f430b23092bb"
+  },
+  "boundaries": [
+    "Dynamic new-member scenario used an isolated same-machine team, real DeepSeek and real official Codex.",
+    "Current team membership unchanged; existing four-member registry verified over HTTPS.",
+    "No new self-registration/admin add/remove CLI; current nine-member limit unchanged.",
+    "Older clients must update for automatic directory sync; legacy servers preserve invitation cache.",
+    "No GitHub commit/push/release; previous file-transfer test not rerun this round."
+  ]
+}

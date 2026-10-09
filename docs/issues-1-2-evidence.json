@@ -1,0 +1,62 @@
+{
+  "kind": "real models, two isolated clients on one Mac and loopback relay; no cross-machine test",
+  "binary_sha256": "172b13c57d375756a5241025aa1b47b4efe5383c46fa7a4a64892a5bfe7d718a",
+  "checks": [
+    {
+      "check": "local chat through PTY completes; progress removed after final answer"
+    },
+    {
+      "check": "recipient has no download before sender authorization; task and CtrlF identify sender",
+      "delivery": {
+        "body": "等待 @b 允许发送附件；请发送方在自己的终端按 CtrlF → Enter → 按字母键 a（允许发送）。接收方暂时没有可下载文件，无需重试任务。",
+        "items": [
+          {
+            "available_here": false,
+            "body": "等待 @b 允许发送附件；请发送方在自己的终端按 CtrlF → Enter → 按字母键 a（允许发送）。接收方暂时没有可下载文件，无需重试任务。",
+            "error": null,
+            "next_owner": "b",
+            "sender": "b",
+            "state": "draft",
+            "transfer_id": "2a0a3a69-b81a-5aca-9f29-6483d3b886f1"
+          }
+        ],
+        "next_owner": "b",
+        "ready": false
+      }
+    },
+    {
+      "check": "progress and responsible member survive closing and reopening the TUI"
+    },
+    {
+      "check": "PTY distinguishes connection loss and daemon reconnects without replaying execution"
+    },
+    {
+      "check": "real model answers follow-up using transport context"
+    },
+    {
+      "check": "sender PTY authorizes; recipient PTY downloads; meaningful final answer and exact bytes",
+      "sha256": "d37cf4e3424402b93646c857f1a802c0dccdd22e34c6bed5c4268e8428c75a8d",
+      "runs": [
+        {
+          "state": "succeeded",
+          "turn_completed": 1,
+          "exit_code": 0
+        }
+      ],
+      "final": "已收到并校验 1 个文件，已保存到本机。\n\ntemperature.csv（31 字节，来自 @b）\n\n按 CtrlF 查看附件，可打开、另存为或继续分析。这些是发送时的固定副本；发送方后续修改不会改变本次附件。"
+    }
+  ],
+  "status": "passed",
+  "task_id": "f636d242-1858-5c55-bdd4-96c1bdc3287d",
+  "date": "2026-10-08",
+  "raw_evidence_directory": "smoke-output/issues-1-2-1e65e7c4",
+  "validation_boundary": "Same Mac with two isolated PTYs, real DeepSeek and official Codex, authenticated loopback relay. Original reporter task and cross-machine HTTPS not revalidated.",
+  "automated": {
+    "full_suite_passed": 131,
+    "failed": 0,
+    "ignored_opt_in": 2,
+    "final_transfer_suite_passed": 12,
+    "clippy": "passed",
+    "format": "passed"
+  }
+}

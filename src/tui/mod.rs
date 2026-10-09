@@ -217,7 +217,50 @@ impl Ui {
             .collect()
     }
     pub fn refresh(&mut self, store: &Store) -> Result<()> {
+        let previous = self.data["contacts"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        let viewed_member = self
+            .view
+            .checked_sub(1)
+            .and_then(|n| previous.get(n))
+            .map(|c| c["member_id"].clone());
+        let recent_tasks = self.view == previous.len() + 1;
+        let recipient = (self.panel == Panel::AttachmentRecipient)
+            .then(|| previous.get(self.index).map(|c| c["member_id"].clone()))
+            .flatten();
+        let candidate = self.candidates();
+        let selected_candidate =
+            (!candidate.is_empty()).then(|| candidate[self.candidate % candidate.len()].clone());
         self.data = app::snapshot(store, &self.session)?;
+        let contacts = self.data["contacts"].as_array().unwrap();
+        // A newly joined member may sort before the currently selected person.
+        // Keep selection by identity so refresh cannot silently change recipients.
+        if recent_tasks {
+            self.view = contacts.len() + 1;
+        } else if let Some(member) = viewed_member {
+            self.view = contacts
+                .iter()
+                .position(|c| c["member_id"] == member)
+                .map_or(0, |n| n + 1);
+        }
+        if let Some(member) = recipient {
+            if let Some(index) = contacts.iter().position(|c| c["member_id"] == member) {
+                self.index = index;
+            } else {
+                self.panel = Panel::Attachments;
+                self.index = 0;
+                self.notice = "该成员已不在团队名单中，请重新选择收件人。".into();
+            }
+        }
+        if let Some(member) = selected_candidate {
+            self.candidate = self
+                .candidates()
+                .iter()
+                .position(|c| c == &member)
+                .unwrap_or(0);
+        }
         if let Some(id) = self.pending_command.clone() {
             let c = app::command(store, &id)?;
             if let Some(task) = c["task_id"].as_str() {
@@ -1151,6 +1194,23 @@ impl Ui {
                 lines.push("历史任务 · CtrlD 来源和记录 · CtrlG 授权 · CtrlY 恢复旧流程".into());
             }
         }
+        let activity = presentation::activity(
+            &self.data,
+            &self.session,
+            self.selected_task.as_deref(),
+            &self.owner,
+            crate::store::now(),
+        );
+        let activity_height = if activity.is_empty() {
+            0
+        } else {
+            (activity
+                .iter()
+                .map(|s| wrap(s, body.width.saturating_sub(2).max(1) as usize).len())
+                .sum::<usize>()
+                + 2)
+            .min(7) as u16
+        };
         let split = Layout::vertical([
             Constraint::Length(if body.height < 10 {
                 2
@@ -1162,6 +1222,7 @@ impl Ui {
                 4
             }),
             Constraint::Min(1),
+            Constraint::Length(activity_height),
         ])
         .split(body);
         // Keep the viewed status and selected task visible independently of chat scrolling.
@@ -1225,6 +1286,9 @@ impl Ui {
             }
         } else {
             draw_lines(f, split[1], &title, &lines, self.scroll, true);
+        }
+        if !activity.is_empty() {
+            draw_lines(f, split[2], "当前进展", &activity, 0, false);
         }
         let title = match self.panel {
             Panel::ProjectPath => "输入其他工作目录路径".to_owned(),
@@ -1655,6 +1719,21 @@ impl Ui {
                             .join("、")
                     ));
                 }
+                for t in self.data["tasks"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|t| t["delivery"].is_object() && t["delivery"]["ready"] == false)
+                {
+                    lines.push(format!("待交付任务：{}", t["title"].as_str().unwrap_or("")));
+                    lines.extend(
+                        t["delivery"]["body"]
+                            .as_str()
+                            .unwrap_or("")
+                            .lines()
+                            .map(str::to_owned),
+                    );
+                }
                 "附件"
             }
             Panel::AttachmentRecipient => {
@@ -1688,7 +1767,10 @@ impl Ui {
                         m["recipient"].as_str().unwrap_or(""),
                         v["label"].as_str().unwrap_or("")
                     ));
-                    lines.push(m["note"].as_str().unwrap_or("").into());
+                    lines.push(format!(
+                        "发送方准备附件时的说明（历史）：{}",
+                        m["note"].as_str().unwrap_or("")
+                    ));
                     if let Some(err) = v["error"].as_str() {
                         lines.push(format!("需处理：{err}"));
                     }
@@ -1712,10 +1794,31 @@ impl Ui {
                         }
                     }
                     if self.panel == Panel::AttachmentDetail {
-                        lines.push("a 允许发送所列固定文件 · d 下载 · r 重试 · x 撤销发送".into());
-                        lines.push(
-                            "↑↓ 选文件 · Enter/o 打开 · s 另存为 · c 继续分析 · Esc 返回".into(),
-                        );
+                        let state = v["state"].as_str().unwrap_or("");
+                        let mut actions = vec![];
+                        if v["direction"] == "out" {
+                            if matches!(state, "draft" | "queued" | "unsupported") {
+                                actions.push("a 允许发送所列固定文件");
+                            }
+                            if !matches!(state, "revoked" | "expired" | "revoking") {
+                                actions.push("x 撤销发送");
+                            }
+                        } else if matches!(state, "offered" | "failed") {
+                            actions.push("d 下载到本机");
+                        }
+                        if matches!(state, "failed" | "unsupported") {
+                            actions.push("r 重试");
+                        }
+                        if !actions.is_empty() {
+                            lines.push(actions.join(" · "));
+                        }
+                        if v["direction"] == "out" || state == "received" {
+                            lines.push("↑↓ 选文件 · Enter/o 打开 · s 另存为".into());
+                        }
+                        if state == "received" {
+                            lines.push("c 继续分析".into());
+                        }
+                        lines.push("Esc 返回".into());
                     } else {
                         lines.push(
                             if self.panel == Panel::AttachmentSave {
