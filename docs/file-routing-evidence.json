@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-14",
+  "version": "0.7.2-alpha",
+  "source_files_verified": 108,
+  "runtime_binary_sha256": "df3cc2231f552c3135027ee0c634a449767de2fcef6040be5a26215dd4ef69f0",
+  "linux_tests": {
+    "passed": 180,
+    "failed": 0,
+    "ignored": 3
+  },
+  "deepseek": {
+    "model": "deepseek-flash",
+    "thinking": false,
+    "cases": 24,
+    "correct_tool_decisions": 24
+  },
+  "transfers": [
+    {
+      "id": "cff9793d-51c7-57ff-ab2f-f066b484a446",
+      "a": "delivered",
+      "b": "received",
+      "files": [
+        {
+          "file_id": "500414a2-e89a-5daa-814e-f358ff2d05f1",
+          "size": 174,
+          "sha256": "cbb5f0065c52aded3c3a35941afe1722921da22d47a9dca7a43911fbd9cce6eb"
+        }
+      ]
+    },
+    {
+      "id": "b6e0354e-b803-5fff-b90d-72fd19bc044b",
+      "a": "delivered",
+      "b": "received",
+      "files": [
+        {
+          "file_id": "05848d49-d9b8-5e27-8372-87df3d59af00",
+          "size": 65792,
+          "sha256": "120c518a83325c66464701a6ee080302f332bc768ea3f60473b209f1bfb091df"
+        }
+      ]
+    },
+    {
+      "id": "5fdd8200-9714-5108-9919-069e19bff43d",
+      "a": "received",
+      "b": "delivered",
+      "files": [
+        {
+          "file_id": "ca7a7c0f-7395-5c14-8c65-30bb2374bf1b",
+          "size": 65792,
+          "sha256": "120c518a83325c66464701a6ee080302f332bc768ea3f60473b209f1bfb091df"
+        }
+      ]
+    },
+    {
+      "id": "d47da67c-3b7f-57ac-a0e5-4a0bf861ffcd",
+      "a": "delivered",
+      "b": "received",
+      "files": [
+        {
+          "file_id": "a4bef06c-93a3-5689-8a3c-d24ae04cf295",
+          "size": 65792,
+          "sha256": "120c518a83325c66464701a6ee080302f332bc768ea3f60473b209f1bfb091df"
+        }
+      ]
+    },
+    {
+      "id": "b3b1a61c-023f-5940-bf54-50382b4672a4",
+      "a": "received",
+      "b": "delivered",
+      "files": [
+        {
+          "file_id": "82265660-b75d-5071-9941-73f87a2e4192",
+          "size": 174,
+          "sha256": "cec7ba046f219399182639307a52acaa71aca57d80cc3c219bda0243e5ef4dac"
+        }
+      ]
+    }
+  ],
+  "remote_pull": {
+    "task_id": "cac16f59-45d8-5b85-a1e4-7777ead7559a",
+    "both_completed": true,
+    "real_pty_final_answers_observed": true,
+    "preserved_failed_runs": true
+  },
+  "sandbox_probe": [
+    {
+      "case": "runtime",
+      "success": true,
+      "expected": true
+    },
+    {
+      "case": "public-file",
+      "success": true,
+      "expected": true
+    },
+    {
+      "case": "private-denied",
+      "success": false,
+      "expected": false
+    },
+    {
+      "case": "write-denied",
+      "success": false,
+      "expected": false
+    }
+  ]
+}

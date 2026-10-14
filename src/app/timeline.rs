@@ -75,6 +75,17 @@ pub fn messages(store: &Store, session: &str, history: &[Value]) -> Result<Vec<V
     let mut shown = HashSet::new();
     let mut result = vec![];
     for message in history {
+        if message["kind"] == "operation_prepare_file_send" {
+            if let Some(command) = message["command_id"].as_str() {
+                let batch = stable_id(&stable_id(command, "prepare-attachment"), "attachment");
+                // Once a manifest exists its live card is authoritative. A
+                // persistent "press a to allow" receipt becomes misleading
+                // after authorization or receipt on the other machine.
+                if batches.contains_key(&batch) {
+                    continue;
+                }
+            }
+        }
         let mut row = message.clone();
         if matches!(message["kind"].as_str(), Some("attachment" | "user")) {
             let batch = message["id"]

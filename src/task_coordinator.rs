@@ -1145,7 +1145,7 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
                 &store.owner()?,
                 &stable_id(&m.message_id, "recovered"),
                 "accepted",
-                json!({"body":"正在重试上次未完成的检查"}),
+                json!({"body":"正在重试上次未完成的检查","recovered":true}),
                 &members(&t)?,
             )?;
         }
@@ -1224,6 +1224,28 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
                     &format!("permission:{}", m.message_id),
                     "task_progress",
                     w.data["body"].as_str().unwrap_or(WAIT_ACCESS),
+                )?;
+            }
+        }
+        "accepted" if w.data["recovered"] == true && executors(&t)?.contains(&m.sender) => {
+            // A fresh, explicit retry by the responsible executor can clear
+            // that executor's failure. Ordinary progress must not do so, nor
+            // may one member clear another member's pending decision/error.
+            if t["state"] == "needs_attention" && t["next_owner"] == m.sender {
+                state(
+                    &tx,
+                    &t,
+                    "processing",
+                    Some(&m.sender),
+                    Some("执行方已恢复，继续处理"),
+                )?;
+                tx.execute("UPDATE app_tasks SET error=NULL WHERE id=?1", [&w.task_id])?;
+                notify(
+                    &tx,
+                    &t,
+                    &format!("recovered:{}", m.message_id),
+                    "task_progress",
+                    &format!("@{} 已重试原任务，正在继续处理。", m.sender),
                 )?;
             }
         }
@@ -2011,7 +2033,7 @@ pub fn recover(store: &Store, i: &Instruction) -> Result<()> {
             &store.owner()?,
             &stable_id(&i.request_id, "recovered"),
             "accepted",
-            json!({"body":"本端已显式恢复，继续原任务执行"}),
+            json!({"body":"本端已显式恢复，继续原任务执行","recovered":true}),
             &members(&t)?,
         )?;
     }

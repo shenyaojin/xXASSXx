@@ -200,7 +200,7 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
         return command(store, &input.request_id);
     }
     let owner = store.owner()?;
-    let addressed = if input.action == "chat" {
+    let addressed = if matches!(input.action.as_str(), "chat" | "create_task") {
         Some(addressing(store, &input.body)?.0)
     } else {
         None
@@ -270,7 +270,10 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
             [&input.request_id],
         )?;
     }
-    if input.task_id.is_none() && (peer.is_some() || input.action == "create_task") {
+    // An @mention names the other party, not the machine that owns a file.
+    // Route ordinary dialogue before creating a task: local pushes, remote
+    // retrieval and capability questions require different operations.
+    if input.task_id.is_none() && input.action == "create_task" {
         let target = peer.or_else(|| input.payload["peer"].as_str());
         crate::task_coordinator::create(&tx, input, &owner, target)?;
     }

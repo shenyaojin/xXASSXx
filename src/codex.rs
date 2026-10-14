@@ -192,6 +192,151 @@ fn string(s: impl Into<String>) -> toml::Value {
     toml::Value::String(s.into())
 }
 
+// A Linux deny mount also blocks traversal to an explicitly readable child.
+// Standalone Codex installs under CODEX_HOME and re-execs itself as its sandbox
+// helper. Run a verified executable-only cache outside that private directory;
+// never reopen the directory containing login state and conversation history.
+#[cfg(target_os = "linux")]
+fn sandbox_executable(store: &Store, executable: &Path) -> Result<PathBuf> {
+    let resolved = if executable.components().count() == 1 {
+        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
+            .map(|p| p.join(executable))
+            .find(|p| p.is_file())
+            .unwrap_or_else(|| executable.to_owned())
+    } else {
+        executable.to_owned()
+    }
+    .canonicalize()?;
+    let private = std::env::var_os("HOME")
+        .map(|p| PathBuf::from(p).join(".codex"))
+        .into_iter()
+        .chain(std::env::var_os("CODEX_HOME").map(PathBuf::from))
+        .map(|p| p.canonicalize().unwrap_or(p))
+        .collect::<Vec<_>>();
+    cache_sandbox_executable(store, &resolved, &private)
+}
+
+#[cfg(target_os = "linux")]
+fn cache_sandbox_executable(
+    store: &Store,
+    resolved: &Path,
+    private: &[PathBuf],
+) -> Result<PathBuf> {
+    use std::{fs, io::Read, os::unix::fs::PermissionsExt};
+    if !private.iter().any(|p| resolved.starts_with(p)) {
+        return Ok(resolved.to_owned());
+    }
+    let mut header = [0; 4];
+    fs::File::open(resolved)?.read_exact(&mut header)?;
+    ensure!(
+        &header == b"\x7fELF",
+        "请将 Codex 安装在其私有配置目录之外，再重试任务"
+    );
+    let root = store.path.with_extension("runtime");
+    ensure!(
+        !private.iter().any(|p| root.starts_with(p)),
+        "请将 xXASSXx 数据目录放在 Codex 私有目录之外"
+    );
+    fs::create_dir_all(&root)?;
+    ensure!(
+        !fs::symlink_metadata(&root)?.file_type().is_symlink(),
+        "runtime directory cannot be a symlink"
+    );
+    fs::set_permissions(&root, fs::Permissions::from_mode(0o700))?;
+    // Standalone releases carry tool hosts, search tools and sandbox assets.
+    // Preserve their package layout, without copying the surrounding CODEX_HOME.
+    let package = standalone_package(resolved);
+    let mut sources = vec![];
+    fn collect(root: &Path, relative: &Path, out: &mut Vec<(PathBuf, PathBuf)>) -> Result<()> {
+        let path = root.join(relative);
+        let meta = std::fs::symlink_metadata(&path)?;
+        ensure!(
+            !meta.file_type().is_symlink(),
+            "runtime package contains a symlink"
+        );
+        if meta.is_dir() {
+            for entry in std::fs::read_dir(path)? {
+                collect(root, &relative.join(entry?.file_name()), out)?;
+            }
+        } else {
+            ensure!(meta.is_file(), "runtime package must contain regular files");
+            out.push((relative.to_owned(), path));
+        }
+        Ok(())
+    }
+    let entry = if let Some(package) = &package {
+        for directory in ["bin", "codex-path", "codex-resources"] {
+            collect(package, Path::new(directory), &mut sources)?;
+        }
+        sources.push((
+            "codex-package.json".into(),
+            package.join("codex-package.json"),
+        ));
+        PathBuf::from("bin/codex")
+    } else {
+        sources.push(("codex".into(), resolved.to_owned()));
+        PathBuf::from("codex")
+    };
+    sources.sort_by(|a, b| a.0.cmp(&b.0));
+    let files = sources
+        .into_iter()
+        .map(|(relative, source)| Ok((relative, crate::transfers::checksum(&source)?, source)))
+        .collect::<Result<Vec<_>>>()?;
+    let fingerprint = serde_json::to_vec(
+        &files
+            .iter()
+            .map(|(path, sum, _)| (path, sum))
+            .collect::<Vec<_>>(),
+    )?;
+    let destination = root.join(crate::transfers::digest(&fingerprint));
+    if !destination.try_exists()? {
+        let stage = tempfile::tempdir_in(&root)?;
+        for (relative, expected, source) in &files {
+            let target = stage.path().join(relative);
+            fs::create_dir_all(target.parent().context("runtime file parent")?)?;
+            fs::copy(source, &target)?;
+            fs::set_permissions(
+                &target,
+                fs::Permissions::from_mode(
+                    0o600 | (fs::metadata(source)?.permissions().mode() & 0o111),
+                ),
+            )?;
+            fs::File::open(&target)?.sync_all()?;
+            ensure!(
+                crate::transfers::checksum(&target)? == *expected,
+                "Codex runtime changed while copying"
+            );
+        }
+        if let Err(e) = fs::rename(stage.path(), &destination) {
+            ensure!(destination.is_dir(), "cannot cache Codex runtime: {e}");
+        }
+    }
+    for (relative, expected, _) in &files {
+        ensure!(
+            crate::transfers::checksum(&destination.join(relative))? == *expected,
+            "cached Codex runtime checksum mismatch"
+        );
+    }
+    let cached = destination.join(entry);
+    Ok(cached)
+}
+#[cfg(not(target_os = "linux"))]
+fn sandbox_executable(_store: &Store, executable: &Path) -> Result<PathBuf> {
+    Ok(executable.to_owned())
+}
+
+fn standalone_package(executable: &Path) -> Option<PathBuf> {
+    let package = executable.parent()?.parent()?;
+    let manifest: Value =
+        serde_json::from_slice(&std::fs::read(package.join("codex-package.json")).ok()?).ok()?;
+    (manifest["layoutVersion"] == 1
+        && manifest["entrypoint"] == "bin/codex"
+        && manifest["resourcesDir"] == "codex-resources"
+        && manifest["pathDir"] == "codex-path"
+        && executable == package.join("bin/codex"))
+    .then(|| package.to_owned())
+}
+
 fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Command, Failure> {
     let native = crate::native_tasks::roots(&store.conn, &lease.task_id)
         .map_err(|e| Failure::new("storage_error", e.to_string()))?;
@@ -202,7 +347,18 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
     let bound_cwd = crate::native_tasks::working_directory(&store.conn, &lease.task_id)
         .map_err(|e| Failure::new("working_directory", e.to_string()))?;
     let cwd = bound_cwd.as_ref().unwrap_or(&options.workdir);
-    let mut c = command(&options.codex, cwd);
+    let access = crate::task_workspace::for_execution(&store.conn, &lease.task_id)
+        .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
+    let full_access = native.is_some()
+        && crate::access_mode::full(&store.conn)
+            .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
+    let executable = if native.is_some() && !full_access {
+        sandbox_executable(store, &options.codex)
+            .map_err(|e| Failure::new("sandbox_runtime", e.to_string()))?
+    } else {
+        options.codex.clone()
+    };
+    let mut c = command(&executable, cwd);
     c.arg("exec");
     if let Some(id) = &lease.resume_id {
         c.arg("resume").arg(id);
@@ -215,11 +371,6 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
     ]);
     c.env("NO_COLOR", "1");
     config(&mut c, "approval_policy", string("never"));
-    let access = crate::task_workspace::for_execution(&store.conn, &lease.task_id)
-        .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
-    let full_access = native.is_some()
-        && crate::access_mode::full(&store.conn)
-            .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
     if full_access {
         c.arg("--strict-config");
         config(&mut c, "sandbox_mode", string("danger-full-access"));
@@ -244,10 +395,13 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
         }
         // NVM installs the sandbox helper outside the OS's minimal runtime paths.
         // Permit only its package, never the home directory containing it.
-        if let Ok(exe) = options.codex.canonicalize() {
+        if let Ok(exe) = executable.canonicalize() {
+            // Only the runtime executable is readable, not its private parent.
+            fs.insert(exe.to_string_lossy().into_owned(), string("read"));
             if let Some(package) = exe.parent().and_then(Path::parent) {
-                if package.file_name().is_some_and(|n| n == "codex")
-                    && package.join("package.json").is_file()
+                if (package.file_name().is_some_and(|n| n == "codex")
+                    && package.join("package.json").is_file())
+                    || standalone_package(&exe).is_some()
                 {
                     fs.insert(package.to_string_lossy().into_owned(), string("read"));
                 }
@@ -739,6 +893,62 @@ mod permission_tests {
     use super::*;
 
     #[test]
+    #[cfg(target_os = "linux")]
+    fn private_standalone_runtime_cache_contains_only_verified_executable() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::init(&dir.path().join("member.sqlite3")).unwrap();
+        let private = dir.path().join("private");
+        std::fs::create_dir(&private).unwrap();
+        let executable = private.join("codex");
+        std::fs::write(&executable, b"\x7fELFsynthetic-runtime").unwrap();
+        std::fs::write(private.join("auth.json"), b"private-fixture").unwrap();
+        let cached =
+            cache_sandbox_executable(&store, &executable, std::slice::from_ref(&private)).unwrap();
+        assert!(!cached.starts_with(&private));
+        assert_eq!(
+            std::fs::read(&cached).unwrap(),
+            std::fs::read(&executable).unwrap()
+        );
+        assert_eq!(
+            std::fs::read_dir(cached.parent().unwrap()).unwrap().count(),
+            1
+        );
+        assert_eq!(
+            cache_sandbox_executable(&store, &executable, std::slice::from_ref(&private)).unwrap(),
+            cached
+        );
+        std::fs::write(&cached, b"tampered").unwrap();
+        assert!(
+            cache_sandbox_executable(&store, &executable, std::slice::from_ref(&private)).is_err()
+        );
+        std::fs::write(&executable, b"#!/bin/sh\n").unwrap();
+        assert!(
+            cache_sandbox_executable(&store, &executable, std::slice::from_ref(&private)).is_err()
+        );
+        let package = private.join("release");
+        for directory in ["bin", "codex-path", "codex-resources"] {
+            std::fs::create_dir_all(package.join(directory)).unwrap();
+        }
+        std::fs::write(package.join("codex-package.json"), r#"{"layoutVersion":1,"entrypoint":"bin/codex","resourcesDir":"codex-resources","pathDir":"codex-path"}"#).unwrap();
+        std::fs::write(package.join("bin/codex"), b"\x7fELFmain").unwrap();
+        std::fs::write(package.join("bin/codex-code-mode-host"), b"\x7fELFhost").unwrap();
+        std::fs::write(package.join("codex-path/rg"), b"\x7fELFsearch").unwrap();
+        std::fs::write(package.join("auth.json"), b"never-copy").unwrap();
+        let cached =
+            cache_sandbox_executable(&store, &package.join("bin/codex"), &[private]).unwrap();
+        let cached_package = standalone_package(&cached).unwrap();
+        assert_eq!(
+            std::fs::read(cached_package.join("bin/codex-code-mode-host")).unwrap(),
+            b"\x7fELFhost"
+        );
+        assert_eq!(
+            std::fs::read(cached_package.join("codex-path/rg")).unwrap(),
+            b"\x7fELFsearch"
+        );
+        assert!(!cached_package.join("auth.json").exists());
+    }
+
+    #[test]
     fn nested_denials_preserve_private_bounds_and_reopened_subtrees() {
         let mut fs: toml::map::Map<String, toml::Value> = [
             (":minimal", "read"),
@@ -747,6 +957,7 @@ mod permission_tests {
             ("/work/private/secrets.env", "deny"),
             ("/work/private/materials", "read"),
             ("/work/private/materials/credential", "deny"),
+            ("/work/private/packages/bin/codex", "read"),
             ("/work/private-other/token", "deny"),
         ]
         .into_iter()
@@ -762,5 +973,9 @@ mod permission_tests {
         assert_eq!(fs["/work/private-other/token"].as_str(), Some("deny"));
         assert_eq!(fs["/work"].as_str(), Some("read"));
         assert_eq!(fs["/work/private/materials"].as_str(), Some("read"));
+        assert_eq!(
+            fs["/work/private/packages/bin/codex"].as_str(),
+            Some("read")
+        );
     }
 }

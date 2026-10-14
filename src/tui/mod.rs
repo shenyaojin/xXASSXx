@@ -1032,6 +1032,13 @@ impl Ui {
                     return Ok(false);
                 }
                 KeyCode::Char('y') => {
+                    let task = if self.panel == Panel::Tasks {
+                        self.task_rows().get(self.index).cloned()
+                    } else {
+                        self.current_task().cloned()
+                    }
+                    .context("请先选中任务，再按 CtrlY 重试")?;
+                    self.selected_task = task["id"].as_str().map(str::to_owned);
                     self.enqueue(store, "retry_task", "重试原任务".into(), json!({}))?;
                     return Ok(false);
                 }

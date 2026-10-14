@@ -370,6 +370,43 @@ fn business_task(s: &mut Store, ui: &Ui, title: &str) -> String {
         .into()
 }
 #[test]
+fn retry_uses_the_highlighted_task_instead_of_a_stale_chat_selection() {
+    let (_team, mut s, mut ui) = fixture();
+    let first = business_task(&mut s, &ui, "第一个任务");
+    let second = business_task(&mut s, &ui, "第二个任务");
+    ui.refresh(&s).unwrap();
+    ui.selected_task = Some(first);
+    ui.key(
+        &mut s,
+        KeyEvent::new(KeyCode::Char('t'), KeyModifiers::CONTROL),
+    )
+    .unwrap();
+    let index = ui.data["tasks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .rev()
+        .position(|t| t["id"] == second)
+        .unwrap();
+    for _ in 0..index {
+        key(&mut ui, &mut s, KeyCode::Down);
+    }
+    ui.key(
+        &mut s,
+        KeyEvent::new(KeyCode::Char('y'), KeyModifiers::CONTROL),
+    )
+    .unwrap();
+    let conn = rusqlite::Connection::open(&s.path).unwrap();
+    let task: String = conn
+        .query_row(
+            "SELECT task_id FROM app_commands WHERE action='retry_task'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(task, second);
+}
+#[test]
 fn stop_form_preserves_input_has_two_choices_and_archives_with_reason() {
     let (_team, mut s, mut ui) = fixture();
     let id = business_task(&mut s, &ui, "查看当前材料");

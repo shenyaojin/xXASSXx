@@ -1,0 +1,150 @@
+{
+  "date": "2026-10-14",
+  "timezone": "America/Denver",
+  "task_id": "f1f820dc-fa6d-56d3-b8a7-7544f8d08738",
+  "revision": 1,
+  "initiator": {
+    "member": "mba",
+    "version": "0.5.0-alpha",
+    "codex_runs": 0
+  },
+  "executor": {
+    "member": "trader",
+    "version": "0.7.1-alpha",
+    "access_mode": "full_access",
+    "codex_runs": 2
+  },
+  "timing": {
+    "confirmed_at": 1792015497,
+    "completed_at": 1792015695,
+    "elapsed_seconds": 198,
+    "confirmed_denver": "2026-10-14T16:04:57-06:00",
+    "completed_denver": "2026-10-14T16:08:15-06:00"
+  },
+  "real_terminal_result": "Both actual PTYs displayed completed and the same meaningful result; Trader had zero outstanding tasks.",
+  "transport": {
+    "matching_message_ids": true,
+    "messages": [
+      {
+        "id": "c074f355-99de-570f-a717-5814d3a269cf",
+        "direction": "out",
+        "state": "received",
+        "error": null,
+        "sender": "mba",
+        "recipient": "trader",
+        "event": "proposal",
+        "revision": 1
+      },
+      {
+        "id": "b70ad955-6d3f-5d5e-88dd-31df45ad4e21",
+        "direction": "in",
+        "state": "task_handled",
+        "error": null,
+        "sender": "trader",
+        "recipient": "mba",
+        "event": "accepted",
+        "revision": 1
+      },
+      {
+        "id": "51a32db2-c544-537d-ad7a-e303f88442fc",
+        "direction": "out",
+        "state": "received",
+        "error": null,
+        "sender": "mba",
+        "recipient": "trader",
+        "event": "progress",
+        "revision": 1
+      },
+      {
+        "id": "72873903-65eb-52e2-8c26-59a4ee45da33",
+        "direction": "in",
+        "state": "task_handled",
+        "error": null,
+        "sender": "trader",
+        "recipient": "mba",
+        "event": "progress",
+        "revision": 1
+      },
+      {
+        "id": "8f22e01a-08b9-5a37-be43-871cd4aa6b12",
+        "direction": "in",
+        "state": "task_handled",
+        "error": null,
+        "sender": "trader",
+        "recipient": "mba",
+        "event": "candidate",
+        "revision": 1
+      },
+      {
+        "id": "d576cec4-6322-5ab0-9baa-12d1b8ba1922",
+        "direction": "out",
+        "state": "received",
+        "error": null,
+        "sender": "mba",
+        "recipient": "trader",
+        "event": "complete",
+        "revision": 1
+      }
+    ],
+    "all_delivered_and_handled": true,
+    "errors": 0
+  },
+  "result_sha256": "8472c75abf70b0cdbd2fdd72ed0468cd41f2ad6ee4186b02995db686622eafb8",
+  "final_result_identical": true,
+  "execution": {
+    "runs": [
+      {
+        "id": "60c6b365-51a4-4d07-b8fc-e0fc6d17a948",
+        "task_id": "a02a3ecd-f13c-5c80-bee5-61bcb91b3a3c",
+        "state": "succeeded",
+        "codex_version": "codex-cli 0.162.1",
+        "error_code": null,
+        "error_message": null,
+        "session_id": "01a13c72-854a-7480-8e57-ff2815230576",
+        "resumed_session_id": null
+      },
+      {
+        "id": "fe21315a-50da-442b-9c74-15107e76b386",
+        "task_id": "aff55b1b-f85a-554d-a1da-1ade4fa0701d",
+        "state": "succeeded",
+        "codex_version": "codex-cli 0.162.1",
+        "error_code": null,
+        "error_message": null,
+        "session_id": "01a13c73-5789-74b2-a037-963df99d0791",
+        "resumed_session_id": null
+      }
+    ],
+    "access_events": [
+      {
+        "run_id": "60c6b365-51a4-4d07-b8fc-e0fc6d17a948",
+        "mode": "full_access"
+      },
+      {
+        "run_id": "fe21315a-50da-442b-9c74-15107e76b386",
+        "mode": "full_access"
+      }
+    ],
+    "successful_readonly_shell_commands": 18,
+    "selected_files": 28,
+    "selected_bytes": 329439,
+    "scope": "selected sample, not the whole project",
+    "selected_sources_unchanged": true,
+    "git_head_and_status_unchanged": true,
+    "project_programs_or_tests_run": false,
+    "attachments_transferred": 0
+  },
+  "initial_attempt": {
+    "task_id": "64402937-3345-5c18-a5de-62c1afcae522",
+    "state": "cancelled",
+    "error": "local absolute paths are not allowed in messages",
+    "received_by_trader": false,
+    "recovery": "Stopped the unsent draft in the actual TUI; started the same request using project name and the existing remote directory binding."
+  },
+  "limitations": [
+    "The pure-text summary included an irrelevant attachment authorization sentence on the 0.5.0 initiator.",
+    "Git was inspected during the same task discovery phase, not reread during frozen-file analysis.",
+    "No source fixes, automated regression rerun, file transfer, business program execution or offline-recovery validation in this turn."
+  ],
+  "evidence_location": "smoke-output/trader-cross-machine-20261014/; remote ~/xxassxx-tests/trader-cross-machine-20261014/",
+  "privacy": "No project summary, source contents, credentials, private invitations or raw business outputs in this public record."
+}

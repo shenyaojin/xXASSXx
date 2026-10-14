@@ -17,7 +17,14 @@ fn input(t: &Team, body: &str) -> Instruction {
         task_id: None,
         recipient: "a".into(),
         body: body.into(),
-        action: "chat".into(),
+        // Coordinator tests explicitly create tasks; owner-chat routing has
+        // separate coverage in app.rs (an @mention alone no longer creates one).
+        action: if body.starts_with('@') {
+            "create_task"
+        } else {
+            "chat"
+        }
+        .into(),
         payload: json!({}),
     }
 }
@@ -771,7 +778,7 @@ async fn uncertain_restart_stops_and_meeting_cannot_replay_execution() {
     let t = Team::new();
     files(&t, "b");
     let (i, id) = draft(&t, "@b 比较脚本");
-    let a = t.store("a");
+    let mut a = t.store("a");
     let mut b = t.store("b");
     tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
     transfer(&a, &mut b);
@@ -782,6 +789,8 @@ async fn uncertain_restart_stops_and_meeting_cannot_replay_execution() {
     let b = t.store("b");
     tasks::tick(&b, Path::new(BIN)).await.unwrap();
     assert_eq!(tasks::get(&b, &id).unwrap()["state"], "needs_attention");
+    transfer(&b, &mut a);
+    assert_eq!(tasks::get(&a, &id).unwrap()["state"], "needs_attention");
     assert_eq!(count(&b, "SELECT count(*) FROM runs"), 0);
     let event = json!({"id":uuid::Uuid::new_v4().to_string(),"kind":"meeting_invitation","payload":{"source":"system","meeting_id":uuid::Uuid::new_v4().to_string(),"task_id":id,"revision":1}});
     let report = xxassxx::task_schedule::local_event(&b, &event)
@@ -796,6 +805,8 @@ async fn uncertain_restart_stops_and_meeting_cannot_replay_execution() {
     retry.recipient = "b".into();
     tasks::recover(&b, &retry).unwrap();
     assert_eq!(tasks::get(&b, &id).unwrap()["state"], "processing");
+    transfer(&b, &mut a);
+    assert_eq!(tasks::get(&a, &id).unwrap()["state"], "processing");
     assert_eq!(
         count(&b, "SELECT count(*) FROM task_jobs WHERE state='pending'"),
         1

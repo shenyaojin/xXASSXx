@@ -2,6 +2,20 @@
 
 更新日期：2026-10-14（America/Denver）。`0.7.1-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl。Lakota `test` 已通过签名更新器升级；Trader 新增成员 `trader` 和独立个人客户端，用户明确要求保留 Full access，实际终端已设置并在后台重启后确认持久。Trader 信箱本轮实际为 `0.7.0-alpha`，保持运行；个人库 schema 10、信箱 schema 2。本轮执行电脑实际是 MacBook Air M3、成员 `mba`，日常安装仍为 `0.5.0-alpha`；Mac mini／`owner` 没有直接检查或升级，不能把此前另一台 Mac 的部署记录当成本机事实。
 
+## 文件交流修复与 DeepSeek 路由验证（2026-10-14，0.7.2 候选）
+
+Trader 的实际失败来自发送端在模型判断前把 `@成员` 强制路由成远端任务，继而让 Trader 查找另一台 Mac 的路径；不是已有证据能归结为 DeepSeek 能力不足。现已让普通对话先判断文件归属与方向，统一工具说明和 Full access 规则；兼容相对路径、`~/` 与文件 URL，隐藏过时附件操作提示，修复未绑定路径在错误说明中被拒绝、任务列表 CtrlY 选错任务、远端重试状态未恢复和 Linux standalone Codex 的只读沙箱运行包问题。
+
+真实 DeepSeek 24 个路由用例通过。Lakota 与 Trader 的隔离双 PTY 验证自然语言推送、Full access 自动发送、手动发送、文件 URL 和远端取件；五批合成文件的两端字节与源文件一致，反向取件两端实际显示有明确文件来源的最终答复。最终 Linux 180 项测试通过、0 失败、3 忽略，格式、Clippy、优化构建和 108 份输入一致性通过；此时尚未发布或升级日常端。详见 [验证说明](file-routing-validation.md) 与 [证据](file-routing-evidence.json)。师兄原失败任务已由本人停止归档，本轮保留；此前另发的两个 ZIP 已核验落地，不能算作原任务的目标文件。
+
+## MBA → Trader 项目进展协作实测（2026-10-14）
+
+用户要求从本机发任务，让 Trader 总结项目当前进展并验证完整往返。使用现有 MBA 0.5.0 与 Trader 0.7.1、实际双 PTY、真实 DeepSeek／Codex 及 HTTPS 信箱完成，未预先升级本机。任务 `f1f820dc-fa6d-56d3-b8a7-7544f8d08738` 第 1 版，在 Denver 16:04:57 确认，16:08:15 完成，耗时 198 秒。Trader 保持 Full access，自动接收并执行；两次 Codex 调用均发生在 Trader，本机没有替它执行或通过 SSH 代写答复。
+
+两端实际终端均显示完成；六条运输事件逐项匹配且无错误，最终结果哈希一致。发现阶段检查 Git 状态与最近 20 次提交，分析阶段选取 28 份材料、329439 字节；这不是全项目规模。所选原文件哈希、Git HEAD 与工作区状态前后不变。只回复文字，未运行项目脚本、测试、回测或交易，未产生附件传输。业务总结与详细路径只保存在 Git 忽略的证据中。
+
+首次含远端绝对路径的草稿在发送前被现有消息校验拒绝，真实终端停止后改用项目名和 Trader 已绑定目录成功完成；未修改数据库或绕过校验。另发现本机 0.5 的最终总结对纯文字任务仍附带无关的附件授权状态说明；未修复源码，不能描述成首发零错误或全部界面问题已解决。见 [跨机器验收](trader-cross-machine-validation.md) 和 [精简证据](trader-cross-machine-evidence.json)。
+
 ## 0.7.1-alpha 发布与日常部署（2026-10-14）
 
 修复提交 `c8e321d0d34780f4d01bb0008926f6c2df629bc1`、发布提交 `624979e3ae8429f0f4226b2479790d1caac94139` 均已推送，标签 `v0.7.1-alpha` 指向后者。[Release](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.1-alpha) 已公开，prerelease、非 draft。[精确标签源码的 CI](https://github.com/shenyaojin/xXASSXx/actions/runs/38641597073) 在 ARM macOS 和 Linux musl 各通过 175 项测试、0 失败、2 项既有忽略，优化构建与独立目录安装成功。六项发布附件的签名、匿名下载哈希、二进制架构均已核对，签名公钥保持不变。MBA 和 Lakota 另做正式包独立目录试装。

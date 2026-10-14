@@ -63,7 +63,8 @@ fn new_chat_has_bounded_owner_history_for_project_routing() {
     let team = Team::new();
     let db = rusqlite::Connection::open(team.db("a")).unwrap();
     for n in 0..15 {
-        let i = instruction(&team, "a", "b", &format!("取项目 {n} 的结果"));
+        let mut i = instruction(&team, "a", "b", &format!("取项目 {n} 的结果"));
+        i.action = "create_task".into();
         submit(&team, "a", &i);
         let id = task(&team, "a", &i)["id"].as_str().unwrap().to_owned();
         db.execute(r#"UPDATE app_tasks SET state='completed',draft='{"mode":"files"}',updated_at=0 WHERE id=?1"#, [&id]).unwrap();
@@ -433,7 +434,8 @@ fn presence_offline_old_clients_and_expiry_do_not_call_models() {
     let view = xxassxx::presence::view(&s).unwrap();
     assert_eq!(view["members"][0]["presence"]["state"], "expired");
     assert_eq!(view["members"][1]["presence"]["state"], "unknown");
-    let i = instruction(&t, "a", "b", "offline queued");
+    let mut i = instruction(&t, "a", "b", "offline queued");
+    i.action = "create_task".into();
     submit(&t, "a", &i);
     assert_eq!(task(&t, "a", &i)["state"], "draft");
     process(&t, "a");
