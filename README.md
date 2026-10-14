@@ -12,7 +12,7 @@
 
 ### 1. 安装程序
 
-当前测试版为 [0.7.1 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.1-alpha)，修复普通问答提交、执行中补充要求及 zsh 临时文件错误。历史版本保留原有下载；本版只提供 M 系 Mac 和 Linux x86_64 安装包。
+当前测试版为 [0.7.2 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.2-alpha)，修复自然语言发文件选错电脑、远端任务重试与 Linux Codex 启动问题。历史版本保留原有下载；本版只提供 M 系 Mac 和 Linux x86_64 安装包。
 
 从 Release 下载对应系统的 `.tar.gz`、`install.sh` 和 `SHA256SUMS` 到同一目录，进入该目录执行：
 
@@ -96,7 +96,7 @@ xxassxx open "$HOME/Research/project"
 
 也可以先运行 `xxassxx`，在首次启动提示或界面中的 **Ctrl+R** 添加目录。白名单初始为空；加入后，Codex 可按你的请求或团队请求读取其中的文件并返回答案，无需每次重新授权。添加目录不会自动上传整个目录，但获准读取的文本可能进入模型上下文，回复会经过团队信箱。查找、查看和解释文件默认只读。明确要求写文件或运行程序时，执行方需要为这一项已确认任务单独开放工作目录；原文件仍只读。
 
-进入界面后，直接输入请求，例如“找一下与 history matching 有关的文件”。联系同伴时输入 `@bob` 加请求正文，检查任务卡后按 Ctrl+S 确认，再开始协作；用户名可用 `xxassxx client contacts` 查看。
+进入界面后，直接输入请求，例如“找一下与 history matching 有关的文件”。联系同伴时输入 `@bob` 加请求正文；需要确认的任务会显示任务卡，检查后按 Ctrl+S。明确索取已有文件和本机 Full access 下的清楚请求可自动开始；执行与发送使用各台电脑自己的访问模式。用户名可用 `xxassxx client contacts` 查看。
 
 使用支持成员目录同步的信箱和客户端时，后台会自动从服务器更新团队名单，界面和 `@` 候选随之刷新。管理员登记新成员后，已有成员无需重新导入邀请或重启界面；离线成员也会保留在名单中。邀请里的联系人只是初始缓存，断网时使用上次同步的名单。旧客户端需要升级后才能自动同步。
 
@@ -155,7 +155,7 @@ xxassxx client task-access revoke TASK_ID --revision 1
 
 ## 交换文件
 
-0.3.0 Alpha 增加 **CtrlF** 附件入口：选择成员和文件后发送，查看接收状态、另存为，或使用收到的附件继续只读分析。任务也可以交付实际结果文件，执行方需单独允许导出。需要双方个人端和信箱均升级到 0.3.0 Alpha；旧版尚不支持附件。详见[附件操作说明](docs/file-transfer.md)。
+按 **CtrlF → n** 选择成员和文件发送，也可以直接说“`@trader 把我电脑上的 ~/Downloads/结果.zip 发给你`”，或“`@trader 把你那边的结果文件发给我`”。发送方使用 Ask for approval 时，在自己的 CtrlF 清单按 a 允许发送；Full access 下自动发送。收到后可查看、另存为或继续只读分析。自然语言方向修复需要发送端也升级到 0.7.2；详见[附件操作说明](docs/file-transfer.md)。
 
 ## 团队部署
 

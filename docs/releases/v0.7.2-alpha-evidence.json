@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-14",
+  "version": "0.7.2-alpha",
+  "commit": "4f84e86dfacdc859e7315d1439e3377f191467ec",
+  "tag": "v0.7.2-alpha",
+  "release": {
+    "html_url": "https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.2-alpha",
+    "draft": false,
+    "prerelease": true,
+    "published_at": "2026-10-14T23:40:48Z"
+  },
+  "ci": {
+    "id": 38654791851,
+    "head_sha": "4f84e86dfacdc859e7315d1439e3377f191467ec",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/shenyaojin/xXASSXx/actions/runs/38654791851"
+  },
+  "tests": {
+    "mac": {
+      "passed": 179,
+      "failed": 0,
+      "ignored": 3
+    },
+    "linux": {
+      "passed": 180,
+      "failed": 0,
+      "ignored": 3
+    }
+  },
+  "verification": {
+    "version": "0.7.2-alpha",
+    "schema": 10,
+    "signature_verified": true,
+    "public_key": "ee06eef54d768e3445f2c3cf167dc7445c33c4fe67d22ccb06896738c772cbd1",
+    "assets": {
+      "SHA256SUMS": {
+        "size": 209,
+        "sha256": "798db5f3e46f0f91d7d149f86b1a18567a9d87ecaba16433cf3033b988fa5b8f"
+      },
+      "install.sh": {
+        "size": 3612,
+        "sha256": "8f63a694adc788ebfa57bd0a1b9d0b206644961eb3b3f366a9dcc3bd7ab4ec6c"
+      },
+      "update.json": {
+        "size": 1704,
+        "sha256": "716426a905814583b869e009e2b9c852c7d757729d1c408448781de163b2e234"
+      },
+      "update.json.sig": {
+        "size": 129,
+        "sha256": "7c4f532e8f70b14e7bb29323be9e75b6d063ea1b04c8a9a28b38b7477b9520d9"
+      },
+      "xxassxx-aarch64-apple-darwin.tar.gz": {
+        "size": 7503640,
+        "sha256": "1ef5b8e33b56b12dd08021200128b70f13f86c98e2a3487464cfcbac9c55143e"
+      },
+      "xxassxx-x86_64-unknown-linux-musl.tar.gz": {
+        "size": 8682669,
+        "sha256": "cf483d68fa647642bb8ac61f6a0d56be5cabac718693ae9b5adf8c2b603be5ed"
+      }
+    },
+    "binaries": {
+      "aarch64-apple-darwin": {
+        "size": 21028128,
+        "sha256": "4cc0f6501c02b15befb3ba53bf35284853296ed400ca67280f474da0d2c19d74"
+      },
+      "x86_64-unknown-linux-musl": {
+        "size": 24656032,
+        "sha256": "ebdd6b1b5f5233562240a225e18a2b7abe5342a7a15a6bfa2b566ffa59f62cbd"
+      }
+    }
+  },
+  "anonymous_downloads_verified": 6,
+  "deployments": {
+    "lakota": {
+      "database_all_tables_unchanged": true,
+      "config_files_unchanged": true,
+      "table_count": 60,
+      "schema": 10,
+      "backup": "~/.local/share/xxassxx/backups/release-072-20261014/",
+      "version": "0.7.2-alpha",
+      "running": true,
+      "doctor_ready": true,
+      "identity": "test",
+      "access_mode": "ask_for_approval",
+      "counts": {
+        "app_tasks": 22,
+        "messages": 247,
+        "runs": 60,
+        "file_roots": 3
+      },
+      "real_terminal_verified": true
+    },
+    "trader": {
+      "database_all_tables_unchanged": true,
+      "config_files_unchanged": true,
+      "table_count": 60,
+      "schema": 10,
+      "backup": "~/.local/share/xxassxx/backups/release-072-20261014/",
+      "version": "0.7.2-alpha",
+      "running": true,
+      "doctor_ready": true,
+      "identity": "trader",
+      "access_mode": "full_access",
+      "counts": {
+        "app_tasks": 3,
+        "messages": 11,
+        "runs": 8,
+        "file_roots": 1
+      },
+      "real_terminal_verified": true
+    }
+  },
+  "trader_mailbox": {
+    "version": "0.7.0-alpha",
+    "service_active": true,
+    "restarted": false
+  },
+  "mac": {
+    "isolated_install_version_verified": true,
+    "daily_mba_version": "0.5.0-alpha",
+    "daily_mba_upgraded": false,
+    "other_members_macs_upgraded": false
+  },
+  "functional_evidence": "../file-routing-evidence.json"
+}

@@ -1,12 +1,20 @@
 # 项目理念与接续摘要
 
-更新日期：2026-10-14（America/Denver）。`0.7.1-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl。Lakota `test` 已通过签名更新器升级；Trader 新增成员 `trader` 和独立个人客户端，用户明确要求保留 Full access，实际终端已设置并在后台重启后确认持久。Trader 信箱本轮实际为 `0.7.0-alpha`，保持运行；个人库 schema 10、信箱 schema 2。本轮执行电脑实际是 MacBook Air M3、成员 `mba`，日常安装仍为 `0.5.0-alpha`；Mac mini／`owner` 没有直接检查或升级，不能把此前另一台 Mac 的部署记录当成本机事实。
+更新日期：2026-10-14（America/Denver）。`0.7.2-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl。Lakota `test` 与 Trader `trader` 均已通过签名更新器升级并恢复后台；Trader 保持用户选择的 Full access，Lakota 保持 Ask for approval。Trader 独立信箱仍为 `0.7.0-alpha`，未重启；个人库 schema 10、信箱 schema 2。本轮执行电脑实际是 MacBook Air M3、成员 `mba`，日常安装仍为 `0.5.0-alpha`；Mac mini／`owner` 与师兄的 Mac 未直接升级，发送端也需更新才能修复本机文件路由。
 
-## 文件交流修复与 DeepSeek 路由验证（2026-10-14，0.7.2 候选）
+## 0.7.2-alpha 发布与部署（2026-10-14）
+
+修复提交及标签源码为 `4f84e86dfacdc859e7315d1439e3377f191467ec`，[Release](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.2-alpha) 已公开，prerelease、非 draft。[精确标签 CI](https://github.com/shenyaojin/xXASSXx/actions/runs/38654791851) 中 ARM macOS 179 项、Linux musl 180 项通过，均 0 失败、3 忽略，优化构建和安装检查通过。六项发布文件已核对签名、架构、哈希与匿名下载；签名公钥不变。MBA 另做正式包独立目录安装及版本核对，未升级日常客户端。
+
+Lakota 与 Trader 在没有在途任务或传输时停服、备份，以正式离线签名更新器从 0.7.1 升至 0.7.2；每端全部 60 张表与配置安装前后相同，完整性与外键检查通过。Lakota 保留 22 项任务、247 条消息、60 次运行和 3 条白名单；Trader 保留 3 项任务、11 条消息、8 次运行和量化项目白名单。备份均为 `~/.local/share/xxassxx/backups/release-072-20261014/`。两端实际新版本终端已打开，连接与权限显示正常，Trader 的既有两个 ZIP 收件记录仍在。两端 doctor 通过；不将 doctor 当成再次运行模型。Trader 个人端 Full access、工作目录 `/home/ubuntu` 保留，独立信箱 0.7.0 未重启。
+
+本机没有新建 Rust target；正式包保留于 `dist/v0.7.2-alpha/`。源码与真实功能验证见下节，安装与部署证据见 [0.7.2 证据](releases/v0.7.2-alpha-evidence.json)。本轮未代为重开师兄已停止归档的任务，也未操作其 Mac；它需要自行 `/update` 后再发文件。
+
+## 文件交流修复与 DeepSeek 路由验证（2026-10-14，随 0.7.2 发布）
 
 Trader 的实际失败来自发送端在模型判断前把 `@成员` 强制路由成远端任务，继而让 Trader 查找另一台 Mac 的路径；不是已有证据能归结为 DeepSeek 能力不足。现已让普通对话先判断文件归属与方向，统一工具说明和 Full access 规则；兼容相对路径、`~/` 与文件 URL，隐藏过时附件操作提示，修复未绑定路径在错误说明中被拒绝、任务列表 CtrlY 选错任务、远端重试状态未恢复和 Linux standalone Codex 的只读沙箱运行包问题。
 
-真实 DeepSeek 24 个路由用例通过。Lakota 与 Trader 的隔离双 PTY 验证自然语言推送、Full access 自动发送、手动发送、文件 URL 和远端取件；五批合成文件的两端字节与源文件一致，反向取件两端实际显示有明确文件来源的最终答复。最终 Linux 180 项测试通过、0 失败、3 忽略，格式、Clippy、优化构建和 108 份输入一致性通过；此时尚未发布或升级日常端。详见 [验证说明](file-routing-validation.md) 与 [证据](file-routing-evidence.json)。师兄原失败任务已由本人停止归档，本轮保留；此前另发的两个 ZIP 已核验落地，不能算作原任务的目标文件。
+真实 DeepSeek 24 个路由用例通过。Lakota 与 Trader 的隔离双 PTY 验证自然语言推送、Full access 自动发送、手动发送、文件 URL 和远端取件；五批合成文件的两端字节与源文件一致，反向取件两端实际显示有明确文件来源的最终答复。最终 Linux 180 项测试通过、0 失败、3 忽略，格式、Clippy、优化构建和 108 份输入一致性通过；发布与升级状态见上一节。详见 [验证说明](file-routing-validation.md) 与 [证据](file-routing-evidence.json)。师兄原失败任务已由本人停止归档，本轮保留；此前另发的两个 ZIP 已核验落地，不能算作原任务的目标文件。
 
 ## MBA → Trader 项目进展协作实测（2026-10-14）
 
@@ -274,13 +282,13 @@ MBA 与 Lakota 已安装最终补丁，使用现用 HTTPS 信箱、真实 DeepSe
 - 2026-10-07 为用户的 MacBook Air 新增独立身份 `mba`，显示名 `Shenyao "Keith" Jin (MacBook Air)`。邀请位于 `/Users/shenyaojin/Downloads/xXASSXx-MacBook-Air/mba.json`，权限 600，另有 Git 忽略的 `smoke-output/phase4-private/mba.json` 副本；凭据不在文档中。Trader 配置和在线成员登记已更新，其他成员凭据保持不变，无需重启信箱。Mac owner 与 Lakota test 的实际联系人及配置文件已加入 mba，其余运行配置未改；服务器邀请和本地 pengchao 邀请副本的联系人也已同步。HTTPS 身份校验与隔离个人端导入通过，未调用模型、发送任务或在 MBA 本机安装；见本地 `smoke-output/mba-invitation-check.json`。若 pengchao 已使用旧邀请安装，仍需在其电脑更新联系人，本次没有操作该电脑。
 - `owner` 显示名 `Shenyao "Keith" Jin`，此前另一台 Mac 的身份；当时白名单与工作目录为 `/Users/shenyaojin`。当前执行电脑是 MBA／`mba`，不能把 owner 安装视为本机；本轮未检查 Mac mini。
 - `test` 显示名 `test (Lakota)`，Lakota 常驻。本轮升级前实际白名单已有 home、`Documents/bakken_mariner` 及其 `scripts` 三项，全部保留；不再把历史仅 scripts 的范围描述为现状。
-- `trader` 显示名 `Trader`，Trader 个人端 0.7.1，工作目录与白名单均为 `/home/ubuntu/projects/crypto_playground`。用户明确选择持久 Full access；真实模型在此模式完成同机 README 只读任务。信箱服务使用独立的 0.7.0 程序，未重启。
+- `trader` 显示名 `Trader`，Trader 个人端版本见本文开头；2026-10-14 本轮读回的当前工作目录为 `/home/ubuntu`（保留本人设置），目录白名单包含 `/home/ubuntu/projects/crypto_playground`。用户明确选择持久 Full access；真实模型在此模式完成同机 README 只读任务。信箱服务使用独立的 0.7.0 程序，未重启。
 - 原先的 `friend` 已统一改为 `pengchao`（用户名和显示名相同），服务器、Mac/Lakota 联系人、现有邀请与安装提示词已同步。改名之前该身份没有消息或心跳使用记录；改名后邀请鉴权已验证。
 - 朋友安装提示词：`docs/codex-setup-prompt.md`。
-- 此前单独交付朋友的离线包：`dist/xxassxx-pengchao-macos-arm64-20261006.zip`，仅 Apple 芯片 Mac。包内有安装提示词和安装器，不含邀请或密钥；朋友的 CPU 架构尚未确认。当前通用 0.7.1-alpha 包支持 M 系 Mac 和 Linux x86_64，Intel Mac 支持已撤销，见本文开头的 Release 链接。
+- 此前单独交付朋友的离线包：`dist/xxassxx-pengchao-macos-arm64-20261006.zip`，仅 Apple 芯片 Mac。包内有安装提示词和安装器，不含邀请或密钥；朋友的 CPU 架构尚未确认。当前通用 0.7.2-alpha 包支持 M 系 Mac 和 Linux x86_64，Intel Mac 支持已撤销，见本文开头的 Release 链接。
 - 私人邀请：`smoke-output/phase4-private/pengchao.json`，权限 600、Git 忽略，不打印正文。
 - 给用户的两个文件已经放在 `/Users/shenyaojin/Downloads/xXASSXx-发给朋友/`，分别是上述 ZIP 和 `pengchao.json`。旧 friend 文件已归档。
-- 更新器已公开分发，本轮 Lakota 实际完成 0.7.0 → 0.7.1 签名更新。个人客户端的开机自动启动与 TG 接入仍待实现；当前后台运行不等于已配置系统重启后自启动。
+- 更新器已公开分发，本轮 Lakota 与 Trader 实际完成 0.7.1 → 0.7.2 签名更新。个人客户端的开机自动启动与 TG 接入仍待实现；当前后台运行不等于已配置系统重启后自启动。
 
 ## 开发接续要点
 
