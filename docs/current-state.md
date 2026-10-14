@@ -1,14 +1,24 @@
 # 项目理念与接续摘要
 
-更新日期：2026-10-14（America/Denver）。`0.7.0-alpha` 已分段提交、推送并公开发布，仅提供 M 系 Mac 与 Linux x86_64 musl。Lakota `test` 已安装本次正式发布包；Mac `owner` 仍运行此前同版本本地候选包，原界面占用运行锁，正式包已独立试装，日常替换待退出旧窗口。Trader 团队信箱继续运行 `0.6.0-alpha`，个人库 schema 10、信箱 schema 2。三个内置 Codex 技能和真实 DSS 业务的验收证据见下文。未操作 MBA 或 pengchao 的电脑，本次 Lakota 安装为停服备份后手动替换，不是更新器安装。
+更新日期：2026-10-14（America/Denver）。`0.7.1-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl。Lakota `test` 已通过签名更新器升级；Trader 新增成员 `trader` 和独立个人客户端，用户明确要求保留 Full access，实际终端已设置并在后台重启后确认持久。Trader 信箱本轮实际为 `0.7.0-alpha`，保持运行；个人库 schema 10、信箱 schema 2。本轮执行电脑实际是 MacBook Air M3、成员 `mba`，日常安装仍为 `0.5.0-alpha`；Mac mini／`owner` 没有直接检查或升级，不能把此前另一台 Mac 的部署记录当成本机事实。
 
-## Lakota 聊天错误修复候选（2026-10-14）
+## 0.7.1-alpha 发布与日常部署（2026-10-14）
 
-检查日常聊天后修复三处源码问题：analysis/discover 的非文件答复或无匹配结果可携带 `files:[]` 直接交付审核，不再强迫引用无关文件或进入空快照分析；失败的补充/修改命令只记录自身错误，不再暂停原有有效任务并使运行中的 Codex 权限失效；Ask 隔离执行为 zsh 设置任务目录内的 `TMPPREFIX`，修复 here-document 临时文件创建失败。真正的模型准备失败仍标记当前草稿待处理，旧版本/已取消任务不受迟到错误影响。内置技能源码升为 0.1.3，公开包仍是 0.1.2。
+修复提交 `c8e321d0d34780f4d01bb0008926f6c2df629bc1`、发布提交 `624979e3ae8429f0f4226b2479790d1caac94139` 均已推送，标签 `v0.7.1-alpha` 指向后者。[Release](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.1-alpha) 已公开，prerelease、非 draft。[精确标签源码的 CI](https://github.com/shenyaojin/xXASSXx/actions/runs/38641597073) 在 ARM macOS 和 Linux musl 各通过 175 项测试、0 失败、2 项既有忽略，优化构建与独立目录安装成功。六项发布附件的签名、匿名下载哈希、二进制架构均已核对，签名公钥保持不变。MBA 和 Lakota 另做正式包独立目录试装。
+
+Lakota 在无在途工作时停服备份，经正式离线更新器从 0.7.0 升至 0.7.1；停服前后全部 60 张表和配置一致，22 项任务、246 条消息、60 次运行、3 条目录白名单保留，完整性和外键检查通过。备份为 `~/.local/share/xxassxx/backups/release-071-20261014/`。首次备份脚本遇到旧 Python 的 pathlib 兼容问题，尚未替换程序即自动恢复旧后台；不完整副本保留，改用 Python 3.12 后完成。实际新版本终端打开原已完成报告与五份附件，Ask for approval 保持，`/reconnect` 正常，也已同步新联系人 `trader`。
+
+Trader 新客户端位于 `~/.local/xxassxx-client/bin/xxassxx`，与信箱的 `~/.local/bin/xxassxx` 分离，后台运行 0.7.1。用户选择整个 `/home/ubuntu/projects/crypto_playground`，已加入本机目录白名单；随后明确选择 Full access，允许本机文件读写、运行及联网，免任务与发送逐次批准，仍须遵守具体任务的只读等要求。其他成员机器的权限没有改变。新增身份已通过 HTTPS 校验，原四位成员凭据保留，信箱未重启。当前产品没有网页邀请链接或邀请成员按钮；管理员生成的私密邀请文件已在 Trader 直接导入，不公开凭据。
+
+本机未进行 Rust 构建，发布包保留在 `dist/v0.7.1-alpha/`；本机原有 10 月 8 日的 target 缓存未动，不能沿用历史“仓库无 target”的结论。发布与升级证据见 [0.7.1 证据](releases/v0.7.1-alpha-evidence.json)，Trader 的真实终端、模型任务与权限记录见 [Trader 客户端验收](trader-client-validation.md)。
+
+## Lakota 聊天错误修复（2026-10-14，随后随 0.7.1 发布）
+
+检查日常聊天后修复三处源码问题：analysis/discover 的非文件答复或无匹配结果可携带 `files:[]` 直接交付审核，不再强迫引用无关文件或进入空快照分析；失败的补充/修改命令只记录自身错误，不再暂停原有有效任务并使运行中的 Codex 权限失效；Ask 隔离执行为 zsh 设置任务目录内的 `TMPPREFIX`，修复 here-document 临时文件创建失败。真正的模型准备失败仍标记当前草稿待处理，旧版本/已取消任务不受迟到错误影响。内置技能升为 0.1.3，已随 0.7.1 公开。
 
 Lakota 完整自动回归 175 通过、0 失败、2 项既有忽略，格式与 Clippy 通过；107 份源码、测试、技能及 Cargo/build 文件与本机一致。最终 Linux debug 构建在隔离 A/B 真实 PTY、DeepSeek／官方 Codex 中验收：能力问答一次执行、无文件引用正常完成；获准写入任务中执行方补充目标被拒绝但原任务继续，zsh 实际生成并读回两行文件，求和 83，两端终端均显示准确最终答复。真实 Codex 沙箱另做旧/新环境对照，临时文件错误仅在旧配置复现。
 
-这是尚未发布安装包、未安装到日常客户端的源码修复；上述验收未包含本轮 macOS 构建或远端 CI。没有重放已取消的科研任务、删除错误记录或改变日常权限。心跳 `presence_unavailable` 与偶发同步超时仍有观察记录，本轮未证明其根因或宣称修复。详见 [聊天错误验收](chat-errors-validation.md) 与 [精简证据](chat-errors-evidence.json)。
+上述真实任务证据来自发布前的 Linux debug 修复构建；随后发布 CI 与日常部署单独记录于上节，不把旧实测混称为精确发布包上的业务重跑。没有重放已取消的科研任务或删除错误记录。心跳 `presence_unavailable` 与偶发同步超时仍有观察记录，本轮未证明其根因或宣称修复。详见 [聊天错误验收](chat-errors-validation.md) 与 [精简证据](chat-errors-evidence.json)。
 
 ## 0.7.0-alpha 公开发布（2026-10-14）
 
@@ -20,7 +30,7 @@ Lakota 完整自动回归 175 通过、0 失败、2 项既有忽略，格式与 
 
 ## 访问模式与手动重连（2026-10-13）
 
-用户明确选择 Full access 范围为本机文件读写、运行及联网，任务和文件发送免逐次批准。新增 `/access` 两项本机持久设置；默认 Ask for approval，其他成员无法替本机选择。Full access 下清楚任务自动确认，本地执行及文件发送自动继续，仍尊重明确只读要求和真正业务歧义。当前没有替日常用户启用完整权限。三个内置技能为 0.1.2。
+用户明确选择 Full access 范围为本机文件读写、运行及联网，任务和文件发送免逐次批准。新增 `/access` 两项本机持久设置；默认 Ask for approval，其他成员无法替本机选择。Full access 下清楚任务自动确认，本地执行及文件发送自动继续，仍尊重明确只读要求和真正业务歧义。该批次没有替日常用户启用完整权限；2026-10-14 用户明确要求 Trader 使用 Full access，当前部署见本文开头。该批次三个内置技能为 0.1.2。
 
 新增 `/reconnect`：运行中的后台提前结束退避等待，已停止后台可以启动；不会为重连重启执行或重放完成/不确定任务。正常约 2 秒轮询，临时故障按约 4、8、16、32、60 秒重试，另加请求耗时；身份错误或多次不可重试错误仍会阻塞。旧信箱把数据库锁争用返回 400 的情况做精确兼容，未放宽任意请求错误。
 
@@ -246,16 +256,17 @@ MBA 与 Lakota 已安装最终补丁，使用现用 HTTPS 信箱、真实 DeepSe
 ## 当前团队和交付
 
 - 团队 `xxassxx`，信箱 `https://xxassxx.shenyaojin.com`，Trader 托管。SSH 别名 `trader`、`lakota` 已配置。
-- 现有成员为 `owner`、`pengchao`、`test`、`mba`。a/b 已退出当前团队，历史与备份保留。
+- 现有成员为 `owner`、`pengchao`、`test`、`mba`、`trader`。a/b 已退出当前团队，历史与备份保留。2026-10-14 新增 Trader 个人客户端与私密邀请，实际 Full access 设置及部署见本文开头。
 - 2026-10-07 为用户的 MacBook Air 新增独立身份 `mba`，显示名 `Shenyao "Keith" Jin (MacBook Air)`。邀请位于 `/Users/shenyaojin/Downloads/xXASSXx-MacBook-Air/mba.json`，权限 600，另有 Git 忽略的 `smoke-output/phase4-private/mba.json` 副本；凭据不在文档中。Trader 配置和在线成员登记已更新，其他成员凭据保持不变，无需重启信箱。Mac owner 与 Lakota test 的实际联系人及配置文件已加入 mba，其余运行配置未改；服务器邀请和本地 pengchao 邀请副本的联系人也已同步。HTTPS 身份校验与隔离个人端导入通过，未调用模型、发送任务或在 MBA 本机安装；见本地 `smoke-output/mba-invitation-check.json`。若 pengchao 已使用旧邀请安装，仍需在其电脑更新联系人，本次没有操作该电脑。
-- `owner` 显示名 `Shenyao "Keith" Jin`，本机 Mac；升级前实际白名单为 `/Users/shenyaojin`，此次原样保留。新版界面工作目录选为 `/Users/shenyaojin`。
-- `test` 显示名 `test (Lakota)`，Lakota 常驻。唯一白名单是 `/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts`，此次原样保留。旧 executor.workdir 在该范围外；升级时通过新版 TUI 明确选择此 scripts 目录作为当前工作位置，不修改模型配置或授权范围。
+- `owner` 显示名 `Shenyao "Keith" Jin`，此前另一台 Mac 的身份；当时白名单与工作目录为 `/Users/shenyaojin`。当前执行电脑是 MBA／`mba`，不能把 owner 安装视为本机；本轮未检查 Mac mini。
+- `test` 显示名 `test (Lakota)`，Lakota 常驻。本轮升级前实际白名单已有 home、`Documents/bakken_mariner` 及其 `scripts` 三项，全部保留；不再把历史仅 scripts 的范围描述为现状。
+- `trader` 显示名 `Trader`，Trader 个人端 0.7.1，工作目录与白名单均为 `/home/ubuntu/projects/crypto_playground`。用户明确选择持久 Full access；真实模型在此模式完成同机 README 只读任务。信箱服务使用独立的 0.7.0 程序，未重启。
 - 原先的 `friend` 已统一改为 `pengchao`（用户名和显示名相同），服务器、Mac/Lakota 联系人、现有邀请与安装提示词已同步。改名之前该身份没有消息或心跳使用记录；改名后邀请鉴权已验证。
 - 朋友安装提示词：`docs/codex-setup-prompt.md`。
-- 此前单独交付朋友的离线包：`dist/xxassxx-pengchao-macos-arm64-20261006.zip`，仅 Apple 芯片 Mac。包内有安装提示词和安装器，不含邀请或密钥；当时未准备 Intel Mac 包。朋友的 CPU 架构尚未确认。当前通用 0.4.0-alpha 包覆盖两种 Mac 和 Linux x86_64，见本文开头的 Release 链接。
+- 此前单独交付朋友的离线包：`dist/xxassxx-pengchao-macos-arm64-20261006.zip`，仅 Apple 芯片 Mac。包内有安装提示词和安装器，不含邀请或密钥；朋友的 CPU 架构尚未确认。当前通用 0.7.1-alpha 包支持 M 系 Mac 和 Linux x86_64，Intel Mac 支持已撤销，见本文开头的 Release 链接。
 - 私人邀请：`smoke-output/phase4-private/pengchao.json`，权限 600、Git 忽略，不打印正文。
 - 给用户的两个文件已经放在 `/Users/shenyaojin/Downloads/xXASSXx-发给朋友/`，分别是上述 ZIP 和 `pengchao.json`。旧 friend 文件已归档。
-- 已发布的 0.4.0-alpha 仍无启动更新检查；源码中的更新器已在 2026-10-12 实现并隔离验收，尚待发布，见本文开头。开机自动启动与 TG 接入仍待实现。
+- 更新器已公开分发，本轮 Lakota 实际完成 0.7.0 → 0.7.1 签名更新。个人客户端的开机自动启动与 TG 接入仍待实现；当前后台运行不等于已配置系统重启后自启动。
 
 ## 开发接续要点
 

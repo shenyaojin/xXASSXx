@@ -1,0 +1,142 @@
+{
+  "version": "0.7.1-alpha",
+  "recorded_at": "2026-10-14T21:50:42.432127+00:00",
+  "release": {
+    "url": "https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.1-alpha",
+    "published_at": "2026-10-14T21:45:05Z",
+    "draft": false,
+    "prerelease": true,
+    "source_commit": "624979e3ae8429f0f4226b2479790d1caac94139",
+    "tag": "v0.7.1-alpha"
+  },
+  "ci": {
+    "url": "https://github.com/shenyaojin/xXASSXx/actions/runs/38641597073",
+    "apple_silicon": {
+      "passed": 175,
+      "failed": 0,
+      "ignored": 2
+    },
+    "linux_musl": {
+      "passed": 175,
+      "failed": 0,
+      "ignored": 2
+    },
+    "release_builds_and_fresh_prefix_installs": "passed"
+  },
+  "signed_release": {
+    "version": "0.7.1-alpha",
+    "schema": 10,
+    "signature_verified": true,
+    "public_key": "ee06eef54d768e3445f2c3cf167dc7445c33c4fe67d22ccb06896738c772cbd1",
+    "assets": {
+      "SHA256SUMS": {
+        "size": 209,
+        "sha256": "c83f0e0839ec21e336e654bfd55d68cb3577e21167150550cc7b7a5a066e5e75"
+      },
+      "install.sh": {
+        "size": 3612,
+        "sha256": "8f63a694adc788ebfa57bd0a1b9d0b206644961eb3b3f366a9dcc3bd7ab4ec6c"
+      },
+      "update.json": {
+        "size": 2810,
+        "sha256": "6f4504b52a066743c2c041cd3d5e7b3dfbc05268b160f2247a7ac3a40b52cfbd"
+      },
+      "update.json.sig": {
+        "size": 129,
+        "sha256": "a76d5af9c474a41a7427fc4486cf3e3afb813ccc148fdb022f70fb6e677ee2d1"
+      },
+      "xxassxx-aarch64-apple-darwin.tar.gz": {
+        "size": 7507084,
+        "sha256": "728c820bf9725ccc93f7a96722eaa1c95193ff64380410e18859e7ece99a0536"
+      },
+      "xxassxx-x86_64-unknown-linux-musl.tar.gz": {
+        "size": 8661330,
+        "sha256": "22b4a985b8d4d3344e77eb5d7282522870dbe3f8f72f874e68c6d9f792c88955"
+      }
+    },
+    "binaries": {
+      "aarch64-apple-darwin": {
+        "size": 21037856,
+        "sha256": "e71cb127ec9533c2246ba04740357610d5acea2331ab12fedb5d6c275124b4c8"
+      },
+      "x86_64-unknown-linux-musl": {
+        "size": 24572832,
+        "sha256": "1cb8b97e6dde30caa71eb9c7714828c8a1ee4ed20c89826c2edcee34bf9964c7"
+      }
+    }
+  },
+  "anonymous_downloads": {
+    "install.sh": {
+      "size": 3612,
+      "sha256": "8f63a694adc788ebfa57bd0a1b9d0b206644961eb3b3f366a9dcc3bd7ab4ec6c",
+      "anonymous_http_status": 200
+    },
+    "SHA256SUMS": {
+      "size": 209,
+      "sha256": "c83f0e0839ec21e336e654bfd55d68cb3577e21167150550cc7b7a5a066e5e75",
+      "anonymous_http_status": 200
+    },
+    "update.json": {
+      "size": 2810,
+      "sha256": "6f4504b52a066743c2c041cd3d5e7b3dfbc05268b160f2247a7ac3a40b52cfbd",
+      "anonymous_http_status": 200
+    },
+    "update.json.sig": {
+      "size": 129,
+      "sha256": "a76d5af9c474a41a7427fc4486cf3e3afb813ccc148fdb022f70fb6e677ee2d1",
+      "anonymous_http_status": 200
+    },
+    "xxassxx-aarch64-apple-darwin.tar.gz": {
+      "size": 7507084,
+      "sha256": "728c820bf9725ccc93f7a96722eaa1c95193ff64380410e18859e7ece99a0536",
+      "anonymous_http_status": 200
+    },
+    "xxassxx-x86_64-unknown-linux-musl.tar.gz": {
+      "size": 8661330,
+      "sha256": "22b4a985b8d4d3344e77eb5d7282522870dbe3f8f72f874e68c6d9f792c88955",
+      "anonymous_http_status": 200
+    }
+  },
+  "real_machine_validation": {
+    "macbook_air": {
+      "fresh_prefix_install": "passed",
+      "signed_metadata_check": "passed",
+      "daily_install": "unchanged; installed daily client remains 0.5.0-alpha"
+    },
+    "lakota": {
+      "daily_install": "signed offline updater 0.7.0-alpha -> 0.7.1-alpha",
+      "binary": "~/.local/bin/xxassxx",
+      "sha256": "1cb8b97e6dde30caa71eb9c7714828c8a1ee4ed20c89826c2edcee34bf9964c7",
+      "backup": {
+        "backup": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/backups/release-071-20261014",
+        "database_integrity": "ok",
+        "old_binary_sha256": "c455073604543484da1698cb5a57dc1cebe5178e35d1adde29fb45659453478e"
+      },
+      "preservation": {
+        "database_all_tables_unchanged": true,
+        "config_files_unchanged": true,
+        "table_count": 60,
+        "schema": 10
+      },
+      "business_counts_before_and_after": {
+        "app_tasks": 22,
+        "messages": 246,
+        "runs": 60,
+        "identity": 1,
+        "file_roots": 3
+      },
+      "doctor_ready": true,
+      "pty": "Actual installed binary showed existing completed report and five delivered attachments; Ask for approval unchanged; /reconnect succeeded; new trader contact visible",
+      "backup_retry": "Initial system Python rejected pathlib argument during backup, before binary replacement. Old service automatically restored. Incomplete backup preserved; retry with Python 3.12 passed."
+    },
+    "trader": {
+      "client_version": "0.7.1-alpha",
+      "access_mode": "full_access",
+      "persistent_after_daemon_restart": true,
+      "mailbox_version": "0.7.0-alpha (unchanged)",
+      "evidence": "../trader-client-evidence.json"
+    }
+  },
+  "scope": "Execution repair evidence comes from the prior real DeepSeek/Codex tasks. Release CI tested the exact tagged source. No scientific computation rerun; no Intel build. Mac mini was not directly inspected or upgraded. Trader onboarding is recorded separately.",
+  "raw_evidence": "smoke-output/release-v0.7.1-alpha/"
+}

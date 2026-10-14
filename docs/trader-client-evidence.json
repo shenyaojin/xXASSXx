@@ -1,0 +1,208 @@
+{
+  "recorded_at": "2026-10-14T21:56:12.548072+00:00",
+  "version": "0.7.1-alpha",
+  "binary_sha256": "1cb8b97e6dde30caa71eb9c7714828c8a1ee4ed20c89826c2edcee34bf9964c7",
+  "member": {
+    "display_name": "Trader",
+    "mailbox_url": "https://xxassxx.shenyaojin.com",
+    "member_id": "trader",
+    "team_id": "xxassxx",
+    "username": "trader"
+  },
+  "roots": [
+    "/home/ubuntu/projects/crypto_playground"
+  ],
+  "access_mode": "full_access",
+  "access_authorization": "User explicitly requested persistent Full access for Trader on 2026-10-14; selected through actual TUI /access.",
+  "persistence_verification": "Closed TUI, stopped and restarted client daemon, reopened actual TUI and observed Full access, then resumed the same task.",
+  "service": {
+    "alive": true,
+    "error": null,
+    "instance": "894bdbd0-1d48-43f2-9696-3605203d1eb7",
+    "log_path": "/home/ubuntu/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+    "pid": 247622,
+    "state": "running",
+    "updated_at": 1792014971,
+    "version": "0.7.1-alpha"
+  },
+  "doctor": {
+    "allowed_directories": [
+      "/home/ubuntu/projects/crypto_playground"
+    ],
+    "codex": {
+      "available": true,
+      "logged_in": true
+    },
+    "mailbox": {
+      "error": null,
+      "reachable_and_identity_matches": true
+    },
+    "model": {
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "tool_roundtrip": "not_requested"
+    },
+    "note": "Without --probe-model, model inference and tool capability are not tested. Codex login status does not prove available inference quota.",
+    "ready": true
+  },
+  "initial_model_tool_roundtrip": "passed",
+  "network": [
+    {
+      "state": "connected",
+      "error": null
+    }
+  ],
+  "schema": 10,
+  "integrity": "ok",
+  "foreign_key_violations": 0,
+  "task": {
+    "id": "7fb47620-36e4-5ead-a5fb-6f27e8d1aa67",
+    "revision": 1,
+    "state": "completed",
+    "initiator": "trader",
+    "participants": [
+      "trader"
+    ],
+    "error": null,
+    "waiting_reason": null
+  },
+  "executions": [
+    {
+      "id": "6ea26ba0-61e4-5eb6-8dbb-bba2a65e97da",
+      "phase": "discover",
+      "state": "candidate",
+      "round": 1
+    },
+    {
+      "id": "a1d81b9f-3a14-5dad-916e-0bb7c8d8ce28",
+      "phase": "discover",
+      "state": "candidate",
+      "round": 1
+    },
+    {
+      "id": "8aede9b4-5885-585f-84ba-3025f479c32d",
+      "phase": "discover",
+      "state": "done",
+      "round": 2
+    },
+    {
+      "id": "3a790a34-3226-5195-8a79-92276e8a3940",
+      "phase": "analyze",
+      "state": "candidate",
+      "round": 1
+    }
+  ],
+  "runs": [
+    {
+      "id": "5ca81b03-eead-4970-accf-8ffb07dcd2ec",
+      "task_id": "6ea26ba0-61e4-5eb6-8dbb-bba2a65e97da",
+      "state": "succeeded",
+      "error_code": null,
+      "codex_version": "codex-cli 0.162.1"
+    },
+    {
+      "id": "8208663a-cac6-45c6-af82-1489bc7359b2",
+      "task_id": "a1d81b9f-3a14-5dad-916e-0bb7c8d8ce28",
+      "state": "succeeded",
+      "error_code": null,
+      "codex_version": "codex-cli 0.162.1"
+    },
+    {
+      "id": "1e3003a1-dcab-4248-9b87-03c46afca4b2",
+      "task_id": "8aede9b4-5885-585f-84ba-3025f479c32d",
+      "state": "succeeded",
+      "error_code": null,
+      "codex_version": "codex-cli 0.162.1"
+    },
+    {
+      "id": "d27f518e-a746-498c-b29b-5b99a954676f",
+      "task_id": "8aede9b4-5885-585f-84ba-3025f479c32d",
+      "state": "succeeded",
+      "error_code": null,
+      "codex_version": "codex-cli 0.162.1"
+    },
+    {
+      "id": "cf559ec2-118f-452f-8a47-4489e3c530c8",
+      "task_id": "3a790a34-3226-5195-8a79-92276e8a3940",
+      "state": "succeeded",
+      "error_code": null,
+      "codex_version": "codex-cli 0.162.1"
+    }
+  ],
+  "successful_shell_commands": [
+    {
+      "run_id": "d27f518e-a746-498c-b29b-5b99a954676f",
+      "command": "/bin/bash -c \"stat --format='%F %s bytes' -- README.md\"",
+      "status": "completed",
+      "exit_code": 0
+    },
+    {
+      "run_id": "cf559ec2-118f-452f-8a47-4489e3c530c8",
+      "command": "/bin/bash -lc 'nl -ba root-0/README.md'",
+      "status": "completed",
+      "exit_code": 0
+    }
+  ],
+  "source_readme": {
+    "size": 4984,
+    "sha256_before": "49b478bdb2885e106c44d82f7b7f14cfa7b8f52f0aca77e092665c95141adae8",
+    "sha256_after": "49b478bdb2885e106c44d82f7b7f14cfa7b8f52f0aca77e092665c95141adae8",
+    "unchanged": true
+  },
+  "peer_messages": 0,
+  "file_transfers": 0,
+  "running_runs": 0,
+  "mailbox": {
+    "version": "xxassxx 0.7.0-alpha",
+    "unit": [
+      "MainPID=187177",
+      "ActiveState=active",
+      "SubState=running"
+    ],
+    "member_ids": [
+      "mba",
+      "owner",
+      "pengchao",
+      "test",
+      "trader"
+    ],
+    "old_members_and_credentials_preserved": true,
+    "restarted": false
+  },
+  "invitation": {
+    "path": "/home/ubuntu/.local/share/xxassxx/server/invitations/trader.json",
+    "mode": "0o600",
+    "imported": true,
+    "web_invitation_link": false
+  },
+  "backup": "/home/ubuntu/.local/share/xxassxx/backups/add-trader-20261014",
+  "observed_limitations": [
+    "Before Full access, three Codex runs reported bwrap Permission denied and an inability to read the file. Run-level succeeded means submission succeeded, not file reading succeeded.",
+    "After the explicit local access-mode change, discovery and frozen-file analysis completed. This does not establish that the Ask-mode standalone-Codex issue is fixed.",
+    "Final answer correctly gave the project name, purpose and source lines, but its last sentence incorrectly said other README content was not read; actual analysis printed the entire single README. No other project file was read by the observed commands."
+  ],
+  "raw_evidence": "smoke-output/release-v0.7.1-alpha/trader/; remote xxassxx-tests/release-v0.7.1-alpha/",
+  "privacy": "No invitation credential, raw model output, proprietary README content or personal database is included in this summary.",
+  "run_access_events": [
+    {
+      "run_id": "5ca81b03-eead-4970-accf-8ffb07dcd2ec",
+      "mode": "ask_for_approval"
+    },
+    {
+      "run_id": "8208663a-cac6-45c6-af82-1489bc7359b2",
+      "mode": "ask_for_approval"
+    },
+    {
+      "run_id": "1e3003a1-dcab-4248-9b87-03c46afca4b2",
+      "mode": "ask_for_approval"
+    },
+    {
+      "run_id": "d27f518e-a746-498c-b29b-5b99a954676f",
+      "mode": "full_access"
+    },
+    {
+      "run_id": "cf559ec2-118f-452f-8a47-4489e3c530c8",
+      "mode": "full_access"
+    }
+  ]
+}
