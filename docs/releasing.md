@@ -1,22 +1,25 @@
 # 版本构建与发布
 
-本轮发布版本为 `0.4.0-alpha`，对应 Git 标签 `v0.4.0-alpha`。版本来源是 `Cargo.toml`；`Cargo.lock` 中本包版本保持一致，CLI 和 MCP 自动使用该版本。
+`0.5.0-alpha` 起在本地候选版实现签名更新清单；首次公开签名版本为 `0.7.0-alpha`。已配置 `XXASSXX_RELEASE_SIGNING_KEY` GitHub Actions secret；工作流将生成并附上 `update.json` 与 `update.json.sig`。首次启用、签名密钥管理和兼容边界见 [程序更新](updating.md)。此前各版本章节保留为历史证据，0.5–0.6 和较早的 0.7 本地候选安装不等于公开发布。
+
+本轮发布版本为 `0.7.0-alpha`，对应 Git 标签 `v0.7.0-alpha`。版本来源是 `Cargo.toml`；`Cargo.lock` 中本包版本保持一致，CLI 和 MCP 自动使用该版本。
 
 ## 发布前验收
 
 先按 [调试与终端验收流程](debugging.md) 完成受本轮改动影响的真实用户操作。涉及卡住、授权、执行地点、远程接续或最终答复时，必须亲自启动真实终端，从发起任务看到最终回答，并核对实际文件/运行结果。自动测试成功、后台 completed 或一段模型自述不能代替终端验收。记录精简证据及所用二进制哈希；仅改版本号或文档时说明引用哪一轮真实验证，不冒称重新跑过业务计算。
 
-发布必须同时提供以下三个平台的安装包：
+发布必须同时提供以下两个平台的安装包：
 
 | 系统 | 架构 | 安装包 |
 | --- | --- | --- |
 | macOS | Apple Silicon | `xxassxx-aarch64-apple-darwin.tar.gz` |
-| macOS | Intel | `xxassxx-x86_64-apple-darwin.tar.gz` |
 | Linux | x86_64 musl | `xxassxx-x86_64-unknown-linux-musl.tar.gz` |
 
 同时附上 `SHA256SUMS`、`install.sh` 和对应版本说明。不能将某一台机器的本地构建说成所有平台已验证。
 
-## 本机构建
+## 构建与安装验证
+
+优先在 GitHub Actions 构建 M 系 Mac 和 Linux 安装包，Linux 本地排错与回归优先放在 Lakota。下面是手动构建的等价步骤，不要求在开发者 Mac 保留完整缓存。
 
 需要 Rust 工具链、Python 3.11+（测试使用）及平台编译工具。在仓库根目录执行：
 
@@ -26,9 +29,9 @@ cargo test --locked
 cargo clippy --locked --all-targets -- -D warnings
 cargo build --release --locked
 ./target/release/xxassxx --version
-sh scripts/package.sh target/release/xxassxx aarch64-apple-darwin dist/v0.4.0-alpha
-cat dist/v0.4.0-alpha/*.tar.gz.sha256 > dist/v0.4.0-alpha/SHA256SUMS
-cp scripts/install.sh dist/v0.4.0-alpha/install.sh
+sh scripts/package.sh target/release/xxassxx aarch64-apple-darwin dist/v0.7.0-alpha
+cat dist/v0.7.0-alpha/*.tar.gz.sha256 > dist/v0.7.0-alpha/SHA256SUMS
+cp scripts/install.sh dist/v0.7.0-alpha/install.sh
 ```
 
 示例打包目标为 Apple Silicon；其他平台必须使用对应目标的真实二进制。依赖已缓存时可追加 `--offline`。产物按版本隔离，`dist/` 和含私有运行数据的 `smoke-output/` 不提交。
@@ -36,11 +39,11 @@ cp scripts/install.sh dist/v0.4.0-alpha/install.sh
 安装验证使用临时目录，不覆盖日常个人端：
 
 ```sh
-sh scripts/install.sh --from dist/v0.4.0-alpha --prefix /tmp/xxassxx-040-check
-/tmp/xxassxx-040-check/bin/xxassxx --version
+sh scripts/install.sh --from dist/v0.7.0-alpha --prefix /tmp/xxassxx-070-check
+/tmp/xxassxx-070-check/bin/xxassxx --version
 ```
 
-核对安装后版本、二进制哈希及终端入口。升级日常个人端或团队信箱时，先确认没有在途任务，保留已有身份、配置和数据库，停止旧后台后更换并重新启动。1.0.0 前属于小规模测试，本轮按用户要求不创建备份，不重新初始化。
+核对安装后版本、二进制哈希及终端入口。升级日常个人端或团队信箱时，先确认没有在途任务，保留已有身份、配置和数据库，停止旧后台后更换并重新启动。保存数据库、配置、文件存储和旧程序的可恢复副本，不重新初始化身份。
 
 ## GitHub 构建与预发布
 
@@ -48,12 +51,12 @@ sh scripts/install.sh --from dist/v0.4.0-alpha --prefix /tmp/xxassxx-040-check
 
 1. 提交所有实现、测试、文档和版本变更。检查远端状态，正常推送；标签必须指向包含完整实现的提交，不覆盖已有发布标签。
 2. 验证标签与 `Cargo.toml` 完全对应，存在 `docs/releases/<标签>.md`。
-3. 在上述三个平台测试、优化构建、核对版本，并验证对应安装包能离线安装。
-4. 三个平台均通过后，汇总包与校验值，创建带安装器和版本说明的草稿 Release；Alpha 标记为 prerelease。
-5. 检查草稿的五项产物、校验值、平台/版本对应关系以及安装结果，再发布草稿。用户已明确要求发布时无需再次索要同一项许可；权限或外部环境阻塞则准确报告状态。
+3. 在上述两个平台测试、优化构建、核对版本，并验证对应安装包能离线安装。
+4. 两个平台均通过后，汇总包与校验值，创建带安装器和版本说明的草稿 Release；Alpha 标记为 prerelease。
+5. 检查草稿的六项产物（两个包、校验文件、安装器和两份签名元数据）、校验值、平台/版本对应关系以及安装结果，再发布草稿。用户已明确要求发布时无需再次索要同一项许可；权限或外部环境阻塞则准确报告状态。
 6. 确认 Release 已公开、不是 draft、保持 prerelease，并验证公开下载可用，记录提交、标签、CI 和 Release 链接。
 
-手动触发只生成 Actions 产物。标签推送成功不等于 Release 已发布；单个平台成功也不等于发布完成。Alpha 安装显式传入 `--version v0.4.0-alpha`，不依赖稳定版 latest。
+手动触发只生成 Actions 产物。标签推送成功不等于 Release 已发布；单个平台成功也不等于发布完成。Alpha 安装显式传入 `--version v0.7.0-alpha`，不依赖稳定版 latest。
 
 ## 0.4.0-alpha 发布结果
 
@@ -104,3 +107,11 @@ sh scripts/install.sh --from dist/v0.4.0-alpha --prefix /tmp/xxassxx-040-check
 - 发布流程沿用上一轮已验证的 Alpha 配置；本次未运行 GitHub Actions。
 
 可分发文件为 `dist/v0.1.0-alpha/xxassxx-0.1.0-alpha-macos-arm64.zip`，旁边的 `.sha256` 文件用于校验 ZIP；内部 `SHA256SUMS` 用于校验安装器读取的二进制压缩包。`validation/build-info.json` 保存产物、源码和测试文件的 SHA-256、工具链及检查结果，本次测试结果位于 `validation/tests.txt`。旧构建及其日志归档到 `dist/archive/v0.1.0-alpha-20261006T210739/`，不能与当前分发包混用。
+
+## 构建地点与本机空间（2026-10-13）
+
+用户要求此后避免本机保留大型编译缓存。Linux x86_64 musl 的构建与完整回归优先使用 Lakota；目前可复用 `~/xxassxx-tests/inbox-20261012/` 中的源码、工具链与 target 缓存。上传范围仅限 Cargo 清单、src、tests、scripts 与 README，不能同步身份、邀请、模型密钥或日常数据库。保存源码清单、测试日志和安装包校验值，将 Linux 包用于 Lakota 与 Trader。
+
+2026-10-13 起只支持 M 系 Mac 和 Linux x86_64，不再构建或验收 Intel Mac。Apple Silicon 优先交给 `.github/workflows/release.yml` 中的对应 macOS runner。Linux 主机不能直接替代 macOS 的 SDK、链接与原生验收。手动 workflow_dispatch 只构建和保存产物，不会公开 Release；它验证的是已推送的指定版本，未提交源码不能借用旧 CI 结果。0.5–0.7 本地候选安装批次仅做临时 Mac release 构建，未将旧 CI 当作新源码验证。此次公开发布由提交后的源码触发新的两平台 CI；本机不重建 Rust 缓存。
+
+0.6.0-alpha 涉及数据库版本变更，按照 `docs/inbox.md` 停服迁移并保存数据库、配置、文件存储和旧程序的可恢复副本；上文历史升级中的“不创建备份”不适用于本次操作。验证通过后再启动后台，保留原身份与路径。

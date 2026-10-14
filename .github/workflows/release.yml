@@ -13,8 +13,6 @@ jobs:
         include:
           - runner: macos-15
             target: aarch64-apple-darwin
-          - runner: macos-15-intel
-            target: x86_64-apple-darwin
           - runner: ubuntu-22.04
             target: x86_64-unknown-linux-musl
     runs-on: ${{ matrix.runner }}
@@ -73,6 +71,17 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      - name: Sign update metadata
+        env:
+          XXASSXX_RELEASE_SIGNING_KEY: ${{ secrets.XXASSXX_RELEASE_SIGNING_KEY }}
+        shell: bash
+        run: |
+          test -n "$XXASSXX_RELEASE_SIGNING_KEY"
+          umask 077
+          key="$RUNNER_TEMP/xxassxx-release-key.pem"
+          trap 'rm -f "$key"' EXIT
+          printf '%s\n' "$XXASSXX_RELEASE_SIGNING_KEY" > "$key"
+          python3 scripts/sign_release.py dist --key "$key"
       - name: Prepare draft release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -86,4 +95,4 @@ jobs:
           fi
           gh release create "$RELEASE_TAG" "${flags[@]}" --title "$RELEASE_TAG" \
             --notes-file "docs/releases/$RELEASE_TAG.md" \
-            dist/*.tar.gz dist/SHA256SUMS scripts/install.sh
+            dist/*.tar.gz dist/SHA256SUMS scripts/install.sh dist/update.json dist/update.json.sig

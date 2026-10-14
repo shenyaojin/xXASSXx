@@ -25,9 +25,9 @@ done
 
 case "$(uname -s)/$(uname -m)" in
   Darwin/arm64) target=aarch64-apple-darwin ;;
-  Darwin/x86_64) target=x86_64-apple-darwin ;;
+  Darwin/x86_64) echo "Intel Mac is no longer supported. Use an Apple Silicon Mac." >&2; exit 1 ;;
   Linux/x86_64) target=x86_64-unknown-linux-musl ;;
-  *) echo 'Supported: macOS Apple Silicon/Intel and Linux x86_64.' >&2; exit 1 ;;
+  *) echo 'Supported: macOS Apple Silicon and Linux x86_64.' >&2; exit 1 ;;
 esac
 archive="xxassxx-${target}.tar.gz"
 temp=$(mktemp -d "${TMPDIR:-/tmp}/xxassxx-install.XXXXXXXX")
@@ -70,9 +70,21 @@ mkdir -p "$prefix/bin"
   echo 'Existing destination is a directory or symlink; choose another prefix.' >&2; exit 1;
 }
 staged="$prefix/bin/.xxassxx-install-$$"
+if [ -f "$prefix/bin/.xxassxx-install.json" ]; then
+  echo 'This installation supports self-update. Use xxassxx update (or update --from DIRECTORY).' >&2
+  exit 1
+fi
 trap 'rm -f "$staged"; rm -rf "$temp"' EXIT HUP INT TERM
 install -m 755 "$temp/xxassxx" "$staged"
 "$staged" --version
+managed=false
+if "$staged" update --probe >/dev/null 2>&1; then
+  managed=true
+fi
 mv -f "$staged" "$prefix/bin/xxassxx"
+if [ "$managed" = true ]; then
+  installed_version=$("$prefix/bin/xxassxx" --version | awk '{print $2}')
+  printf '{"format":1,"binary":"xxassxx","version":"%s","target":"%s"}\n' "$installed_version" "$target" > "$prefix/bin/.xxassxx-install.json"
+fi
 echo "Installed: $prefix/bin/xxassxx"
 echo "Ensure $prefix/bin is in PATH. Next: xxassxx client init --help"

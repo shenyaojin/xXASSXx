@@ -4,13 +4,15 @@
 
 加入已有团队，从[成员安装](#成员安装)开始。首次搭建团队，由管理员先完成[团队部署](#团队部署)。
 
+0.7.0 新增 `/access`（访问模式）和 `/reconnect`（手动重连），使用方式见[访问模式与重连](docs/access-modes.md)。
+
 ## 成员安装
 
-准备好管理员发给你的**安装包**和**个人邀请文件**（例如 `alice.json`），以及自己的 Codex 登录和 DeepSeek API key。成员电脑使用 macOS 或 Linux；目前不支持 Windows。
+准备好管理员发给你的**安装包**和**个人邀请文件**（例如 `alice.json`），以及自己的 Codex 登录和 DeepSeek API key。成员电脑使用 M 系芯片 Mac 或 Linux x86_64；后续不再支持 Intel Mac，目前不支持 Windows。
 
 ### 1. 安装程序
 
-当前测试版为 [0.4.0 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.4.0-alpha)，提供 Apple 芯片 Mac、Intel Mac 和 Linux x86_64 安装包。
+当前测试版为 [0.7.0 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.0-alpha)。历史版本保留原有下载；本版只提供 M 系 Mac 和 Linux x86_64 安装包。
 
 解压安装包，进入包含 `install.sh` 和 `SHA256SUMS` 的目录：
 
@@ -20,7 +22,7 @@ export PATH="$HOME/.local/bin:$PATH"
 xxassxx --version
 ```
 
-安装器会校验 SHA-256，并将程序安装到 `~/.local/bin/xxassxx`，不需要 Rust 或管理员权限。安装包必须匹配电脑架构：Apple 芯片 Mac、Intel Mac、Linux x86_64 的包不能混用。
+安装器会校验 SHA-256，并将程序安装到 `~/.local/bin/xxassxx`，不需要 Rust 或管理员权限。安装包必须匹配电脑架构：M 系 Mac 与 Linux x86_64 的包不能混用。
 
 将下面一行加入自己的 shell 配置（zsh 用 `~/.zshrc`，bash 通常用 `~/.bashrc`），让新终端也能找到程序：
 
@@ -111,6 +113,21 @@ xxassxx open "$HOME/Research/project"
 | 停止后台 | `xxassxx client stop` |
 
 个人端尚未配置开机自启；重启电脑后运行 `xxassxx` 或 `xxassxx client start`。接收并处理团队请求时，自己的电脑和后台需要在线。
+
+### 更新程序
+
+从 `0.5.0-alpha` 起，使用新版安装器安装的程序支持：
+
+```sh
+xxassxx update --check  # 检查新版
+xxassxx update          # 下载、验证并安装
+```
+
+成员收件箱可用 `/inbox` 查看全部、未读和需要我处理的协作记录，支持普通留言、回复及离线恢复。从旧版升级涉及数据库迁移；操作见 [成员收件箱](docs/inbox.md)，dot 的真实连接状态见 [接入说明](docs/dot-connection.md)。
+
+命令联想和任务归档：输入 `/` 看中文菜单，方向键选择，Tab 补全，Enter 打开；`/tasks` 按进行中、已结束、已归档分类。已结束任务按 `a` 归档，在已归档页按 `a` 恢复。记录和结果保留，正在进行的任务可按 CtrlX 手动停止、填写原因并归档。详见 [界面与归档](docs/ui-experience.md)。
+
+终端内输入 `/update` 可完成更新并回到原会话。默认自动检查、提示后安装；`xxassxx update --configure --policy idle` 可开启终端空闲时自动安装。当前 `0.4.0-alpha` 用户需先手动安装一次带更新器的版本。安装位置、身份、配置、历史及授权保留；后台未退出、其他终端占用或数据库版本不兼容时会暂缓。完整说明见 [程序更新](docs/updating.md)。
 
 ### 让执行方写文件并运行程序
 

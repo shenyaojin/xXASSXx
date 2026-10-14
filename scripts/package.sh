@@ -5,7 +5,7 @@ set -eu
 binary=$1
 target=$2
 output=$3
-case "$target" in aarch64-apple-darwin|x86_64-apple-darwin|x86_64-unknown-linux-musl) ;; *) echo 'Unsupported release target' >&2; exit 2 ;; esac
+case "$target" in aarch64-apple-darwin|x86_64-unknown-linux-musl) ;; *) echo 'Unsupported release target' >&2; exit 2 ;; esac
 mkdir -p "$output"
 temp=$(mktemp -d "${TMPDIR:-/tmp}/xxassxx-package.XXXXXXXX")
 trap 'rm -rf "$temp"' EXIT HUP INT TERM
