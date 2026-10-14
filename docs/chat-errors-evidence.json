@@ -1,0 +1,131 @@
+{
+  "date": "2026-10-14",
+  "timezone": "America/Denver",
+  "base_commit": "549b7fe",
+  "application_version": "0.7.0-alpha",
+  "skill_bundle_version": "0.1.3",
+  "status": "validated before commit; no package release or daily installation",
+  "diagnosed_daily_tasks": [
+    "59f288f4-7194-533b-9830-a98ae0eddb22",
+    "3a8eedba-aa32-514f-90e6-d61d48e724b9",
+    "e4848c6b-a008-5ae5-a2d3-37eacdea59e0"
+  ],
+  "automation": {
+    "passed": 175,
+    "failed": 0,
+    "ignored": 2,
+    "host": "Lakota",
+    "target": "x86_64-unknown-linux-musl",
+    "format": "passed",
+    "clippy": "passed with existing deprecated exception",
+    "source_files_matched": 107,
+    "source_manifest_sha256": "4e11c553f2cfc04cdb2f90dcfbb17411a195eefc8a87080c677940085121667a"
+  },
+  "real_validation": {
+    "environment": "two isolated real PTYs and localhost mailbox on Lakota, real DeepSeek and official Codex; Ask for approval",
+    "binary_sha256": "2461a35c8ab575479384c757dead1ad80a75adf1af97964323c8c0ee939822ee",
+    "tasks": [
+      {
+        "task_id": "3c5ce890-72c4-5701-a409-e2cd802d80aa",
+        "revision": 1,
+        "both_members_state": "completed",
+        "run_id": "c7dc7135-1bb9-4f4e-9e4d-81877339e088",
+        "run_count": 1,
+        "run_state": "succeeded",
+        "codex_version": "codex-cli 0.162.1",
+        "task_reads": 1,
+        "submissions": 1,
+        "command_exit_codes": [],
+        "files": [],
+        "attention_count": 0,
+        "snapshots": 0,
+        "transfers": 0,
+        "failed_commands": []
+      },
+      {
+        "task_id": "8485210c-4080-559a-9c31-11ab662addf7",
+        "revision": 1,
+        "both_members_state": "completed",
+        "run_id": "7d84656d-8f59-4562-9548-a92c3af6de9a",
+        "run_count": 1,
+        "run_state": "succeeded",
+        "codex_version": "codex-cli 0.162.1",
+        "task_reads": 1,
+        "submissions": 1,
+        "command_exit_codes": [
+          0,
+          0
+        ],
+        "files": [
+          {
+            "root": 0,
+            "path": "proof.txt",
+            "reason": "本次 here-document 生成且读回核对的测试文件，包含 alpha=37 与 beta=46 两行。"
+          }
+        ],
+        "attention_count": 0,
+        "snapshots": 0,
+        "transfers": 0,
+        "failed_commands": [
+          {
+            "action": "chat",
+            "body": "请再增加一张示意图。",
+            "state": "failed",
+            "error": "请由发起人修改意图；本端可查看执行、问题和状态"
+          }
+        ]
+      }
+    ],
+    "proof": {
+      "content": "alpha=37\nbeta=46\n",
+      "bytes": 17,
+      "sha256": "35743c526451fce250ca1fc96e374f9e62d28d91eb4bcf952ce722fd793a8b72"
+    },
+    "original_test_files": {
+      "a/work/original.txt": {
+        "content": "original value: 12\n",
+        "sha256": "e9f1a8a8a403bddcd4b2417887104bec6d5a69351279782219ae3e2bb02944f1"
+      },
+      "a/outside.txt": {
+        "content": "outside unchanged\n",
+        "sha256": "d4c40469905ebe7bd828beae2a3d12f9431efae71cd8734e9b408f4d06c1e4ad"
+      },
+      "b/work/original.txt": {
+        "content": "original value: 12\n",
+        "sha256": "e9f1a8a8a403bddcd4b2417887104bec6d5a69351279782219ae3e2bb02944f1"
+      },
+      "b/outside.txt": {
+        "content": "outside unchanged\n",
+        "sha256": "d4c40469905ebe7bd828beae2a3d12f9431efae71cd8734e9b408f4d06c1e4ad"
+      }
+    },
+    "sandbox_temp_probe": [
+      {
+        "patched": false,
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "WARNING: failed to clean up stale arg0 temp dirs: Directory not empty (os error 39)\nzsh:1: can't create temp file for here document: no such file or directory\n"
+      },
+      {
+        "patched": true,
+        "returncode": 0,
+        "stdout": "archive-probe 83\n",
+        "stderr": "WARNING: failed to clean up stale arg0 temp dirs: Directory not empty (os error 39)\n"
+      }
+    ],
+    "rejected_undispatched_draft": "7c914b3e-8095-5217-a63e-0dfff11c684d",
+    "screens": [
+      "real-pty/a-capability-completed.txt",
+      "real-pty/a-write-completed.txt",
+      "real-pty/b-b-write-final-completed.txt"
+    ]
+  },
+  "limitations": [
+    "No current macOS build or CI run",
+    "No daily application installation or scientific-task replay",
+    "Intermittent presence and sync errors observed; network root cause not established",
+    "Codex stale arg0 cleanup warning remains"
+  ],
+  "raw_evidence_local": "smoke-output/chat-errors-20261014",
+  "raw_evidence_lakota": "~/xxassxx-tests/debug-chat-20261014"
+}

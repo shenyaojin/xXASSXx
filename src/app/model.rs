@@ -511,24 +511,9 @@ pub async fn process_one(store: &mut Store) -> Result<bool> {
                     store.conn.execute("UPDATE app_tasks SET error=?2,waiting_reason='确认未成功；查看错误后可重新确认',updated_at=?3 WHERE id=?1 AND protocol=2 AND state='draft'", params![id,e.to_string(),crate::store::now()])?;
                 }
             }
-            if matches!(
-                i.action.as_str(),
-                "chat" | "create_task" | "revise_task" | "reopen_task"
-            ) && !(i.action == "chat" && crate::task_coordinator::is_confirmation(&i.body))
-            {
-                if let Some(id) = i
-                    .task_id
-                    .as_deref()
-                    .filter(|id| crate::task_coordinator::is_task(&store.conn, id).unwrap_or(false))
-                {
-                    crate::task_coordinator::attention(
-                        store,
-                        &crate::task_coordinator::get(store, id)?,
-                        &i.request_id,
-                        &e.to_string(),
-                    )?;
-                }
-            }
+            // The failed command has its own error record. Preparation and
+            // execution own their task failures; rejecting a chat/revision
+            // must not pause an otherwise valid task or kill its running Codex.
             store.conn.execute(
                 "UPDATE app_commands SET state='failed',error=?2 WHERE id=?1",
                 params![i.request_id, e.to_string()],

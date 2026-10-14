@@ -2,7 +2,7 @@
 name: xxassxx-task-intake
 description: 接续 xXASSXx 已确认的通用任务；在 Codex 每次启动或恢复时核对本轮任务、范围和已有答案，识别必要澄清。用于绑定任务的执行端，不用于需求草拟、成员调度或普通信箱留言。
 metadata:
-  version: "0.1.2"
+  version: "0.1.3"
 ---
 
 # 接任务与澄清

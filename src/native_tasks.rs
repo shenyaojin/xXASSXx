@@ -165,8 +165,8 @@ pub fn validate(conn: &Connection, task: &str, result: &str) -> Result<()> {
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )?;
             ensure!(
-                !out.files.is_empty() && out.files.len() <= budget.0,
-                "发现结果需要 1..={} 个可冻结文件；请缩减候选，或在无材料时提交结构化问题",
+                out.files.len() <= budget.0,
+                "发现结果最多接受 {} 个可冻结文件；请缩减候选。非文件答复或未找到材料可返回空清单并说明局限",
                 budget.0
             );
             Some(budget)

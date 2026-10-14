@@ -2,6 +2,14 @@
 
 更新日期：2026-10-14（America/Denver）。`0.7.0-alpha` 已分段提交、推送并公开发布，仅提供 M 系 Mac 与 Linux x86_64 musl。Lakota `test` 已安装本次正式发布包；Mac `owner` 仍运行此前同版本本地候选包，原界面占用运行锁，正式包已独立试装，日常替换待退出旧窗口。Trader 团队信箱继续运行 `0.6.0-alpha`，个人库 schema 10、信箱 schema 2。三个内置 Codex 技能和真实 DSS 业务的验收证据见下文。未操作 MBA 或 pengchao 的电脑，本次 Lakota 安装为停服备份后手动替换，不是更新器安装。
 
+## Lakota 聊天错误修复候选（2026-10-14）
+
+检查日常聊天后修复三处源码问题：analysis/discover 的非文件答复或无匹配结果可携带 `files:[]` 直接交付审核，不再强迫引用无关文件或进入空快照分析；失败的补充/修改命令只记录自身错误，不再暂停原有有效任务并使运行中的 Codex 权限失效；Ask 隔离执行为 zsh 设置任务目录内的 `TMPPREFIX`，修复 here-document 临时文件创建失败。真正的模型准备失败仍标记当前草稿待处理，旧版本/已取消任务不受迟到错误影响。内置技能源码升为 0.1.3，公开包仍是 0.1.2。
+
+Lakota 完整自动回归 175 通过、0 失败、2 项既有忽略，格式与 Clippy 通过；107 份源码、测试、技能及 Cargo/build 文件与本机一致。最终 Linux debug 构建在隔离 A/B 真实 PTY、DeepSeek／官方 Codex 中验收：能力问答一次执行、无文件引用正常完成；获准写入任务中执行方补充目标被拒绝但原任务继续，zsh 实际生成并读回两行文件，求和 83，两端终端均显示准确最终答复。真实 Codex 沙箱另做旧/新环境对照，临时文件错误仅在旧配置复现。
+
+这是尚未发布安装包、未安装到日常客户端的源码修复；上述验收未包含本轮 macOS 构建或远端 CI。没有重放已取消的科研任务、删除错误记录或改变日常权限。心跳 `presence_unavailable` 与偶发同步超时仍有观察记录，本轮未证明其根因或宣称修复。详见 [聊天错误验收](chat-errors-validation.md) 与 [精简证据](chat-errors-evidence.json)。
+
 ## 0.7.0-alpha 公开发布（2026-10-14）
 
 五段实现与发布提交已推送，标签 `v0.7.0-alpha` 指向 `2a7e998ee6b6e21a7a7ca4a873c5af8de79b8e54`。[Release](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.0-alpha) 已公开，prerelease、非 draft；[本次 CI](https://github.com/shenyaojin/xXASSXx/actions/runs/38519443106) 在 M 系 Mac 与 Linux musl 分别通过 173 项测试、2 项既有忽略，优化构建和离线安装均通过。两个包、SHA256SUMS、install.sh、update.json、update.json.sig 共六项，签名及匿名下载哈希全部核对。

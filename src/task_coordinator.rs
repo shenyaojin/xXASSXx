@@ -1480,7 +1480,7 @@ pub fn execution_context(c: &Connection, id: &str) -> Result<Option<Value>> {
         "SELECT json_object('revision',revision,'decision',json(payload)) FROM task_journal WHERE task_id=?1 AND kind='agent_review' AND json_extract(payload,'$.action')='investigate' ORDER BY rowid",
         string(&v, "task_id")?,
     )?;
-    v["contract"] = json!({"execution":"For phase execute, follow current execution_policy and execution_access: Ask for approval confines edits to its isolated workspace; Full access permits requested changes to original files and network use. Preserve unrelated work. Submit actual generated files, run logs and a plain-language outcome, including changes, numeric results and limitations. Existing successful outputs should be inspected before repeating any program after resume.","question_tool":"submit_task_question","question":"Use when information is necessary and absent. Include body, reason, known. Never invent a user decision. This finishes only the current run.","discovery":"Use native tools to discover candidate relative paths. Submit {body,files:[{root,path,reason}]}. Do not claim final content analysis. Rust freezes these files; a new isolated analysis run will read only immutable copies.","analysis":"Read actual immutable files with native tools. Submit {body,files:[{root,path,reason}]}; cite all files used. If dependencies are missing ask a structured question, do not invent them. This is a candidate, A checks completeness."});
+    v["contract"] = json!({"execution":"For phase execute, follow current execution_policy and execution_access: Ask for approval confines edits to its isolated workspace; Full access permits requested changes to original files and network use. Preserve unrelated work. Submit actual generated files, run logs and a plain-language outcome, including changes, numeric results and limitations. Existing successful outputs should be inspected before repeating any program after resume.","question_tool":"submit_task_question","question":"Use when information is necessary and absent. Include body, reason, known. Never invent a user decision. This finishes only the current run.","discovery":"For file analysis, use native tools to discover candidate relative paths and submit {body,files:[{root,path,reason}]}. Rust freezes nonempty references for a later isolated analysis; do not claim final content analysis. For a non-file answer or a search with no matches, submit a truthful body and files:[] directly for review, stating the absence of file evidence and any search limits. Do not invent references or request unnecessary user information just to fill the list.","analysis":"Read actual immutable files with native tools. Submit {body,files:[{root,path,reason}]}; cite all files used. If dependencies are missing ask a structured question, do not invent them. This is a candidate, A checks completeness."});
     if v["confirmed_intent"]["mode"] == "files" {
         // This route selects existing deliverables directly. It does not run
         // discovery -> text freezing -> analysis; that contract must not leak in.
@@ -1657,7 +1657,7 @@ async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result
     // Earlier model drafts are not owner facts. Do not feed a failed draft back
     // as established scope when the owner has already corrected the location.
     let system = format!(
-        "{system} File attachments: The extra.delivery field (or task.delivery when present) contains authoritative current transport facts. When extra.delivery.ready=true, attachments are already received; candidate body/attachment.state describe preparation time only and must not trigger continuation for export or download. Use delivery.body and next_owner when explaining what happens next. Only say this owner can download when the matching item has available_here=true and state=offered. A prepared manifest alone is not downloadable. Remote export is controlled on the sender computer, either per-file approval or the sender Full access setting; the recipient cannot grant it. For a request to obtain existing actual files from a peer, use mode files; discovering candidate paths is the executor job and binary files are supported. For a follow-up asking to send a result already discussed, reuse the established project and findings. Add only the new delivery request; do not automatically repeat the earlier inventory or expand into validation. Keep constraints in plain language; say sender approval rather than grant. For execute requests that explicitly ask for result files, always set deliver_files=true, even when delivery follows a later user decision in the same task. Preserve all requested stages in this task. Requested delivery intent is already established: do not add whether to send those files to questions, prohibit the requested delivery, or defer it to a new confirmation. Runtime permission belongs to the dedicated sender controls, not model-generated intent questions. Export is an independent sender permission: Full access supplies it locally, otherwise the sender can approve together with execution for this task or later for selected files. Do not predict that another approval will be required: describe an outstanding sender action only when current delivery facts require it. When escalating a different question, ask only that question and do not add speculative future permission steps. Review results are mirrored to both sender and recipient: identify a delivery destination by member name (the task initiator for task result files), never as your computer or this computer. In review, a candidate attachment manifest is evidence of prepared fixed files; evaluate the substantive result, then choose complete when adequate. Rust independently waits for actual download before final completion. Never request rerunning successful computation solely because its attachment is still transferring."
+        "{system} File attachments: The extra.delivery field (or task.delivery when present) contains authoritative current transport facts. When extra.delivery.ready=true, attachments are already received; candidate body/attachment.state describe preparation time only and must not trigger continuation for export or download. Use delivery.body and next_owner when explaining what happens next. Only say this owner can download when the matching item has available_here=true and state=offered. A prepared manifest alone is not downloadable. Remote export is controlled on the sender computer, either per-file approval or the sender Full access setting; the recipient cannot grant it. For a request to obtain existing actual files from a peer, use mode files; discovering candidate paths is the executor job and binary files are supported. For a follow-up asking to send a result already discussed, reuse the established project and findings. Add only the new delivery request; do not automatically repeat the earlier inventory or expand into validation. Keep constraints in plain language; say sender approval rather than grant. For execute requests that explicitly ask for result files, always set deliver_files=true, even when delivery follows a later user decision in the same task. Preserve all requested stages in this task. Requested delivery intent is already established: do not add whether to send those files to questions, prohibit the requested delivery, or defer it to a new confirmation. Runtime permission belongs to the dedicated sender controls, not model-generated intent questions. Export is an independent sender permission: Full access supplies it locally, otherwise the sender can approve together with execution for this task or later for selected files. Do not predict that another approval will be required: describe an outstanding sender action only when current delivery facts require it. When escalating a different question, ask only that question and do not add speculative future permission steps. Review results are mirrored to both sender and recipient: identify a delivery destination by member name (the task initiator for task result files), never as your computer or this computer. In review, a candidate attachment manifest is evidence of prepared fixed files; evaluate the substantive result, then choose complete when adequate. Empty files and sources are valid for non-file answers or no-match reports; assess the original request, never require unrelated files or pretend that empty evidence proves file contents. Rust independently waits for actual download before final completion. Never request rerunning successful computation solely because its attachment is still transferring."
     );
     let system = format!(
         "{system} Result selection: Unless the owner specifies otherwise, 'latest result' means the final adopted output of the most recent completed run, identified from project status, a manifest or an explicit final-result pointer. File modification time alone is not evidence. Later scratch/probe/parameter-perturbation/intermediate outputs are not the adopted result. Do not require a scientific re-validation. In prepare preserve this default as a concise selection constraint, not a new question. In review for mode files, return file_summary with one or two everyday sentences explaining what the delivered result represents and why selected, based on the executor's evidence; leave receipt and next-button instructions to Rust. Do not turn a simple image request into a progress report."
@@ -1779,14 +1779,32 @@ pub async fn prepare_model(store: &Store, id: &str) -> Result<()> {
     if t["confirmed"] == t["revision"] {
         return Ok(());
     }
-    let draft = decision(store, &t, "prepare", json!({})).await?;
-    // Fence the awaited model decision against concurrent edits/cancellation.
-    let current = get(store, id)?;
-    ensure!(
-        current["revision"] == t["revision"] && current["state"] == "draft",
-        "草稿已改变，丢弃过期整理"
-    );
-    prepare(store, id, draft)
+    let outcome = async {
+        let draft = decision(store, &t, "prepare", json!({})).await?;
+        // Fence the awaited model decision against concurrent edits/cancellation.
+        let current = get(store, id)?;
+        ensure!(
+            current["revision"] == t["revision"] && current["state"] == "draft",
+            "草稿已改变，丢弃过期整理"
+        );
+        prepare(store, id, draft)
+    }
+    .await;
+    if let Err(error) = &outcome {
+        let current = get(store, id)?;
+        // Only the preparation that actually failed may pause its own draft.
+        // Rejected user commands and failed follow-up replies must not revoke
+        // a concurrently running executor's authorization.
+        if current["revision"] == t["revision"] && current["state"] == "draft" {
+            attention(
+                store,
+                &t,
+                &uuid::Uuid::new_v4().to_string(),
+                &error.to_string(),
+            )?;
+        }
+    }
+    outcome
 }
 fn start_execution(
     store: &Store,
@@ -2714,6 +2732,9 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
     }
     if context["phase"] == "discover"
         && !matches!(t["draft"]["mode"].as_str(), Some("listing" | "files"))
+        && out["files"]
+            .as_array()
+            .is_some_and(|files| !files.is_empty())
     {
         let snapshot = crate::task_materials::freeze(store, t, id, &out["files"])?;
         start_execution(store, t, "analyze", Some(&snapshot), Some(id), &snapshot)?;
@@ -2770,6 +2791,10 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
             .collect::<Vec<_>>();
         ensure!(sources.len() == refs.len(), "引用不是当前快照材料");
         json!(sources)
+    } else if out["files"].as_array().is_some_and(Vec::is_empty) {
+        // A non-file answer or an empty search goes straight to substantive
+        // review. It establishes no file evidence and needs no empty snapshot.
+        json!([{"member":store.owner()?,"submitted_at":now(),"evidence":"no file references; non-file answer or no-match report, not file content analysis"}])
     } else {
         json!([{"member":store.owner()?,"search_time":now(),"scope":"confirmed local allowlist","evidence":"live path discovery only; not fixed-content analysis"}])
     };

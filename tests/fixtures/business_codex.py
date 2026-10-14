@@ -68,6 +68,15 @@ elif business['phase']=='execute':
     permissions=cfg[f'permissions.{profile}.filesystem']
     assert permissions[str(workspace)]=='write'
     assert all(permissions[r]=='read' for r in access['read_roots'])
+    shell_env=cfg['shell_environment_policy.set']
+    assert shell_env['TMPPREFIX']==str(workspace/'.tmp/zsh')
+    assert Path(shell_env['TMPDIR']).is_dir()
+    # Exercise the actual shell's here-document handling with the configured
+    # environment; sandbox enforcement is covered separately by real Codex.
+    import shutil
+    if zsh := shutil.which('zsh'):
+        check=subprocess.run([zsh,'-c',"cat <<'EOF'\nworkspace temporary input\nEOF"],env={**os.environ,**shell_env},capture_output=True,text=True)
+        assert check.returncode==0 and check.stdout=='workspace temporary input\n',check
     source=Path(access['read_roots'][0])/'fast.py'
     assert source.read_text()=='iterations=10 # fast original'
     script=workspace/'calculation.py';script.write_text(source.read_text()+'\nprint(sum(range(iterations+1)))\n')

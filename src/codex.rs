@@ -326,6 +326,12 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
                     string(access.directory.join(".tmp").to_string_lossy()),
                 );
             }
+            // zsh uses TMPPREFIX, independently of TMPDIR, for here-doc files.
+            // Its /tmp/zsh default is outside the isolated writable workspace.
+            env.insert(
+                "TMPPREFIX".into(),
+                string(access.directory.join(".tmp/zsh").to_string_lossy()),
+            );
             env.insert("PYTHONDONTWRITEBYTECODE".into(), string("1"));
             for name in ["OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"] {
                 env.insert(name.into(), string("1"));

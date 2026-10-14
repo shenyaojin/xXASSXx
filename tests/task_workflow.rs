@@ -1310,6 +1310,152 @@ async fn material_budget_rejects_before_acceptance_and_recovery_keeps_run_histor
 }
 
 #[tokio::test]
+async fn empty_discovery_answers_reach_review_without_freezing_or_inventing_evidence() {
+    let team = Team::new();
+    files(&team, "b");
+    let router = axum::Router::new().route("/chat/completions", axum::routing::post(|axum::Json(v): axum::Json<Value>| async move {
+        let context: Value = serde_json::from_str(v["messages"].as_array().unwrap().last().unwrap()["content"].as_str().unwrap()).unwrap();
+        assert_eq!(context["stage"], "review");
+        let result = &context["extra"]["candidates"][0]["result"];
+        assert_eq!(result["files"], json!([]));
+        assert_eq!(result["sources"][0]["evidence"], "no file references; non-file answer or no-match report, not file content analysis");
+        assert!(result["sources"][0].get("sha256").is_none());
+        assert!(result["sources"][0].get("path").is_none());
+        let decision = json!({"action":"complete","body":result["body"]});
+        axum::Json(json!({"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","tool_calls":[{"id":"review","type":"function","function":{"name":"task_decision","arguments":decision.to_string()}}]}}]}))
+    }));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut a = team.store("a");
+    let mut b = team.store("b");
+    let mut config = a.member_config().unwrap();
+    config.model =
+        json!({"provider":"compatible","base_url":url,"model":"simulation","api_key_env":""});
+    a.configure_member(&config).unwrap();
+    for (request, body) in [
+        (
+            "@b 说明当前能提供哪些帮助",
+            "可以只读查询获准资料；这个能力说明没有读取项目文件。",
+        ),
+        (
+            "@b 查找现有图件",
+            "在获准目录内没有找到匹配图件，未检查其他目录。",
+        ),
+    ] {
+        let (i, id) = draft(&team, request);
+        let mut config = b.member_config().unwrap();
+        config.executor.mode = "queue".into();
+        b.configure_member(&config).unwrap();
+        tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+        transfer(&a, &mut b);
+        tasks::tick(&b, Path::new(BIN)).await.unwrap();
+        let ex = tasks::get(&b, &id).unwrap()["executions"][0]["id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        let lease = b
+            .claim(&ex, false, &team.dir.path().join("b/work"), 30)
+            .unwrap();
+        b.initialized(&ex, &lease.run_id, &lease.token).unwrap();
+        b.read_task(&ex, &lease.run_id, &lease.token).unwrap();
+        b.submit_result(
+            &ex,
+            &lease.run_id,
+            &lease.token,
+            &lease.run_id,
+            &json!({"body":body,"files":[]}).to_string(),
+        )
+        .unwrap();
+        b.event(
+            &lease,
+            &json!({"type":"thread.started","thread_id":uuid::Uuid::new_v4().to_string()}),
+        )
+        .unwrap();
+        b.event(&lease, &json!({"type":"turn.completed"})).unwrap();
+        b.finish(&lease, Some(0), None).unwrap();
+        config.executor.mode = "auto".into();
+        b.configure_member(&config).unwrap();
+        tasks::tick(&b, Path::new(BIN)).await.unwrap();
+        transfer(&b, &mut a);
+        tasks::tick(&a, Path::new(BIN)).await.unwrap();
+        transfer(&a, &mut b);
+        assert_eq!(tasks::get(&a, &id).unwrap()["state"], "completed");
+        assert_eq!(tasks::get(&b, &id).unwrap()["state"], "completed");
+        assert_eq!(tasks::get(&a, &id).unwrap()["result"]["body"], body);
+        assert_eq!(b.runs(&ex).unwrap().len(), 1);
+    }
+    assert_eq!(count(&b, "SELECT count(*) FROM task_snapshots"), 0);
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM task_executions WHERE phase='analyze'"
+        ),
+        0
+    );
+    server.abort();
+}
+
+#[tokio::test]
+async fn rejected_participant_commands_do_not_pause_or_revoke_running_task() {
+    let team = Team::new();
+    files(&team, "b");
+    let (i, id) = draft(&team, "@b 检查已有资料");
+    let a = team.store("a");
+    let mut b = team.store("b");
+    let mut config = b.member_config().unwrap();
+    config.executor.mode = "queue".into();
+    b.configure_member(&config).unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    transfer(&a, &mut b);
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    let before = tasks::get(&b, &id).unwrap();
+    let ex = before["executions"][0]["id"].as_str().unwrap();
+    let lease = b
+        .claim(ex, false, &team.dir.path().join("b/work"), 30)
+        .unwrap();
+    b.initialized(ex, &lease.run_id, &lease.token).unwrap();
+    for kind in ["chat", "revise_task", "reopen_task"] {
+        let mut command = action(&i, &id, kind, 1, "补充一些图件");
+        command.session_id = before["session_id"].as_str().unwrap().into();
+        command.recipient = "b".into();
+        submit(&mut b, &command);
+        app::model::process_one(&mut b).await.unwrap();
+        assert_eq!(
+            app::command(&b, &command.request_id).unwrap()["state"],
+            "failed"
+        );
+        let after = tasks::get(&b, &id).unwrap();
+        for key in [
+            "state",
+            "revision",
+            "confirmed",
+            "next_owner",
+            "waiting_for",
+            "error",
+        ] {
+            assert_eq!(after[key], before[key], "command {kind} changed {key}");
+        }
+        b.read_task(ex, &lease.run_id, &lease.token).unwrap();
+    }
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM app_messages WHERE kind='task_attention'"
+        ),
+        0
+    );
+    b.submit_result(
+        ex,
+        &lease.run_id,
+        &lease.token,
+        &lease.run_id,
+        &json!({"body":"已完成查询，没有匹配文件。","files":[]}).to_string(),
+    )
+    .unwrap();
+}
+
+#[tokio::test]
 async fn remote_retry_stays_on_worker_and_legacy_wrong_host_execution_is_blocked() {
     let t = Team::new();
     files(&t, "a");
