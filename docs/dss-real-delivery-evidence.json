@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-13",
+  "evidence_kind": "Real installed Mac→Trader HTTPS→Lakota task with official Codex and DeepSeek; manual intent clarification and exact sender approval via PTY",
+  "old_task": {
+    "id": "defc0941-301a-51b9-a2e9-f8713c27939b",
+    "state": "cancelled",
+    "archived_on": "owner",
+    "reason": "按本人要求停止旧任务，改用新任务只发送 DSS 项目最新结果图。",
+    "original_reference_batch_authorized": false
+  },
+  "new_task": {
+    "id": "5b210e2b-f35b-5f9b-b643-d86ee540d829",
+    "revision": 2,
+    "owner_state": "completed",
+    "executor_state": "completed",
+    "owner_file_runs": 0,
+    "execution_id": "009d3112-b4af-5e32-9fa4-3f24fe7786e7",
+    "run_id": "fea4b8bf-4964-4e89-9469-68e987a10dfe",
+    "codex_session": "01a137ba-75be-7d93-8935-9a0a0ef34e3c",
+    "codex_version": "codex-cli 0.162.1",
+    "turn_completed": true,
+    "exit_code": 0,
+    "submissions": 1,
+    "result": "已选出 continuous_geometry_bg18 分支最终采用结果目录 k_024a5f80458d6667 中的观测与拟合应变对比图：2026 年 10 月 7 日 06:54 UTC 的完成状态及优化结果均记录优化成功收敛，并明确指向该目录，图中背景参数 −18、拟合系数 0.03378 与记录一致。"
+  },
+  "delivery": {
+    "transfer_id": "a10f23a9-cc4f-5060-9dfb-0b9afb6db072",
+    "sender": "test",
+    "recipient": "owner",
+    "sender_authorized": true,
+    "sender_state": "delivered",
+    "recipient_state": "received",
+    "file": {
+      "id": "936eef9d-2b47-5b7e-b5bb-108416c26b4e",
+      "name": "qc_bg_18_only.png",
+      "bytes": 258255,
+      "sha256": "792071a95e00935ba04a1fe739a55593acd832b67cb3ec395bc0d19a3e237c9f"
+    },
+    "source_result_directory": "continuous_geometry_bg18/permeability_evaluations/k_024a5f80458d6667",
+    "checks": [
+      {
+        "transfer_id": "a10f23a9-cc4f-5060-9dfb-0b9afb6db072",
+        "path": "/Users/shenyaojin/.local/share/xxassxx/client/member.file-transfers/incoming/a10f23a9-cc4f-5060-9dfb-0b9afb6db072/936eef9d-2b47-5b7e-b5bb-108416c26b4e/qc_bg_18_only.png",
+        "bytes": 258255,
+        "sha256": "792071a95e00935ba04a1fe739a55593acd832b67cb3ec395bc0d19a3e237c9f"
+      },
+      {
+        "transfer_id": "a10f23a9-cc4f-5060-9dfb-0b9afb6db072",
+        "path": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.file-transfers/outgoing/a10f23a9-cc4f-5060-9dfb-0b9afb6db072/936eef9d-2b47-5b7e-b5bb-108416c26b4e",
+        "bytes": 258255,
+        "sha256": "792071a95e00935ba04a1fe739a55593acd832b67cb3ec395bc0d19a3e237c9f"
+      }
+    ],
+    "download_copy": "/Users/shenyaojin/Downloads/DSS-最新完成结果-2026-10-07.png",
+    "download_sha256": "792071a95e00935ba04a1fe739a55593acd832b67cb3ec395bc0d19a3e237c9f",
+    "source_files_unchanged_count": 8,
+    "project_programs_rerun": false,
+    "scp_picture_transfer": false
+  },
+  "validation": {
+    "linux_tests": {
+      "passed": 167,
+      "failed": 0,
+      "ignored": 2
+    },
+    "clippy": "passed with existing deprecated allowance",
+    "format": "passed",
+    "linux_release": "passed",
+    "source_files_matched": 99,
+    "mac_build": "not run",
+    "actual_picture_viewed": true,
+    "actual_terminal_final_answer_viewed": true
+  },
+  "installed": {
+    "owner": "0.6.4-alpha",
+    "lakota": "0.6.5-alpha",
+    "trader": "0.6.0-alpha",
+    "linux_binary_sha256": "54637d20787a4cb66ad52e8175f9208910b6bbc13e390d6c4d85b55c725d454b",
+    "method": "backup and manual installation; not updater",
+    "database_config_unchanged_during_install": true,
+    "published": false,
+    "committed": false
+  },
+  "limits": [
+    "Latest initially meant newest-written perturbation evaluation; clarified to final adopted result before approval.",
+    "Completed UI shows delivery receipt and filename; selection explanation remains in task result details.",
+    "Earlier unapproved drafts remain in sender attachment history."
+  ],
+  "artifacts": {
+    "raw_evidence": "smoke-output/dss-real-delivery-20261013/",
+    "linux_package": "dist/v0.6.5-alpha/xxassxx-x86_64-unknown-linux-musl.tar.gz"
+  },
+  "cleanup": {
+    "temporary_pyte_removed": true,
+    "local_target_exists": false,
+    "lakota_saved_directory": {
+      "restored_rows": 1,
+      "working_directory": "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner",
+      "scope": "restore only saved directory preference changed by inspection; task state not edited"
+    }
+  }
+}

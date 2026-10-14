@@ -1,0 +1,96 @@
+{
+  "date": "2026-10-13",
+  "version": "0.6.6-alpha",
+  "skill_bundle": {
+    "loading": "inline",
+    "phase": "discover",
+    "prompt_bytes": 13629,
+    "sha256": "37b5bc042b576b24427a70c8fedac8b29e1fa8f55c4e43d1347a613dc85b8f30",
+    "skill_bytes": 12905,
+    "skills": [
+      "xxassxx-task-intake",
+      "xxassxx-task-execution",
+      "xxassxx-task-handoff"
+    ],
+    "type": "xxassxx.skill_bundle",
+    "version": "0.1.1"
+  },
+  "task": {
+    "id": "1306a4f6-18e0-5fab-b48a-7eb92ec6a06d",
+    "revision": 1,
+    "original": "把 DSS 最新结果图发过来",
+    "initiator": "owner",
+    "executor": "test (Lakota)",
+    "state": "completed",
+    "initiator_commands": [
+      [
+        "chat",
+        "把 DSS 最新结果图发过来"
+      ]
+    ],
+    "manual_task_corrections": 0,
+    "sender_manifest_approvals": 1,
+    "questions": 0
+  },
+  "models": {
+    "coordinator": "configured DeepSeek",
+    "executor": "codex-cli 0.162.1",
+    "run_id": "4f590e7c-4c3a-4e3e-8efa-c69751b68dfd",
+    "execution_id": "c52590fd-0c0b-530f-a260-37da619bda7a",
+    "session_id": "01a13810-d04f-72f0-ba16-2a53825e5446",
+    "reads": 1,
+    "submissions": 1,
+    "turn_completed": true,
+    "exit_code": 0,
+    "runs": 1,
+    "native_read_commands": 7
+  },
+  "delivery": {
+    "transfer_id": "7c3b778b-e669-503a-ac2a-1c2ac78ef0e7",
+    "file": "qc_final.png",
+    "bytes": 258255,
+    "sha256": "792071a95e00935ba04a1fe739a55593acd832b67cb3ec395bc0d19a3e237c9f",
+    "source_fixed_receiver_equal": true,
+    "transport": "existing Trader HTTPS mailbox",
+    "sender": "delivered",
+    "receiver": "received",
+    "body": "1 个文件已送达 @owner。\nqc_final.png\n\nqc_final.png 是 DSS 项目最近一次已完成反演的最终结果图（覆盖 14373–14379 ft 区间，2026 年 10 月 7 日完成）；依据该轮运行的完成状态与最终输出记录选定，因此即为你要的\"最新结果图\"。\n\n按 CtrlF 查看文件。"
+  },
+  "checks": {
+    "tests_passed": 170,
+    "tests_failed": 0,
+    "tests_ignored": 2,
+    "rustfmt": true,
+    "clippy": true,
+    "linux_release": true,
+    "apple_silicon_release": true,
+    "source_files_match": 105,
+    "watched_dss_records_unchanged": 8,
+    "real_terminal": "two interactive PTYs; plain original request, sender approval, completion and actual image inspected",
+    "new_real_model_coverage": "files path only; other modes covered by existing simulated regression, not a new real-model matrix"
+  },
+  "installation": {
+    "mac": {
+      "installed": "/Users/shenyaojin/.local/bin/xxassxx",
+      "version": "0.6.6-alpha",
+      "sha256": "60b082cef75ab83298058571168664971a137b43fd40238fed2a7b443af2a94d"
+    },
+    "linux": {
+      "installed": "/rcp/rcp42/home/shenyaojin/.local/bin/xxassxx",
+      "version": "0.6.6-alpha",
+      "sha256": "7b8b075dfa9f0744586024a981934cbc0168f0ac01f20315070788b9bc393ec8"
+    },
+    "method": "manual backup and atomic binary replacement, not updater",
+    "database_and_config_unchanged_during_install": true,
+    "trader_unchanged": true,
+    "committed": false,
+    "published": false,
+    "temporary_build_bytes_freed": 1374998528,
+    "packages_retained_and_verified_on_both_hosts": true
+  },
+  "limits": [
+    "Single real DSS acceptance is not a guarantee for every future ambiguous project.",
+    "Unknown/conflicting member or missing completion evidence may still require one focused clarification.",
+    "Inline skill delivery does not claim native /skills registration or complete isolation of other native skills."
+  ]
+}

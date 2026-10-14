@@ -1,0 +1,484 @@
+{
+  "date": "2026-10-13",
+  "timezone": "America/Denver",
+  "version": "0.6.6-alpha",
+  "skill_version": "0.1.1",
+  "method": "Actual interactive system PTYs, DeepSeek local agents, official Codex, daily Trader HTTPS mailbox; real Lakota DSS files.",
+  "cases": {
+    "listing": {
+      "task_id": "c9e5910e-39d0-5c32-bab7-4b69911fd24b",
+      "revision": 1,
+      "state": "completed",
+      "executor": "lakota",
+      "runs": [
+        {
+          "run_id": "472e4906-5a3a-41d0-ae1e-f135f8f3b41c",
+          "execution_id": "b684666a-2c7d-579f-b2a5-3061cdc0f86a",
+          "session_id": "01a1386f-bb3f-7a92-bfef-d77008ed556b",
+          "resumed_session_id": null,
+          "phase": "discover",
+          "skills": {
+            "loading": "inline",
+            "phase": "discover",
+            "prompt_bytes": 13629,
+            "sha256": "37b5bc042b576b24427a70c8fedac8b29e1fa8f55c4e43d1347a613dc85b8f30",
+            "skill_bytes": 12905,
+            "skills": [
+              "xxassxx-task-intake",
+              "xxassxx-task-execution",
+              "xxassxx-task-handoff"
+            ],
+            "type": "xxassxx.skill_bundle",
+            "version": "0.1.1"
+          },
+          "mcp_calls": [
+            "get_task",
+            "submit_task_result"
+          ],
+          "get_task_matches_current_run": true,
+          "authorized_root_count": 3,
+          "command_count": 7,
+          "commands_with_nonzero_exit": 0,
+          "succeeded": true
+        }
+      ],
+      "question_count": 0,
+      "transfer_count": 0,
+      "final_body": "已找到这三类文件，都在 test 工作目录下的 DSS_history_match 项目里，最近一次可确认跑完的计算是 continuous_geometry_bg18/fixed_geometry_inversion（完成时间 2026-10-07 06:54 UTC）：\n\n1. 最终结果图：.../continuous_geometry_bg18/fixed_geometry_inversion/qc_final.png（同名 qc_final.pdf 也在）。用途：这一轮最终结果的质检图。\n2. 完成状态：.../fixed_geometry_inversion/status.json（记录已 complete、成功收敛和完成时间）；上一层 .../continuous_geometry_bg18/pipeline_status.json（记录整条流程完成）。\n3. 最终采用结果记录：.../fixed_geometry_inversion/optimizer_result.json（本轮最终参数、终止状态和最终正演目录指向）；同目录 final_evaluation.json 是对应的最终评估记录。\n\n（上面的路径都相对工作目录，省略的前缀是 scripts/DSS_history_match/real_rfsdss_fixed_zones_14373_14379_400000s_bg21_coupling/background_sensitivity。）\n\n说明与局限：查找只覆盖工作目录中已定位的 DSS_history_match 项目，没有遍历其他项目或整个主目录，因此这是一个范围内的结论。这里的“最终采用”指该轮优化器自己保留的结果，未发现单独的人工采用确认记录。全程只核对文件是否存在及状态/指向信息，没有查看图像内容、没有做科学分析、也没有传输文件或重新计算。"
+    },
+    "analysis": {
+      "task_id": "4c18b5f5-f05d-5ad6-b75e-e6339f180977",
+      "revision": 1,
+      "state": "completed",
+      "executor": "lakota",
+      "runs": [
+        {
+          "run_id": "1c203895-75d3-4eab-a101-558eb86e5001",
+          "execution_id": "820fb013-7368-5960-b178-859de285b850",
+          "session_id": "01a13871-1a37-7910-be4b-8554a11b336c",
+          "resumed_session_id": null,
+          "phase": "discover",
+          "skills": {
+            "loading": "inline",
+            "phase": "discover",
+            "prompt_bytes": 13629,
+            "sha256": "37b5bc042b576b24427a70c8fedac8b29e1fa8f55c4e43d1347a613dc85b8f30",
+            "skill_bytes": 12905,
+            "skills": [
+              "xxassxx-task-intake",
+              "xxassxx-task-execution",
+              "xxassxx-task-handoff"
+            ],
+            "type": "xxassxx.skill_bundle",
+            "version": "0.1.1"
+          },
+          "mcp_calls": [
+            "get_task",
+            "submit_task_result"
+          ],
+          "get_task_matches_current_run": true,
+          "authorized_root_count": 3,
+          "command_count": 7,
+          "commands_with_nonzero_exit": 0,
+          "succeeded": true
+        },
+        {
+          "run_id": "59d5eb87-9da1-4329-a6f0-2953bd5b2713",
+          "execution_id": "1e205641-bbad-58f1-afe0-71dbcd56cd37",
+          "session_id": "01a13872-60dd-7873-ae3b-b0f4e83962cc",
+          "resumed_session_id": null,
+          "phase": "analyze",
+          "skills": {
+            "loading": "inline",
+            "phase": "analyze",
+            "prompt_bytes": 13629,
+            "sha256": "37b5bc042b576b24427a70c8fedac8b29e1fa8f55c4e43d1347a613dc85b8f30",
+            "skill_bytes": 12905,
+            "skills": [
+              "xxassxx-task-intake",
+              "xxassxx-task-execution",
+              "xxassxx-task-handoff"
+            ],
+            "type": "xxassxx.skill_bundle",
+            "version": "0.1.1"
+          },
+          "mcp_calls": [
+            "get_task",
+            "submit_task_result"
+          ],
+          "get_task_matches_current_run": true,
+          "authorized_root_count": 1,
+          "command_count": 4,
+          "commands_with_nonzero_exit": 1,
+          "succeeded": true
+        }
+      ],
+      "question_count": 0,
+      "transfer_count": 0,
+      "final_body": "在所抽查的记录范围内，DSS 最近一次完成的计算是 2026 年 10 月 7 日（UTC）的 continuous_geometry_bg18 流程：先做几何与网格搜索，再在背景渗透率固定为 10⁻¹⁸ m² 的条件下反演渗透率，优化器报告收敛。按记录中的最终结果指针，本轮采用的结果是 permeability_evaluations/k_024a5f80458d6667，对应中心深度约 14376.2 ft、宽度约 1.51 ft 的几何与 200×517 网格。\n\n该结果的加权拟合误差约为 0.1518 微应变，低于同背景同网格基线的 0.1652 微应变（微应变是衡量计算信号与实测信号差异的单位，越小表示拟合越接近），说明在这套模型与权重下拟合有所改善；但记录本身不足以证明地下参数唯一或物理解释正确。依据取自抽查的 14 份记录（项目说明、各级状态与结果文件，合计约 66 KB），本轮未重算、未修改文件、也未准备附件。需要提醒的是，这些结论只覆盖上述抽查样本：全项目是否另有更晚的最终采用结果、参数不确定性或完整数值验证，无法从现有记录确认。"
+    },
+    "execute": {
+      "task_id": "b4152c97-ed34-50df-9c39-87423c427408",
+      "revision": 1,
+      "state": "completed",
+      "executor": "lakota",
+      "runs": [
+        {
+          "run_id": "0bfa7698-765a-4a61-8e3f-b374f28835c5",
+          "execution_id": "3ba6a98a-a7ec-5cd7-9327-d8499d68b555",
+          "session_id": "01a13873-e81e-7b83-a883-19cba332ee05",
+          "resumed_session_id": null,
+          "phase": "execute",
+          "skills": {
+            "loading": "inline",
+            "phase": "execute",
+            "prompt_bytes": 13629,
+            "sha256": "37b5bc042b576b24427a70c8fedac8b29e1fa8f55c4e43d1347a613dc85b8f30",
+            "skill_bytes": 12905,
+            "skills": [
+              "xxassxx-task-intake",
+              "xxassxx-task-execution",
+              "xxassxx-task-handoff"
+            ],
+            "type": "xxassxx.skill_bundle",
+            "version": "0.1.1"
+          },
+          "mcp_calls": [
+            "get_task",
+            "submit_task_question"
+          ],
+          "get_task_matches_current_run": true,
+          "authorized_root_count": 4,
+          "command_count": 14,
+          "commands_with_nonzero_exit": 3,
+          "succeeded": true
+        },
+        {
+          "run_id": "df03dfae-bc87-4ced-8350-60443102f358",
+          "execution_id": "3ba6a98a-a7ec-5cd7-9327-d8499d68b555",
+          "session_id": "01a13873-e81e-7b83-a883-19cba332ee05",
+          "resumed_session_id": "01a13873-e81e-7b83-a883-19cba332ee05",
+          "phase": "execute",
+          "skills": {
+            "loading": "inline",
+            "phase": "execute",
+            "prompt_bytes": 13629,
+            "sha256": "37b5bc042b576b24427a70c8fedac8b29e1fa8f55c4e43d1347a613dc85b8f30",
+            "skill_bytes": 12905,
+            "skills": [
+              "xxassxx-task-intake",
+              "xxassxx-task-execution",
+              "xxassxx-task-handoff"
+            ],
+            "type": "xxassxx.skill_bundle",
+            "version": "0.1.1"
+          },
+          "mcp_calls": [
+            "get_task",
+            "submit_task_result"
+          ],
+          "get_task_matches_current_run": true,
+          "authorized_root_count": 4,
+          "command_count": 3,
+          "commands_with_nonzero_exit": 0,
+          "succeeded": true
+        }
+      ],
+      "question_count": 1,
+      "transfer_count": 1,
+      "final_body": "这次轻量整理已完成，三个文件都已收到并保存到你的电脑：最终报告《DSS 结果交接验收》、原迭代记录的副本，以及那个统计小脚本。\n\n整理对象是 DSS 项目最近一次完整跑完的优化结果（2026-10-07 完成的连续几何与固定几何反演那次）。副本里共有 4 条被接受的迭代记录（第 1–4 次），目标值从 0.012105359575104963 降到 0.011917617566537492，即下降了约 0.0001877，相对降幅约 1.55%。这只是首条到末条接受记录之间的变化，因为记录里不含最初的起始点，所以不能当作整体优化的总收益。统计脚本是真实运行过的（正常退出），末条目标值与优化器的最终结果一致。\n\n报告里写明了记录来源、统计结果、执行过程和局限；过程中没有跑原项目、没有改动任何原文件，新增文件都只放在执行方自己的独立任务目录里。需要看细节时打开报告即可，副本和脚本可对照核验。"
+    },
+    "attachment": {
+      "task_id": "5bf03245-0e9f-5ae9-a0e0-e2a17fe71b87",
+      "revision": 1,
+      "state": "completed",
+      "executor": "owner",
+      "runs": [
+        {
+          "run_id": "e845c6d7-346d-49dc-8e0f-cc1c8fe2a915",
+          "execution_id": "c5908a86-0c3e-5a48-bd32-8adeb318c038",
+          "session_id": "01a13879-db94-7953-a0b4-c798b57686d7",
+          "resumed_session_id": null,
+          "phase": "attachment",
+          "skills": {
+            "loading": "inline",
+            "phase": "attachment",
+            "prompt_bytes": 13629,
+            "sha256": "37b5bc042b576b24427a70c8fedac8b29e1fa8f55c4e43d1347a613dc85b8f30",
+            "skill_bytes": 12905,
+            "skills": [
+              "xxassxx-task-intake",
+              "xxassxx-task-execution",
+              "xxassxx-task-handoff"
+            ],
+            "type": "xxassxx.skill_bundle",
+            "version": "0.1.1"
+          },
+          "mcp_calls": [
+            "get_task",
+            "submit_task_result"
+          ],
+          "get_task_matches_current_run": true,
+          "authorized_root_count": 1,
+          "command_count": 1,
+          "commands_with_nonzero_exit": 0,
+          "succeeded": true
+        }
+      ],
+      "question_count": 0,
+      "transfer_count": 0,
+      "final_body": "这个脚本只是一个汇总小工具，不涉及重跑模型。它读取自己所在文件夹里的 accepted_iterations.csv，检查记录不为空、迭代编号唯一且递增、目标值为有限数字，然后算出首末目标值、两者差值和降幅百分比，再给这个 CSV 算一个校验指纹。\n\n它会把结果写成同文件夹下的 result_draft.json（如果已有同名文件会被直接覆盖），同时把内容打印到屏幕上。\n\n脚本里没有调用 DSS 原模型、求解器或任何其他项目程序，所以不会重跑 DSS 原模型。另外脚本自己注明数据只含已接受的第 1–4 次迭代，不含初始点和试算评估——这只是脚本的说明文字，本轮只读了这一个脚本文件，没有执行脚本，也没有打开那个 CSV，所以其中数据是否真的如此并未核实。"
+    }
+  },
+  "resume_verification": {
+    "runs_before_local_grant": 0,
+    "existing_files_with_unchanged_hash_and_mtime": 10,
+    "only_added_file": "DSS_handoff_report.txt",
+    "statistics_script_invocations": 1,
+    "source_record_count": 4,
+    "first_objective": "0.012105359575104963",
+    "last_objective": "0.011917617566537492",
+    "reduction_percent": "1.550899891925293172850162566",
+    "scope": "first to last accepted iteration; excludes initial point"
+  },
+  "delivery": {
+    "transfer_id": "9f22b398-4ecb-588c-b070-2bce644fde35",
+    "files": [
+      {
+        "name": "accepted_iterations.csv",
+        "bytes": 1518,
+        "sha256": "f2bd0f2eeab0e8a8fe1a5786067287c344b6716710348d712c259d2206dfe411"
+      },
+      {
+        "name": "DSS_handoff_report.txt",
+        "bytes": 3569,
+        "sha256": "fc9b3d4971f300667a27458b81a9affb11c78c7a0a9a2f03de5bbb7aad832ebc"
+      },
+      {
+        "name": "summarize_iterations.py",
+        "bytes": 1459,
+        "sha256": "859abf583d867b214399dcce1e6ab853cea85075086565bcfac9ef186d064784"
+      }
+    ],
+    "local_approval": "one execution-screen approval with task-output delivery enabled; no later file approval action"
+  },
+  "attachment_verification": {
+    "selected_files": 1,
+    "script_executions": 0,
+    "commands": "ls -l and cat on the selected fixed script only",
+    "writes_granted": false
+  },
+  "final_functional_recheck": {
+    "version": "0.6.8-alpha",
+    "task_id": "a7cbf6ba-6f51-5925-882c-7017409dd03a",
+    "revision": 1,
+    "state": "completed",
+    "executor": "lakota",
+    "runs": [
+      {
+        "run_id": "2b51df8e-297b-4f0f-8664-a451b9141e55",
+        "execution_id": "9a2cfedd-313a-58f0-9662-f391ea6fce3d",
+        "session_id": "01a13887-c0c4-7e92-8759-51054e2c63eb",
+        "resumed_session_id": null,
+        "phase": "execute",
+        "skills": {
+          "loading": "inline",
+          "phase": "execute",
+          "prompt_bytes": 13629,
+          "sha256": "37b5bc042b576b24427a70c8fedac8b29e1fa8f55c4e43d1347a613dc85b8f30",
+          "skill_bytes": 12905,
+          "skills": [
+            "xxassxx-task-intake",
+            "xxassxx-task-execution",
+            "xxassxx-task-handoff"
+          ],
+          "type": "xxassxx.skill_bundle",
+          "version": "0.1.1"
+        },
+        "mcp_calls": [
+          "get_task",
+          "submit_task_question"
+        ],
+        "get_task_matches_current_run": true,
+        "authorized_root_count": 4,
+        "command_count": 11,
+        "commands_with_nonzero_exit": 4,
+        "succeeded": true
+      },
+      {
+        "run_id": "175e1f5e-b1bc-4ba3-b7a9-c83c495894d6",
+        "execution_id": "9a2cfedd-313a-58f0-9662-f391ea6fce3d",
+        "session_id": "01a13887-c0c4-7e92-8759-51054e2c63eb",
+        "resumed_session_id": "01a13887-c0c4-7e92-8759-51054e2c63eb",
+        "phase": "execute",
+        "skills": {
+          "loading": "inline",
+          "phase": "execute",
+          "prompt_bytes": 13629,
+          "sha256": "37b5bc042b576b24427a70c8fedac8b29e1fa8f55c4e43d1347a613dc85b8f30",
+          "skill_bytes": 12905,
+          "skills": [
+            "xxassxx-task-intake",
+            "xxassxx-task-execution",
+            "xxassxx-task-handoff"
+          ],
+          "type": "xxassxx.skill_bundle",
+          "version": "0.1.1"
+        },
+        "mcp_calls": [
+          "get_task",
+          "submit_task_result"
+        ],
+        "get_task_matches_current_run": true,
+        "authorized_root_count": 4,
+        "command_count": 2,
+        "commands_with_nonzero_exit": 0,
+        "succeeded": true
+      }
+    ],
+    "question_count": 1,
+    "transfer_count": 1,
+    "final_body": "整理已完成，你要求的三个文件（最终报告、迭代记录副本、统计脚本）都已发回并保存到你的电脑，可以在附件里查看。\n\n执行方选取的是最近一次已完成优化运行所采用的最终迭代记录（2026 年 10 月 7 日完成且收敛的那一次，共 4 条接受迭代）。脚本实际运行的结果是：目标值 scaled_objective（优化中用于衡量偏离程度的数值，越小代表拟合越好）从 0.012105 降到 0.011918，下降约 1.55%。需要注意这份 CSV 的第一条已经是接受迭代 1，所以这个变化只反映 CSV 首末两条记录之间的差异，并不等于从优化开始到最终的总改善幅度。\n\n报告按你批准的标题《DSS 交接说明》命名，复用了标题批准前实际运行并保存的计算结果，本轮没有重跑统计；原项目未运行，原文件也未被修改。报告来源、哈希核对记录和以上局限都写在报告及随附的依据文件里，如需更细的来源路径和运行记录可查阅报告正文。"
+  },
+  "final_resume_check": {
+    "unchanged_files": 7,
+    "unchanged_calculation_files": [
+      "accepted_iterations.csv",
+      "result_draft.json",
+      "run.log"
+    ],
+    "changed_file": "summarize_iterations.py",
+    "change": "Made completion-state validation optional when evidence/status.json is absent, for the requested standalone three-file package; calculations unchanged. No statistics script invocation in resumed run.",
+    "new_file": "DSS_handoff_report.txt",
+    "independent_received_script_check": {
+      "purpose": "Independent audit after product delivery; not a product execution or manual repair",
+      "exit_code": 0,
+      "only_copied_inputs": [
+        "summarize_iterations.py",
+        "accepted_iterations.csv"
+      ],
+      "result": {
+        "record_count": 4,
+        "first_iteration": 1,
+        "last_iteration": 4,
+        "objective_column": "scaled_objective",
+        "first_record_objective": 0.012105359575104963,
+        "last_record_objective": 0.011917617566537492,
+        "change_last_minus_first": -0.0001877420085674708,
+        "decrease": 0.0001877420085674708,
+        "decrease_percent": 1.5508998919252917,
+        "nonincreasing": true,
+        "copy_sha256": "f2bd0f2eeab0e8a8fe1a5786067287c344b6716710348d712c259d2206dfe411",
+        "limitation": "首条为接受迭代1，非优化前初始状态；变化仅覆盖CSV首末记录。"
+      }
+    }
+  },
+  "final_delivery": {
+    "transfer_id": "d94446f7-7a37-514d-a10c-8fef8c97231e",
+    "files": [
+      {
+        "name": "DSS_handoff_report.txt",
+        "bytes": 2574,
+        "sha256": "656b041d67a19f309ad7a66fa417b733e5de1d1cd4d8c2a3509ea1fcfbdf7bb6"
+      },
+      {
+        "name": "summarize_iterations.py",
+        "bytes": 1980,
+        "sha256": "ef5a7f53ab1862c400baee9094917639a6d4dfe5b3064a90c6596869e88bcb96"
+      },
+      {
+        "name": "accepted_iterations.csv",
+        "bytes": 1518,
+        "sha256": "f2bd0f2eeab0e8a8fe1a5786067287c344b6716710348d712c259d2206dfe411"
+      }
+    ],
+    "approval": "One local execution form including task outputs; no later file approval action",
+    "body_after_title": "请确认：是否批准将最终报告标题定为“DSS 交接说明”？确认后即可复用已完成的计算结果形成最终报告并回传。"
+  },
+  "intermediate_failure": {
+    "version": "0.6.7-alpha",
+    "task_id": "4949b087-4434-5510-8fe1-29cffa75f440",
+    "reason": "Draft omitted delivery intent flag and asked for an already requested delivery again",
+    "resolution": "Stopped and archived before confirmation; zero executions and transfers; fixed general decision schema/prompt and rechecked unchanged user request on 0.6.8"
+  },
+  "ui_followup": {
+    "version": "0.6.9-alpha",
+    "change": "Deterministic sender-side reply heading identifies the task initiator; preserves immutable result prose.",
+    "actual_installed_ptys_verified": true,
+    "owner_heading": "助手 · 结果",
+    "sender_heading": "给 @owner 的答复",
+    "owner_transfer_status": "已保存到本机",
+    "sender_transfer_status": "已保存到对方电脑",
+    "business_task_reexecuted": false,
+    "task_id": "a7cbf6ba-6f51-5925-882c-7017409dd03a",
+    "evidence": [
+      "installed-069-owner-ui/owner-installed-final.txt",
+      "upgrade-069/test-installed-final.txt",
+      "upgrade-069/test-installed-final.png"
+    ]
+  },
+  "installed_version": "0.6.9-alpha",
+  "version_note": "Top-level version describes the first four scenarios; final business recheck is 0.6.8; installed 0.6.9 adds only recipient heading and version.",
+  "final_build_and_install": {
+    "source_files_matched": 106,
+    "tests": {
+      "passed": 170,
+      "failed": 0,
+      "ignored": 2
+    },
+    "packages": [
+      {
+        "file": "dist/v0.6.9-alpha/xxassxx-aarch64-apple-darwin.tar.gz",
+        "bytes": 7507181,
+        "sha256": "0224f12c8e6edc707751eeda323f6033d245443e0bd237d388d21795621c67fc"
+      },
+      {
+        "file": "dist/v0.6.9-alpha/xxassxx-x86_64-unknown-linux-musl.tar.gz",
+        "bytes": 8550607,
+        "sha256": "606e07bdbbda14d3602e81ee27863e088403856b7a5e34200d860895396fe7ee"
+      }
+    ],
+    "installed": {
+      "mac": {
+        "installed": "/Users/shenyaojin/.local/bin/xxassxx",
+        "version": "0.6.9-alpha",
+        "sha256": "e3125c00b89e0f674881930f6b4ca8b48cdb5ada66ba1d6929010c38601aaf35"
+      },
+      "linux": {
+        "installed": "/rcp/rcp42/home/shenyaojin/.local/bin/xxassxx",
+        "version": "0.6.9-alpha",
+        "sha256": "ff16e0b217b2b6f3b42c2243f3e3c8abe0f1d035af0a813da30db2b9a4575b68"
+      }
+    },
+    "database_and_configuration_unchanged_during_install": true,
+    "method": "Manual backed-up installation, not client updater",
+    "backup_suffix": "skills-069-20261013",
+    "source_uncommitted": true,
+    "remote_macos_ci_claimed": false,
+    "server_version": "0.6.0-alpha",
+    "other_members_upgraded": false
+  },
+  "final_source_integrity": {
+    "eight_records_and_images": {
+      "pipeline_status.json": "adf67061c0d181248a7547bcbec8436e42dd0b495ecea850c2c6816f5c72d2e6",
+      "fixed_geometry_inversion/status.json": "089ae9d96784822ee86b37f83b316029a9cb5779a9cfdb36913c338a9d552c99",
+      "fixed_geometry_inversion/optimizer_result.json": "7b229f9dcbf2888e164d2a3d93ebca20434b51d6269eedb8c38529c5a42f63b5",
+      "fixed_geometry_inversion/final_evaluation.json": "eebc19e9752227d828bf8ad7978f7a431adced3f360fa6069995702d2398db63",
+      "permeability_evaluations/k_0640aa308e803988/summary.json": "c3bd31f30a2ad53d2b4541046f188bead995092ef2fdaf0fbddd80d330308fe1",
+      "fixed_geometry_inversion/qc_final.png": "792071a95e00935ba04a1fe739a55593acd832b67cb3ec395bc0d19a3e237c9f",
+      "permeability_evaluations/k_0640aa308e803988/qc_bg_18_only.png": "e72ea70605269acc27835248028734f26bd3e334b423b093ffaa3bfc7982fb98",
+      "permeability_evaluations/k_024a5f80458d6667/qc_bg_18_only.png": "792071a95e00935ba04a1fe739a55593acd832b67cb3ec395bc0d19a3e237c9f"
+    },
+    "original_csv_sha256": "f2bd0f2eeab0e8a8fe1a5786067287c344b6716710348d712c259d2206dfe411",
+    "all_unchanged": true
+  },
+  "cleanup": {
+    "removed": [
+      "/private/tmp/xxassxx-skills-matrix-tooling",
+      "/private/tmp/xxassxx-skills-matrix-pylibs"
+    ],
+    "allocated_kib_before": 1474552,
+    "repo_target_exists": false,
+    "packages_retained_on_mac_and_lakota": true
+  }
+}
