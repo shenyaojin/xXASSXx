@@ -69,6 +69,151 @@ fn files(t: &Team, m: &str) {
     cfg.executor.timeout_secs = 20;
     s.configure_member(&cfg).unwrap();
 }
+
+#[tokio::test]
+async fn full_access_uses_local_standing_permission_and_reverts_without_a_saved_grant() {
+    use xxassxx::access_mode::{self, Mode};
+    let team = Team::new();
+    files(&team, "b");
+    let mut a = team.store("a");
+    access_mode::set(&a, Mode::FullAccess).unwrap();
+    let mut i = input(&team, "@b 修改原文件，生成并发送结果");
+    i.channel = "tui".into();
+    let c = submit(&mut a, &i);
+    let id = c["task_id"].as_str().unwrap();
+    tasks::prepare(&a,id,json!({"goal":"修改原文件并发送结果","mode":"execute","deliver_files":true,"deliverables":["结果"],"questions":[]})).unwrap();
+    assert_eq!(tasks::get(&a, id).unwrap()["confirmed"], 1);
+    let mut b = team.store("b");
+    transfer(&a, &mut b);
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    assert_eq!(
+        count(&b, "SELECT count(*) FROM runs"),
+        0,
+        "A cannot authorize B"
+    );
+    assert_eq!(tasks::get(&b, id).unwrap()["state"], "waiting");
+    access_mode::set(&b, Mode::FullAccess).unwrap();
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    let result = tasks::get(&b, id).unwrap();
+    assert_eq!(result["executions"][0]["state"], "candidate", "{result:#}");
+    assert_eq!(
+        std::fs::read_to_string(team.dir.path().join("b/work/fast.py")).unwrap(),
+        "iterations=20 # changed under full access"
+    );
+    assert_eq!(count(&b, "SELECT count(*) FROM task_workspaces"), 0);
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM file_transfers WHERE direction='out' AND authorized=1 AND state='queued'"
+        ),
+        1
+    );
+    let conn = rusqlite::Connection::open(&b.path).unwrap();
+    assert!(
+        xxassxx::task_workspace::binding(&conn, id, 1)
+            .unwrap()
+            .full_access
+    );
+    access_mode::set(&b, Mode::AskForApproval).unwrap();
+    assert!(xxassxx::task_workspace::binding(&conn, id, 1).is_err());
+    assert!(!xxassxx::task_workspace::has_grant(&conn, id, 1).unwrap());
+    assert_eq!(
+        access_mode::get(&rusqlite::Connection::open(&a.path).unwrap()).unwrap(),
+        Mode::FullAccess
+    );
+}
+#[test]
+fn direct_file_request_uses_original_owner_command_without_export_or_execution_grant() {
+    let team = Team::new();
+    let mut a = team.store("a");
+    let mut i = input(&team, "@b 把项目最新结果图发过来");
+    i.channel = "tui".into();
+    let command = submit(&mut a, &i);
+    let id = command["task_id"].as_str().unwrap();
+    tasks::prepare(&a, id, json!({"goal":"取得最新完成结果图","deliverables":["结果图片"],"mode":"files","questions":[],"start_from_request":true})).unwrap();
+    let task = tasks::get(&a, id).unwrap();
+    assert_eq!(task["state"], "queued");
+    assert_eq!(task["confirmed"], 1);
+    let db = rusqlite::Connection::open(&a.path).unwrap();
+    let confirmation: String = db
+        .query_row(
+            "SELECT confirmation_id FROM task_revisions WHERE task_id=?1",
+            [id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(confirmation, i.request_id);
+    assert_eq!(count(&a, "SELECT count(*) FROM messages"), 1);
+    assert!(
+        !app::history(&a, &i.session_id)
+            .unwrap()
+            .iter()
+            .any(|m| m["body"].as_str().unwrap_or("").contains("按 CtrlS"))
+    );
+    submit(&mut a, &i);
+    tasks::confirm(&a, &action(&i, id, "confirm_task", 1, "确认")).unwrap();
+    assert_eq!(count(&a, "SELECT count(*) FROM messages"), 1);
+    let mut b = team.store("b");
+    transfer(&a, &mut b);
+    assert_eq!(tasks::get(&b, id).unwrap()["confirmed"], 1);
+    assert_eq!(count(&b, "SELECT count(*) FROM file_transfers"), 0);
+    assert_eq!(count(&b, "SELECT count(*) FROM task_workspaces"), 0);
+}
+
+#[test]
+fn direct_file_request_cannot_confirm_other_modes_questions_revisions_or_forged_origins() {
+    let team = Team::new();
+    let mut a = team.store("a");
+    for case in [
+        "execute",
+        "analysis",
+        "question",
+        "not_direct",
+        "other_channel",
+        "revision",
+        "actor",
+        "changed_original",
+        "no_command",
+    ] {
+        let mut i = input(&team, "@b 请取一份已有结果");
+        i.channel = if case == "other_channel" {
+            "peer"
+        } else {
+            "tui"
+        }
+        .into();
+        let command = submit(&mut a, &i);
+        let id = command["task_id"].as_str().unwrap();
+        let db = rusqlite::Connection::open(&a.path).unwrap();
+        match case {
+            "revision" => {
+                tasks::revise(&a, &action(&i, id, "revise_task", 1, "改成另一份结果")).unwrap()
+            }
+            "actor" => {
+                db.execute(
+                    "UPDATE app_commands SET actor='b' WHERE id=?1",
+                    [&i.request_id],
+                )
+                .unwrap();
+            }
+            "changed_original" => {
+                db.execute("UPDATE app_tasks SET original='不同要求' WHERE id=?1", [id])
+                    .unwrap();
+            }
+            "no_command" => {
+                db.execute(
+                    "UPDATE app_commands SET task_id=NULL WHERE id=?1",
+                    [&i.request_id],
+                )
+                .unwrap();
+            }
+            _ => (),
+        }
+        tasks::prepare(&a, id, json!({"goal":"取结果","deliverables":["结果"],"mode":if matches!(case,"execute"|"analysis") {case} else {"files"},"questions":if case=="question" {vec!["选择哪个项目？"]} else {vec![]},"start_from_request":case!="not_direct"})).unwrap();
+        assert_eq!(tasks::get(&a, id).unwrap()["state"], "draft", "{case}");
+    }
+    assert_eq!(count(&a, "SELECT count(*) FROM messages"), 0);
+}
 #[test]
 fn drafts_confirmation_revision_fence_and_independent_chats() {
     let t = Team::new();
@@ -548,6 +693,9 @@ async fn chosen_directory_is_bound_before_ui_switch_and_invalid_scope_blocks() {
     let task = tasks::get(&s, &id).unwrap();
     let ex = task["executions"][0]["id"].as_str().unwrap();
     let conn = rusqlite::Connection::open(&s.path).unwrap();
+    let context = tasks::execution_context(&conn, ex).unwrap().unwrap();
+    assert!(context["contract"].get("listing").is_some());
+    assert!(context["contract"].get("discovery").is_none());
     assert_eq!(
         xxassxx::native_tasks::working_directory(&conn, ex)
             .unwrap()
@@ -1483,6 +1631,11 @@ fn completed_remote_task_card_has_no_waiting_or_initiator_directory() {
         KeyEvent::new(KeyCode::Char('t'), KeyModifiers::CONTROL),
     )
     .unwrap();
+    // Completed tasks now live in their own tab; opening one preserves executor context.
+    ui.key(&mut a, KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE))
+        .unwrap();
+    ui.key(&mut a, KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
+        .unwrap();
     let mut screen = ratatui::Terminal::new(ratatui::backend::TestBackend::new(160, 50)).unwrap();
     screen.draw(|f| ui.render(f, &a)).unwrap();
     let text = format!("{:?}", screen.backend().buffer());
@@ -1526,6 +1679,52 @@ fn file_task_waits_for_peer_capability_and_resumes_when_registered() {
             .unwrap()
             .iter()
             .any(|m| m.message.operation == "task_v2")
+    );
+}
+
+#[tokio::test]
+async fn file_delivery_exports_explicit_binary_selection_not_supporting_evidence() {
+    let team = Team::new();
+    files(&team, "b");
+    let work = team.dir.path().join("b/work");
+    std::fs::write(work.join("status.json"), r#"{"latest":"result.png"}"#).unwrap();
+    std::fs::write(work.join("result.png"), b"\x89PNG\r\n\x1a\nfixture").unwrap();
+    let (i, id) = draft(&team, "@b 把之前讨论的结果图发给我");
+    let a = team.store("a");
+    tasks::prepare(
+        &a,
+        &id,
+        json!({"goal":"获取结果图","deliverables":["一张结果图"],"mode":"files"}),
+    )
+    .unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    let mut b = team.store("b");
+    transfer(&a, &mut b);
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    let conn = rusqlite::Connection::open(&b.path).unwrap();
+    let (raw, state, authorized): (String, String, bool) = conn
+        .query_row(
+            "SELECT manifest,state,authorized FROM file_transfers WHERE task_id=?1",
+            [&id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap();
+    let manifest: Value = serde_json::from_str(&raw).unwrap();
+    assert_eq!(manifest["files"].as_array().unwrap().len(), 1);
+    assert_eq!(manifest["files"][0]["name"], "result.png");
+    assert_eq!(state, "draft");
+    assert!(!authorized);
+    assert_eq!(
+        tasks::get(&b, &id).unwrap()["local_delivery"]["state"],
+        "draft"
+    );
+    assert!(!manifest["note"].as_str().unwrap().contains("status.json"));
+    assert_eq!(count(&b, "SELECT count(*) FROM task_snapshots"), 0);
+    assert_eq!(count(&b, "SELECT count(*) FROM task_executions"), 1);
+    // The sender's evidence file was inspected but never placed in the export list.
+    assert_eq!(
+        std::fs::read(work.join("status.json")).unwrap(),
+        br#"{"latest":"result.png"}"#
     );
 }
 
@@ -1631,7 +1830,7 @@ async fn prepared_attachment_waits_for_receipt_before_model_can_request_more_wor
         assert_eq!(ctx["extra"]["delivery"]["ready"],true);
         // The immutable candidate still truthfully records its preparation time.
         assert_eq!(ctx["extra"]["candidates"][0]["result"]["attachment"]["state"],"draft");
-        axum::Json(json!({"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"receipt-review","type":"function","function":{"name":"task_decision","arguments":json!({"action":"complete","body":"原图已收到"}).to_string()}}]}}]}))
+        axum::Json(json!({"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"receipt-review","type":"function","function":{"name":"task_decision","arguments":json!({"action":"complete","body":"原图已收到","file_summary":"这是最近完成的一轮计算最终采用的结果图，依据已完成记录中的结果指向选定。"}).to_string()}}]}}]}))
     }));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
@@ -1641,10 +1840,260 @@ async fn prepared_attachment_waits_for_receipt_before_model_can_request_more_wor
     cfg.model = json!({"provider":"compatible","base_url":url,"model":"simulation","api_key_env":"","allow_insecure_http":true,"thinking":false});
     a.configure_member(&cfg).unwrap();
     tasks::tick(&a, Path::new(BIN)).await.unwrap();
-    assert_eq!(tasks::get(&a, &id).unwrap()["state"], "completed");
+    let completed = tasks::get(&a, &id).unwrap();
+    assert_eq!(completed["state"], "completed");
+    let answer = completed["result"]["body"].as_str().unwrap();
+    assert!(answer.contains("已送达 @a"));
+    assert!(answer.contains("最终采用的结果图"));
+    assert!(!answer.contains("尚未授权"));
     assert_eq!(count(&a, "SELECT count(*) FROM task_model_attempts"), 1);
     assert_eq!(count(&a, "SELECT count(*) FROM task_executions"), 0);
     tasks::tick(&a, Path::new(BIN)).await.unwrap();
     assert_eq!(count(&a, "SELECT count(*) FROM task_model_attempts"), 1);
+    server.abort();
+}
+
+#[test]
+fn manual_stop_is_immediate_atomic_reasoned_archivable_and_revision_bound() {
+    let team = Team::new();
+    let (i, id) = draft(&team, "@b 查看材料");
+    let mut a = team.store("a");
+    let mut stop = action(&i, &id, "stop_task", 2, "停止并归档");
+    stop.payload["reason"] = json!("需求改变，保留已有材料");
+    stop.payload["archive"] = json!(true);
+    let actor = Actor::local(&a).unwrap();
+    assert!(app::submit(&mut a, &actor, &stop).is_err());
+    assert_eq!(tasks::get(&a, &id).unwrap()["state"], "draft");
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM app_commands WHERE action='stop_task'"
+        ),
+        0
+    );
+    stop.payload["revision"] = json!(1);
+    let actor = Actor::local(&a).unwrap();
+    let done = app::submit(&mut a, &actor, &stop).unwrap();
+    assert_eq!(
+        done["state"], "done",
+        "stop must not wait for a dialogue worker"
+    );
+    assert_eq!(tasks::get(&a, &id).unwrap()["state"], "cancelled");
+    assert!(xxassxx::app::task_archive::ids(&a).unwrap().contains(&id));
+    assert!(
+        app::history(&a, &i.session_id)
+            .unwrap()
+            .iter()
+            .any(|m| m["kind"] == "task_cancelled"
+                && m["body"].as_str().unwrap().contains("需求改变"))
+    );
+    assert_eq!(
+        submit(&mut a, &stop),
+        done,
+        "same stop request stays idempotent"
+    );
+    assert_eq!(
+        count(&a, "SELECT count(*) FROM messages"),
+        0,
+        "unconfirmed draft contacts no peer"
+    );
+    let reopened = Store::open(&a.path).unwrap();
+    assert!(
+        xxassxx::app::task_archive::ids(&reopened)
+            .unwrap()
+            .contains(&id)
+    );
+    xxassxx::app::task_archive::set(&a, &id, false).unwrap();
+    assert_eq!(
+        tasks::get(&a, &id).unwrap()["state"],
+        "cancelled",
+        "unarchive does not restart work"
+    );
+}
+
+#[tokio::test]
+async fn participant_can_stop_locally_and_tell_initiator_without_global_cancel() {
+    let team = Team::new();
+    files(&team, "b");
+    let (i, id) = draft(&team, "@b 检查资料");
+    let mut a = team.store("a");
+    let mut b = team.store("b");
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    transfer(&a, &mut b);
+    let bt = tasks::get(&b, &id).unwrap();
+    let mut stop = action(&i, &id, "stop_task", 1, "本机资源不足，请调整安排");
+    stop.recipient = "b".into();
+    stop.session_id = bt["session_id"].as_str().unwrap().into();
+    stop.payload["archive"] = json!(true);
+    submit(&mut b, &stop);
+    assert_eq!(tasks::get(&b, &id).unwrap()["state"], "cancelled");
+    assert!(xxassxx::app::task_archive::ids(&b).unwrap().contains(&id));
+    assert_eq!(
+        count(&b, "SELECT count(*) FROM task_journal WHERE kind='cancel'"),
+        0
+    );
+    // An already blocked initiator must still see this new explicit owner decision.
+    rusqlite::Connection::open(&a.path)
+        .unwrap()
+        .execute(
+            "UPDATE app_tasks SET state='needs_attention',waiting_reason='旧问题' WHERE id=?1",
+            [&id],
+        )
+        .unwrap();
+    // An out-of-order later status report cannot suppress the manual decision.
+    let report = xxassxx::team::Message {
+        message_id: uuid::Uuid::new_v4().to_string(),
+        conversation_id: xxassxx::team::stable_id(&id, "a:b"),
+        sender: "b".into(),
+        recipient: "a".into(),
+        kind: "request".into(),
+        operation: "task_v2".into(),
+        body: serde_json::to_string(&tasks::Wire {
+            version: 2,
+            task_id: id.clone(),
+            revision: 1,
+            sequence: 100,
+            event: "meeting_report".into(),
+            data: json!({"state":"cancelled","body":"状态报告"}),
+        })
+        .unwrap(),
+        created_at: 1,
+        reply_to: None,
+        object_id: None,
+        version_id: None,
+        workflow: None,
+    };
+    tasks::ingest(&a, &report).unwrap();
+    transfer(&b, &mut a);
+    let at = tasks::get(&a, &id).unwrap();
+    assert_eq!(at["state"], "needs_attention");
+    assert_eq!(at["next_owner"], "a");
+    assert!(at["waiting_for"].as_str().unwrap().contains("本机资源不足"));
+    assert!(tasks::recover(&a, &action(&i, &id, "retry_task", 1, "继续")).is_err());
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    assert_eq!(count(&b, "SELECT count(*) FROM runs"), 0);
+    tasks::cancel(
+        &a,
+        &action(&i, &id, "stop_task", 1, "等待新安排，停止本次任务"),
+    )
+    .unwrap();
+    transfer(&a, &mut b);
+    assert_eq!(tasks::get(&b, &id).unwrap()["state"], "cancelled");
+    assert!(xxassxx::app::task_archive::ids(&b).unwrap().contains(&id));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn manual_stop_terminates_running_process_and_prevents_late_files() {
+    use xxassxx::task_workspace::{self, Command};
+    let team = Team::new();
+    files(&team, "b");
+    let (i, id) = draft(&team, "@b 撤销执行测试");
+    let a = team.store("a");
+    tasks::prepare(
+        &a,
+        &id,
+        json!({"goal":"运行独立副本","deliverables":["结果"],"mode":"execute"}),
+    )
+    .unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    let mut b = team.store("b");
+    transfer(&a, &mut b);
+    let grant = task_workspace::execute(
+        &b,
+        Command::Allow {
+            task: id.clone(),
+            revision: 1,
+            parent: team.dir.path().join("b/work"),
+            read_dirs: vec![],
+            timeout_secs: 30,
+        },
+    )
+    .unwrap();
+    let workspace = std::path::PathBuf::from(grant["directory"].as_str().unwrap());
+    let bt = tasks::get(&b, &id).unwrap();
+    let mut stop = action(&i, &id, "stop_task", 1, "停止此计算，保留已生成文件");
+    stop.recipient = "b".into();
+    stop.session_id = bt["session_id"].as_str().unwrap().into();
+    stop.payload["archive"] = json!(true);
+    let mut control = Store::open(&b.path).unwrap();
+    let start = std::time::Instant::now();
+    let (result, ()) = tokio::join!(tasks::tick(&b, Path::new(BIN)), async {
+        for _ in 0..100 {
+            if workspace.join("calculation.py").exists() {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        assert!(workspace.join("calculation.py").exists());
+        submit(&mut control, &stop);
+    });
+    result.unwrap();
+    assert!(start.elapsed() < std::time::Duration::from_secs(15));
+    assert!(!workspace.join("late.txt").exists());
+    assert!(!workspace.join("result.txt").exists());
+    let bt = tasks::get(&b, &id).unwrap();
+    assert_eq!(bt["state"], "cancelled");
+    assert_eq!(bt["runs"][0]["error_code"], "authorization_changed");
+    assert!(xxassxx::app::task_archive::ids(&b).unwrap().contains(&id));
+    assert_eq!(count(&b, "SELECT count(*) FROM task_candidates"), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn manual_stop_interrupts_pending_model_and_cannot_be_overwritten() {
+    let team = Team::new();
+    let (i, id) = draft(&team, "@b 查看资料");
+    let mut a = team.store("a");
+    let router = axum::Router::new().route(
+        "/chat/completions",
+        axum::routing::post(|| async {
+            tokio::time::sleep(std::time::Duration::from_secs(20)).await;
+            axum::Json(json!({}))
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut config = a.member_config().unwrap();
+    config.model = json!({"provider":"compatible","base_url":format!("http://{address}"),"model":"simulation","api_key_env":""});
+    a.configure_member(&config).unwrap();
+    let mut control = Store::open(&a.path).unwrap();
+    let stop = action(&i, &id, "stop_task", 1, "不再需要本次任务");
+    let start = std::time::Instant::now();
+    let (result, ()) = tokio::join!(app::model::process_one(&mut a), async {
+        for _ in 0..100 {
+            if count(
+                &control,
+                "SELECT count(*) FROM task_model_attempts WHERE state='running'",
+            ) > 0
+            {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+        assert!(
+            count(
+                &control,
+                "SELECT count(*) FROM task_model_attempts WHERE state='running'"
+            ) > 0
+        );
+        submit(&mut control, &stop);
+    });
+    assert!(result.unwrap());
+    assert!(start.elapsed() < std::time::Duration::from_secs(5));
+    assert_eq!(tasks::get(&a, &id).unwrap()["state"], "cancelled");
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM task_model_attempts WHERE state='running'"
+        ),
+        0
+    );
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM app_messages WHERE kind IN ('failure','task_attention')"
+        ),
+        0
+    );
     server.abort();
 }

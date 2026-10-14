@@ -40,9 +40,14 @@ pub struct Access {
     pub directory: PathBuf,
     pub read_roots: Vec<PathBuf>,
     pub timeout_secs: u64,
+    #[serde(default)]
+    pub full_access: bool,
 }
 
 pub fn has_grant(c: &Connection, task: &str, rev: i64) -> Result<bool> {
+    if crate::access_mode::full(c)? {
+        return Ok(true);
+    }
     Ok(c.query_row(
         "SELECT EXISTS(SELECT 1 FROM task_workspaces WHERE task_id=?1 AND revision=?2)",
         params![task, rev],
@@ -92,12 +97,24 @@ pub fn view(store: &Store, t: &Value) -> Result<Value> {
         |r| r.get(0),
     )?;
     Ok(
-        json!({"can_allow":t["draft"]["mode"] == "execute" && t["confirmed"] == t["revision"] && !matches!(t["state"].as_str(),Some("draft"|"completed"|"cancelled")) && grant.is_none() && !started,
+        json!({"can_allow":!crate::access_mode::full(&store.conn)? && t["draft"]["mode"] == "execute" && t["confirmed"] == t["revision"] && !matches!(t["state"].as_str(),Some("draft"|"completed"|"cancelled")) && grant.is_none() && !started,
         "directory":grant,"parent":parent,"read_roots":roots,"timeout_secs":1800}),
     )
 }
 
 pub fn binding(c: &Connection, task: &str, rev: i64) -> Result<Access> {
+    if crate::access_mode::full(c)? {
+        let (directory, mut read_roots) = crate::task_materials::check_binding(c, task, rev)?;
+        if !read_roots.iter().any(|p| p == std::path::Path::new("/")) {
+            read_roots.push("/".into());
+        }
+        return Ok(Access {
+            directory,
+            read_roots,
+            timeout_secs: 1800,
+            full_access: true,
+        });
+    }
     let (dir, raw, timeout): (String, String, u64) = c.query_row(
         "SELECT directory,read_roots,timeout_secs FROM task_workspaces WHERE task_id=?1 AND revision=?2",
         params![task,rev], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?)),
@@ -106,6 +123,7 @@ pub fn binding(c: &Connection, task: &str, rev: i64) -> Result<Access> {
         directory: dir.into(),
         read_roots: serde_json::from_str(&raw)?,
         timeout_secs: timeout,
+        full_access: false,
     };
     for p in access
         .read_roots
@@ -279,7 +297,7 @@ pub fn sources(store: &Store, execution: &str, files: &Value) -> Result<Value> {
             ) == (after.ino(), after.len(), after.mtime(), after.mtime_nsec()),
             "结果文件仍在变化，请等待运行结束"
         );
-        let generated = path.starts_with(&access.directory);
+        let generated = access.full_access || path.starts_with(&access.directory);
         artifact |= generated;
         sources.push(json!({"member":store.owner()?,"root":f["root"],"path":relative,"sha256":format!("{:x}",hash.finalize()),"bytes":before.len(),"captured_at":now(),"evidence":if generated {"generated artifact"}else{"read-only source"}}));
     }

@@ -2,6 +2,7 @@
 use crate::{store::Store, supervisor::TaskLock, team::stable_id};
 use anyhow::{Context, Result, ensure};
 use clap::Subcommand;
+use rusqlite::{Connection, OpenFlags};
 use serde_json::{Value, json};
 use std::{
     io::Write,
@@ -51,15 +52,86 @@ fn atomic(path: &Path, value: &Value) -> Result<()> {
     Ok(())
 }
 pub fn status(store: &Store) -> Result<Value> {
-    let p = root(&store.path).join("status.json");
+    status_path(&store.path)
+}
+pub fn reconnect_token(store: &Store) -> Result<String> {
+    use rusqlite::OptionalExtension;
+    Ok(store
+        .conn
+        .query_row(
+            "SELECT value FROM app_preferences WHERE key='reconnect_request'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?
+        .unwrap_or_default())
+}
+pub fn request_reconnect(store: &Store) -> Result<()> {
+    store.conn.execute("INSERT INTO app_preferences(key,value) VALUES('reconnect_request',?1) ON CONFLICT(key) DO UPDATE SET value=excluded.value", [uuid::Uuid::new_v4().to_string()])?;
+    crate::presence::network(store, "connecting", None)
+}
+/// Wake the transport, or start a stopped daemon. Never restart a live executor.
+pub async fn reconnect(store: &Store) -> Result<Value> {
+    request_reconnect(store)?;
+    execute(
+        store,
+        Command::Start {
+            poll_secs: 2,
+            max_failures: 3,
+            reconnect: true,
+        },
+    )
+    .await
+}
+/// Maintenance must inspect/stop the service without opening a migrating Store.
+pub fn status_path(db: &Path) -> Result<Value> {
+    if !db.is_file() {
+        return Ok(json!({"state":"not_started","alive":false}));
+    }
+    let p = root(db).join("status.json");
     let mut value = if p.is_file() {
         serde_json::from_slice::<Value>(&std::fs::read(p)?)?
     } else {
         json!({"state":"not_started"})
     };
-    value["alive"] = json!(TaskLock::acquire(&store.path, &lock_id()).is_err());
-    value["log_path"] = json!(root(&store.path).join("butler.log"));
+    value["alive"] = json!(TaskLock::acquire(db, &lock_id()).is_err());
+    value["log_path"] = json!(root(db).join("butler.log"));
     Ok(value)
+}
+/// Read-only admission check for unattended application maintenance.
+pub fn idle_path(db: &Path) -> Result<bool> {
+    if !db.exists() {
+        return Ok(true);
+    }
+    let conn = Connection::open_with_flags(db, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let schema: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
+    ensure!(
+        schema == crate::store::SCHEMA_VERSION,
+        "个人数据库版本需要手动迁移"
+    );
+    let busy: bool = conn.query_row("SELECT EXISTS(SELECT 1 FROM runs WHERE state='running') OR EXISTS(SELECT 1 FROM app_commands WHERE state IN ('pending','processing')) OR EXISTS(SELECT 1 FROM task_jobs j JOIN app_tasks a ON a.id=j.task_id WHERE j.state IN ('pending','running') AND a.state NOT IN ('needs_attention','draft','completed','cancelled')) OR EXISTS(SELECT 1 FROM file_transfers WHERE state IN ('queued','uploading','downloading','revoking')) OR EXISTS(SELECT 1 FROM member_inbox_outbox WHERE state='pending') OR EXISTS(SELECT 1 FROM member_inbox_viewed WHERE through_seq>sent_seq)", [], |r| r.get(0))?;
+    Ok(!busy)
+}
+pub async fn stop_path(db: &Path, wait_secs: u64) -> Result<Value> {
+    ensure!(wait_secs <= 300, "stop wait exceeds 300 seconds");
+    let state = status_path(db)?;
+    if state["alive"] != true {
+        return Ok(state);
+    }
+    let instance = state["instance"]
+        .as_str()
+        .context("service startup in progress; retry stop")?;
+    std::fs::write(root(db).join("stop"), instance)?;
+    for _ in 0..wait_secs * 10 {
+        let s = status_path(db)?;
+        if s["alive"] != true {
+            return Ok(s);
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    let mut s = status_path(db)?;
+    s["stop_requested"] = json!(true);
+    Ok(s)
 }
 pub struct Runtime {
     _lock: TaskLock,
@@ -89,7 +161,7 @@ impl Runtime {
     fn write(&self, alive: bool) -> Result<()> {
         atomic(
             &self.root.join("status.json"),
-            &json!({"pid":self.pid,"instance":self.nonce,"state":self.state,"alive":alive,"error":self.error,"updated_at":crate::store::now()}),
+            &json!({"pid":self.pid,"instance":self.nonce,"version":env!("CARGO_PKG_VERSION"),"state":self.state,"alive":alive,"error":self.error,"updated_at":crate::store::now()}),
         )
     }
     pub fn update(&mut self, state: &str, error: Option<String>) -> Result<()> {
@@ -179,26 +251,6 @@ pub async fn execute(store: &Store, command: Command) -> Result<Value> {
             }
             anyhow::bail!("service startup not confirmed; inspect service status and logs")
         }
-        Command::Stop { wait_secs } => {
-            ensure!(wait_secs <= 300, "stop wait exceeds 300 seconds");
-            let state = status(store)?;
-            if state["alive"] != true {
-                return Ok(state);
-            }
-            let instance = state["instance"]
-                .as_str()
-                .context("service startup in progress; retry stop")?;
-            std::fs::write(root(&store.path).join("stop"), instance)?;
-            for _ in 0..wait_secs * 10 {
-                let s = status(store)?;
-                if s["alive"] != true {
-                    return Ok(s);
-                }
-                tokio::time::sleep(Duration::from_millis(100)).await;
-            }
-            let mut s = status(store)?;
-            s["stop_requested"] = json!(true);
-            Ok(s)
-        }
+        Command::Stop { wait_secs } => stop_path(&store.path, wait_secs).await,
     }
 }

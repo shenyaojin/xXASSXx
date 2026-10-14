@@ -45,6 +45,13 @@ pub(crate) type ApiError = (StatusCode, Json<Value>);
 pub(crate) fn problem(status: StatusCode, text: &str) -> ApiError {
     (status, Json(json!({"error":text})))
 }
+fn request_error(error: anyhow::Error) -> ApiError {
+    if error.downcast_ref::<rusqlite::Error>().is_some() {
+        problem(StatusCode::SERVICE_UNAVAILABLE, "storage unavailable")
+    } else {
+        problem(StatusCode::BAD_REQUEST, &error.to_string())
+    }
+}
 pub(crate) fn connection(db: &FsPath) -> Result<Connection> {
     let c = Connection::open(db)?;
     c.busy_timeout(Duration::from_secs(5))?;
@@ -77,6 +84,11 @@ pub fn router(db: &FsPath, cfg: &RelayConfig) -> Result<Router> {
         std::fs::create_dir_all(p)?;
     }
     let mut c = connection(db)?;
+    let version: u32 = c.pragma_query_value(None, "user_version", |r| r.get(0))?;
+    ensure!(
+        version <= crate::inbox::RELAY_SCHEMA,
+        "unsupported mailbox schema {version}"
+    );
     c.pragma_update(None, "journal_mode", "WAL")?;
     c.execute_batch("CREATE TABLE IF NOT EXISTS relay_team(id TEXT PRIMARY KEY); CREATE TABLE IF NOT EXISTS relay_members(id TEXT PRIMARY KEY,name TEXT NOT NULL,token_hash TEXT NOT NULL UNIQUE); CREATE TABLE IF NOT EXISTS relay_messages(id TEXT PRIMARY KEY,sender TEXT NOT NULL,recipient TEXT NOT NULL,payload TEXT NOT NULL,received INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL);")?;
     c.execute_batch("CREATE TABLE IF NOT EXISTS relay_presence(member_id TEXT PRIMARY KEY,busy INTEGER NOT NULL,seen_at INTEGER NOT NULL)")?;
@@ -117,6 +129,7 @@ pub fn router(db: &FsPath, cfg: &RelayConfig) -> Result<Router> {
         )?;
     }
     tx.commit()?;
+    crate::inbox::migrate(&mut c)?;
     let relay = Arc::new(Relay {
         db: db.canonicalize()?,
         team: cfg.team_id.clone(),
@@ -150,7 +163,8 @@ pub fn router(db: &FsPath, cfg: &RelayConfig) -> Result<Router> {
         .route("/v1/status/{id}", get(status))
         .layer(DefaultBodyLimit::max(65536))
         .with_state(relay)
-        .merge(crate::transfers::relay::router(db, &cfg.transfers)?))
+        .merge(crate::transfers::relay::router(db, &cfg.transfers)?)
+        .merge(crate::inbox::http::router(db.to_path_buf())))
 }
 async fn send(
     State(relay): State<Arc<Relay>>,
@@ -195,9 +209,9 @@ async fn send(
             return Err(problem(StatusCode::CONFLICT, "message_id conflict"));
         }
     } else {
-        crate::task_schedule::accept(&tx, &msg, now())
-            .map_err(|e| problem(StatusCode::BAD_REQUEST, &e.to_string()))?;
+        crate::task_schedule::accept(&tx, &msg, now()).map_err(request_error)?;
         tx.execute("INSERT INTO relay_messages(id,sender,recipient,payload,created_at) VALUES(?1,?2,?3,?4,?5)",params![msg.message_id,sender,msg.recipient,payload,now()]).map_err(|_|problem(StatusCode::INTERNAL_SERVER_ERROR,"storage unavailable"))?;
+        crate::inbox::project(&tx, &msg, false).map_err(crate::inbox::http::error)?;
     }
     tx.commit()
         .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "storage unavailable"))?;
@@ -286,7 +300,7 @@ async fn whoami(
         )
     })?;
     Ok(Json(
-        json!({"team_id":relay.team,"member_id":me,"task_protocol":2,"file_transfer_protocol":1,
+        json!({"team_id":relay.team,"member_id":me,"task_protocol":2,"file_transfer_protocol":1,"member_inbox_protocol":1,
             "member_directory":{"protocol":1,"members":members}}),
     ))
 }
@@ -362,8 +376,7 @@ async fn meeting_report(
     let c = connection(&relay.db)
         .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "storage unavailable"))?;
     let me = auth(&c, &headers)?;
-    crate::task_schedule::report(&c, &me, &p, now())
-        .map_err(|e| problem(StatusCode::BAD_REQUEST, &e.to_string()))?;
+    crate::task_schedule::report(&c, &me, &p, now()).map_err(request_error)?;
     Ok(Json(json!({"accepted":true})))
 }
 
@@ -429,6 +442,6 @@ async fn local_task_facts(
         Ok(())
     };
     let mut apply = apply;
-    apply().map_err(|e| problem(StatusCode::BAD_REQUEST, &e.to_string()))?;
+    apply().map_err(request_error)?;
     Ok(Json(json!({"persisted":true})))
 }

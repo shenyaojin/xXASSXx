@@ -59,6 +59,36 @@ fn count(t: &Team, m: &str, sql: &str) -> i64 {
         .unwrap()
 }
 #[test]
+fn new_chat_has_bounded_owner_history_for_project_routing() {
+    let team = Team::new();
+    let db = rusqlite::Connection::open(team.db("a")).unwrap();
+    for n in 0..15 {
+        let i = instruction(&team, "a", "b", &format!("取项目 {n} 的结果"));
+        submit(&team, "a", &i);
+        let id = task(&team, "a", &i)["id"].as_str().unwrap().to_owned();
+        db.execute(r#"UPDATE app_tasks SET state='completed',draft='{"mode":"files"}',updated_at=0 WHERE id=?1"#, [&id]).unwrap();
+    }
+    let i = instruction(&team, "a", "a", "取那个项目的新结果");
+    submit(&team, "a", &i);
+    let s = team.store("a");
+    let context = app::model::context(&s, &i).unwrap();
+    let memory = context["recent_file_tasks"].as_array().unwrap();
+    assert_eq!(memory.len(), 12);
+    assert!(
+        memory
+            .iter()
+            .all(|t| t["participants"] == json!(["a", "b"]))
+    );
+    db.execute("UPDATE app_tasks SET initiator='b'", [])
+        .unwrap();
+    assert!(
+        app::model::context(&s, &i).unwrap()["recent_file_tasks"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+}
+#[test]
 fn trusted_actor_idempotent_queue_second_channel_and_events() {
     let t = Team::new();
     let mut i = instruction(&t, "a", "a", "只读分析");
@@ -149,7 +179,7 @@ fn ui_routing_unicode_render_and_project_are_independent_of_grants() {
         terminal.draw(|f| ui.render(f, &s)).unwrap();
         if w == 100 {
             let screen = format!("{:?}", terminal.backend().buffer());
-            assert!(screen.contains("Keith"));
+            assert!(screen.contains("@a"));
         }
     }
     assert_eq!(count(&t, "a", "SELECT count(*) FROM app_commands"), 0);
@@ -584,6 +614,7 @@ fn tui_file_picker_authorizes_without_pasting_ids_and_stop_is_real() {
     assert_eq!(app::tasks::get(&s, &id).unwrap()["state"], "ready");
     assert_eq!(count(&t, "a", "SELECT count(*) FROM workflow_grants"), 1);
     key(&mut ui, &mut s, 'x');
+    ui.input.insert("本次材料不再需要，先停止");
     ui.key(&mut s, KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
         .unwrap();
     process(&t, "a");

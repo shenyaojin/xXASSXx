@@ -1,7 +1,12 @@
 //! xXASSXx owns this terminal. Models, delivery and execution live in the daemon.
+mod attachments;
+mod commands;
 pub mod editor;
+mod inbox;
 mod presentation;
 mod startup;
+mod theme;
+mod update;
 use crate::{app, interactive::OpenArgs, service, setup, store::Store};
 use anyhow::{Context, Result, ensure};
 use crossterm::{
@@ -17,9 +22,9 @@ use editor::{Editor, safe, wrap};
 use ratatui::{
     Terminal,
     backend::CrosstermBackend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::Line,
+    text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
 };
 use serde_json::{Value, json};
@@ -61,6 +66,7 @@ impl Drop for TerminalGuard {
 #[derive(Clone, Copy, PartialEq)]
 enum Panel {
     Chat,
+    AccessMode,
     ProjectAccess,
     Tasks,
     Chats,
@@ -69,6 +75,9 @@ enum Panel {
     Roots,
     Files,
     Help,
+    Identity,
+    Status,
+    Contacts,
     ProjectPath,
     RootPath,
     NewTask,
@@ -81,6 +90,7 @@ enum Panel {
     AccessTimeout,
     Attachments,
     AttachmentDetail,
+    AttachmentInfo,
     AttachmentRecipient,
     AttachmentSave,
     AttachmentAnalyze,
@@ -96,6 +106,12 @@ struct AccessForm {
     timeout_secs: u64,
     deliver_files: bool,
 }
+struct StopForm {
+    task: Value,
+    previous_input: Editor,
+    previous_panel: Panel,
+    archive: bool,
+}
 pub struct Ui {
     pub input: Editor,
     pub view: usize,
@@ -108,16 +124,23 @@ pub struct Ui {
     index: usize,
     scroll: usize,
     candidate: usize,
+    task_filter: usize,
+    commands_hidden: bool,
     notice: String,
     files: Vec<Value>,
     chosen: Vec<PathBuf>,
     folder: Option<PathBuf>,
     owner: String,
     pending_command: Option<String>,
+    reconnect_requested: bool,
+    reconnect_monitor: bool,
     access_form: Option<AccessForm>,
+    stop_form: Option<StopForm>,
     send_to: Option<String>,
     transfer_id: Option<String>,
     transfer_file: Option<String>,
+    update: update::UpdateUi,
+    inbox: inbox::InboxUi,
 }
 impl Ui {
     pub fn new(store: &Store, project: Value) -> Result<Self> {
@@ -137,22 +160,32 @@ impl Ui {
             index: 0,
             scroll: 0,
             candidate: 0,
+            task_filter: 0,
+            commands_hidden: false,
             notice: String::new(),
             files: vec![],
             chosen: vec![],
             folder: None,
             owner,
             pending_command: None,
+            reconnect_requested: false,
+            reconnect_monitor: false,
             access_form: None,
+            stop_form: None,
             send_to: None,
             transfer_id: None,
             transfer_file: None,
+            update: update::UpdateUi::default(),
+            inbox: inbox::InboxUi::default(),
         })
     }
     pub fn recipient(&self, store: &Store) -> Result<String> {
         Ok(app::addressing(store, &self.input.text)?.0)
     }
     pub fn prompt_project_access(&mut self, store: &Store) -> Result<()> {
+        if crate::access_mode::full(&store.conn)? {
+            return Ok(());
+        }
         let path = Path::new(self.project["path"].as_str().unwrap());
         if startup::needs_prompt(store, path)? {
             self.panel = Panel::ProjectAccess;
@@ -164,12 +197,10 @@ impl Ui {
         let path = Path::new(self.project["path"].as_str().unwrap());
         if allow {
             store.allow_directory(path)?;
-            self.notice =
-                "已加入可访问目录。可以用 @成员 或 CtrlN 发起任务，确认意图后自动准备材料。".into();
+            self.notice = "已允许读取此目录".into();
         } else {
             startup::decline(store, path)?;
-            self.notice =
-                "已记住：此目录不加入白名单。可以继续聊天；以后用 CtrlR 添加目录。".into();
+            self.notice = "已记住：不读取此目录".into();
         }
         self.panel = Panel::Chat;
         self.refresh(store)
@@ -198,6 +229,122 @@ impl Ui {
             .filter(|s| s.starts_with(prefix))
             .collect()
     }
+    fn task_rows(&self) -> Vec<Value> {
+        self.data["tasks"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .rev()
+            .filter(|t| {
+                let archived = t["ui_archived"] == true;
+                let finished = app::task_archive::finished(t["state"].as_str().unwrap_or(""));
+                match self.task_filter {
+                    0 => !archived && !finished,
+                    1 => !archived && finished,
+                    _ => archived,
+                }
+            })
+            .cloned()
+            .collect()
+    }
+    fn open_tasks(&mut self, filter: usize) {
+        self.panel = Panel::Tasks;
+        self.task_filter = filter;
+        self.index = 0;
+        self.scroll = 0;
+    }
+    fn archive_task(&mut self, store: &Store, task: &Value) -> Result<()> {
+        if !app::task_archive::finished(task["state"].as_str().unwrap_or("")) {
+            return self.open_stop_task(task.clone());
+        }
+        let archived = task["ui_archived"] != true;
+        app::task_archive::set(store, task["id"].as_str().context("请选择任务")?, archived)?;
+        self.notice = if archived {
+            "已归档 · 可在“已归档”中恢复"
+        } else {
+            "已恢复到已结束任务"
+        }
+        .into();
+        self.selected_task = None;
+        self.selected_question = None;
+        self.pending_command = None;
+        self.refresh(store)?;
+        self.index = self.index.min(self.task_rows().len().saturating_sub(1));
+        Ok(())
+    }
+    fn slash(&mut self, store: &Store, name: &str) -> Result<bool> {
+        ensure!(
+            commands::COMMANDS.iter().any(|c| c.name == name),
+            "未知命令；输入 / 查看可用命令"
+        );
+        self.input.clear();
+        self.commands_hidden = false;
+        self.candidate = 0;
+        self.scroll = 0;
+        match name {
+            "/inbox" => self.inbox.open(store)?,
+            "/tasks" => self.open_tasks(0),
+            "/stop" => self.open_stop()?,
+            "/archived" => self.open_tasks(2),
+            "/archive" => {
+                if let Some(task) = self.current_task().cloned() {
+                    self.archive_task(store, &task)?;
+                }
+                if self.panel != Panel::Stop {
+                    self.open_tasks(1);
+                }
+            }
+            "/new" => {
+                self.session = app::new_session(store, self.project["id"].as_str().unwrap())?;
+                self.selected_task = None;
+                self.selected_question = None;
+                self.pending_command = None;
+                self.panel = Panel::Chat;
+                self.refresh(store)?;
+            }
+            "/task" => {
+                self.selected_task = None;
+                self.selected_question = None;
+                self.panel = Panel::NewTask;
+            }
+            "/chats" => {
+                self.panel = Panel::Chats;
+                self.index = 0;
+            }
+            "/files" => {
+                self.panel = Panel::Attachments;
+                self.index = 0;
+            }
+            "/directory" => {
+                self.panel = Panel::Projects;
+                self.index = 0;
+            }
+            "/access" => {
+                self.panel = Panel::AccessMode;
+                self.index = usize::from(crate::access_mode::full(&store.conn)?);
+            }
+            "/reconnect" => {
+                self.reconnect_requested = true;
+                self.reconnect_monitor = true;
+                self.notice = "正在重新连接…".into();
+                self.panel = Panel::Chat;
+            }
+            "/roots" => {
+                self.panel = Panel::Roots;
+                self.index = 0;
+            }
+            "/contacts" => self.panel = Panel::Contacts,
+            "/identity" => self.panel = Panel::Identity,
+            "/status" => self.panel = Panel::Status,
+            "/help" => self.panel = Panel::Help,
+            "/update" => {
+                self.update.requested = true;
+                return Ok(true);
+            }
+            _ => unreachable!(),
+        }
+        Ok(false)
+    }
     fn current_task(&self) -> Option<&Value> {
         self.data["tasks"]
             .as_array()?
@@ -205,18 +352,33 @@ impl Ui {
             .find(|t| self.selected_task.as_deref() == t["id"].as_str())
     }
     pub fn visible_messages(&self) -> Vec<&Value> {
-        self.data["messages"]
+        self.data["timeline"]
             .as_array()
             .into_iter()
             .flatten()
             .filter(|m| {
-                self.selected_task
-                    .as_ref()
-                    .is_none_or(|id| m["task_id"] == *id)
+                if let Some(id) = &self.selected_task {
+                    m["task_id"] == *id
+                } else {
+                    !self.data["tasks"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .any(|t| t["ui_archived"] == true && m["task_id"] == t["id"])
+                }
             })
             .collect()
     }
     pub fn refresh(&mut self, store: &Store) -> Result<()> {
+        self.inbox.refresh(store)?;
+        let selected_row = if self.panel == Panel::Tasks {
+            self.task_rows()
+                .get(self.index)
+                .and_then(|t| t["id"].as_str())
+                .map(str::to_owned)
+        } else {
+            None
+        };
         let previous = self.data["contacts"]
             .as_array()
             .cloned()
@@ -234,6 +396,13 @@ impl Ui {
         let selected_candidate =
             (!candidate.is_empty()).then(|| candidate[self.candidate % candidate.len()].clone());
         self.data = app::snapshot(store, &self.session)?;
+        if let Some(id) = selected_row {
+            let rows = self.task_rows();
+            self.index = rows
+                .iter()
+                .position(|t| t["id"] == id)
+                .unwrap_or(self.index.min(rows.len().saturating_sub(1)));
+        }
         let contacts = self.data["contacts"].as_array().unwrap();
         // A newly joined member may sort before the currently selected person.
         // Keep selection by identity so refresh cannot silently change recipients.
@@ -366,9 +535,111 @@ impl Ui {
         self.selected_question = None;
         self.pending_command = Some(i.request_id);
         self.input.clear();
-        self.notice = "已保存，助手会继续处理；可以继续输入。".into();
+        self.notice.clear();
         self.scroll = 0;
         self.refresh(store)
+    }
+    fn open_stop(&mut self) -> Result<()> {
+        let task = if self.panel == Panel::Tasks {
+            self.task_rows().get(self.index).cloned()
+        } else {
+            self.current_task().cloned()
+        }
+        .context("请先选中任务，再按 CtrlX 停止")?;
+        self.open_stop_task(task)
+    }
+    fn open_stop_task(&mut self, task: Value) -> Result<()> {
+        ensure!(
+            !app::task_archive::finished(task["state"].as_str().unwrap_or("")),
+            "任务已经结束，可直接归档"
+        );
+        self.stop_form = Some(StopForm {
+            task,
+            previous_input: std::mem::take(&mut self.input),
+            previous_panel: self.panel,
+            archive: true,
+        });
+        self.panel = Panel::Stop;
+        self.scroll = 0;
+        self.notice.clear();
+        Ok(())
+    }
+    fn stop_key(&mut self, store: &mut Store, key: KeyEvent) -> Result<bool> {
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        match key.code {
+            KeyCode::Esc => {
+                let form = self.stop_form.take().context("请重新打开停止选项")?;
+                self.input = form.previous_input;
+                self.panel = form.previous_panel;
+                self.notice.clear();
+            }
+            KeyCode::Tab | KeyCode::BackTab => {
+                let form = self.stop_form.as_mut().context("请重新打开停止选项")?;
+                form.archive = !form.archive;
+            }
+            KeyCode::Enter
+                if !key
+                    .modifiers
+                    .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) =>
+            {
+                let form = self.stop_form.as_ref().context("请重新打开停止选项")?;
+                let reason = self.input.text.trim().to_owned();
+                ensure!(!reason.is_empty(), "请填写停止原因");
+                let archive = form.archive;
+                let i = app::Instruction {
+                    request_id: uuid::Uuid::new_v4().to_string(),
+                    channel: "tui".into(),
+                    session_id: form.task["session_id"]
+                        .as_str()
+                        .context("task session")?
+                        .into(),
+                    task_id: Some(form.task["id"].as_str().context("task id")?.into()),
+                    recipient: self.owner.clone(),
+                    body: format!(
+                        "{}：{reason}",
+                        if archive {
+                            "停止并归档"
+                        } else {
+                            "停止任务"
+                        }
+                    ),
+                    action: "stop_task".into(),
+                    payload: json!({"revision":form.task["revision"],"reason":reason,"archive":archive}),
+                };
+                app::submit(store, &app::Actor::local(store)?, &i)?;
+                self.stop_form = None;
+                self.input.clear();
+                self.pending_command = None;
+                self.selected_question = None;
+                self.session = i.session_id;
+                self.selected_task = i.task_id;
+                self.panel = Panel::Chat;
+                self.refresh(store)?;
+                self.notice = if archive {
+                    "已停止并归档 · /archived 可查看原因和原记录"
+                } else {
+                    "已停止 · 原记录保留，可随时归档"
+                }
+                .into();
+                if archive {
+                    self.selected_task = None;
+                    self.open_tasks(0);
+                }
+            }
+            KeyCode::Char('j') if ctrl => self.input.insert("\n"),
+            KeyCode::Enter => self.input.insert("\n"),
+            KeyCode::Char(c) if !ctrl => self.input.insert(&c.to_string()),
+            KeyCode::Backspace => self.input.backspace(),
+            KeyCode::Delete => self.input.delete(),
+            KeyCode::Left => self.input.left(),
+            KeyCode::Right => self.input.right(),
+            KeyCode::Up => self.input.vertical(false),
+            KeyCode::Down => self.input.vertical(true),
+            KeyCode::Home => self.input.home(),
+            KeyCode::End => self.input.end(),
+            _ => {}
+        }
+        Ok(false)
     }
     fn open_files(&mut self, store: &Store) -> Result<()> {
         self.send_to = None;
@@ -541,7 +812,7 @@ impl Ui {
         self.panel = Panel::Chat;
         self.input.clear();
         self.scroll = 0;
-        self.notice = "已选择工作目录；只影响之后的对话和任务。".into();
+        self.notice = "已切换工作目录".into();
         self.refresh(store)
     }
     fn projects(&self) -> Vec<Value> {
@@ -558,6 +829,88 @@ impl Ui {
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         if ctrl && matches!(key.code, KeyCode::Char('q' | 'c')) {
             return Ok(true);
+        }
+        if self.panel == Panel::Stop {
+            return self.stop_key(store, key);
+        }
+        if self.inbox.active {
+            if let Some(id) = self.inbox.key(store, key)? {
+                let task = crate::task_coordinator::get(store, &id)
+                    .context("原任务尚未同步到本机，请等待后台同步后再打开")?;
+                self.session = task["session_id"].as_str().context("task session")?.into();
+                self.project = app::project(
+                    store,
+                    Path::new(task["project"].as_str().context("task project")?),
+                )?;
+                self.selected_task = Some(id);
+                self.panel = Panel::Chat;
+                self.inbox.active = false;
+                self.refresh(store)?;
+            }
+            return Ok(false);
+        }
+        if ctrl && key.code == KeyCode::Char('x') {
+            self.open_stop()?;
+            return Ok(false);
+        }
+        let options = if self.panel == Panel::Chat && !self.commands_hidden {
+            commands::matching(&self.input.text)
+        } else {
+            vec![]
+        };
+        if !options.is_empty()
+            && !key
+                .modifiers
+                .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SHIFT)
+        {
+            match key.code {
+                KeyCode::Up => {
+                    self.candidate = (self.candidate + options.len() - 1) % options.len();
+                    return Ok(false);
+                }
+                KeyCode::Down => {
+                    self.candidate = (self.candidate + 1) % options.len();
+                    return Ok(false);
+                }
+                KeyCode::Tab => {
+                    let name = options[self.candidate % options.len()].name;
+                    self.input.clear();
+                    self.input.insert(name);
+                    self.candidate = 0;
+                    self.commands_hidden = true;
+                    return Ok(false);
+                }
+                KeyCode::Enter => {
+                    let name = options[self.candidate % options.len()].name;
+                    return self.slash(store, name);
+                }
+                KeyCode::Esc => {
+                    self.commands_hidden = true;
+                    return Ok(false);
+                }
+                _ => {}
+            }
+        }
+        if self.panel == Panel::AccessMode {
+            match key.code {
+                KeyCode::Up | KeyCode::Down | KeyCode::Tab | KeyCode::BackTab => {
+                    self.index = 1 - self.index
+                }
+                KeyCode::Enter => {
+                    let mode = if self.index == 1 {
+                        crate::access_mode::Mode::FullAccess
+                    } else {
+                        crate::access_mode::Mode::AskForApproval
+                    };
+                    crate::access_mode::set(store, mode)?;
+                    self.notice = format!("本机已切换为 {}", mode.label());
+                    self.panel = Panel::Chat;
+                    self.refresh(store)?;
+                }
+                KeyCode::Esc => self.panel = Panel::Chat,
+                _ => {}
+            }
+            return Ok(false);
         }
         if self.panel == Panel::ProjectAccess {
             match key.code {
@@ -579,8 +932,15 @@ impl Ui {
             return self.access_key(store, key);
         }
         if key.code == KeyCode::Esc {
+            if self.panel == Panel::AttachmentInfo {
+                self.panel = Panel::AttachmentDetail;
+                self.scroll = 0;
+                return Ok(false);
+            }
             self.panel = Panel::Chat;
             self.input.clear();
+            self.notice.clear();
+            self.commands_hidden = false;
             self.selected_task = None;
             self.selected_question = None;
             self.pending_command = None;
@@ -635,13 +995,11 @@ impl Ui {
                     return Ok(false);
                 }
                 KeyCode::Char('t') => {
-                    self.panel = Panel::Tasks;
-                    self.index = self.data["tasks"]
-                        .as_array()
-                        .and_then(|ts| {
-                            ts.iter()
-                                .position(|t| t["execution_permission"]["can_allow"] == true)
-                        })
+                    self.open_tasks(0);
+                    self.index = self
+                        .task_rows()
+                        .iter()
+                        .position(|t| t["execution_permission"]["can_allow"] == true)
                         .unwrap_or(0);
                     return Ok(false);
                 }
@@ -670,8 +1028,7 @@ impl Ui {
                     return Ok(false);
                 }
                 KeyCode::Char('x') => {
-                    ensure!(self.current_task().is_some(), "请先选任务");
-                    self.panel = Panel::Stop;
+                    self.open_stop()?;
                     return Ok(false);
                 }
                 KeyCode::Char('y') => {
@@ -750,7 +1107,12 @@ impl Ui {
                 }
                 return Ok(false);
             }
-            Panel::Help | Panel::Detail => {
+            Panel::Help
+            | Panel::Detail
+            | Panel::Identity
+            | Panel::Status
+            | Panel::Contacts
+            | Panel::AttachmentInfo => {
                 match key.code {
                     KeyCode::Down | KeyCode::PageDown => {
                         self.scroll = self.scroll.saturating_add(5)
@@ -760,20 +1122,30 @@ impl Ui {
                 }
                 return Ok(false);
             }
-            Panel::Stop => {
-                if key.code == KeyCode::Enter {
-                    self.enqueue(store, "stop_task", "停止本端任务".into(), json!({}))?;
-                    self.panel = Panel::Chat;
-                }
-                return Ok(false);
-            }
             Panel::Tasks => {
-                let tasks = self.data["tasks"].as_array().unwrap();
+                let tasks = self.task_rows();
                 match key.code {
+                    KeyCode::Tab | KeyCode::BackTab => {
+                        self.task_filter =
+                            (self.task_filter + if key.code == KeyCode::Tab { 1 } else { 2 }) % 3;
+                        self.index = 0;
+                        self.notice.clear();
+                    }
                     KeyCode::Down => {
                         self.index = (self.index + 1).min(tasks.len().saturating_sub(1))
                     }
                     KeyCode::Up => self.index = self.index.saturating_sub(1),
+                    KeyCode::Char('a') if !ctrl => {
+                        if let Some(task) = tasks.get(self.index) {
+                            self.archive_task(store, task)?;
+                        }
+                    }
+                    KeyCode::Char('A') if !ctrl && self.task_filter == 1 => {
+                        let count = app::task_archive::finished_all(store)?;
+                        self.notice = format!("已归档 {count} 项已结束任务 · 可随时恢复");
+                        self.refresh(store)?;
+                        self.index = 0;
+                    }
                     KeyCode::Enter => {
                         if let Some(t) = tasks.get(self.index) {
                             self.selected_task = t["id"].as_str().map(str::to_owned);
@@ -892,6 +1264,10 @@ impl Ui {
                 let m = &v["manifest"];
                 let files = m["files"].as_array().unwrap();
                 match key.code {
+                    KeyCode::Char('i') => {
+                        self.panel = Panel::AttachmentInfo;
+                        self.scroll = 0;
+                    }
                     KeyCode::Up => self.index = self.index.saturating_sub(1),
                     KeyCode::Down => {
                         self.index = (self.index + 1).min(files.len().saturating_sub(1))
@@ -1023,6 +1399,13 @@ impl Ui {
         {
             let text = self.input.text.trim().to_owned();
             ensure!(!text.is_empty(), "请输入内容");
+            if self.panel == Panel::Chat && commands::is_stop_request(&text) {
+                self.open_stop()?;
+                return Ok(false);
+            }
+            if self.panel == Panel::Chat && text.starts_with('/') {
+                return self.slash(store, &text);
+            }
             match self.panel {
                 Panel::ProjectPath => self.change_project(store, &expand(&text))?,
                 Panel::RootPath => {
@@ -1071,6 +1454,14 @@ impl Ui {
             }
             return Ok(false);
         }
+        if matches!(
+            key.code,
+            KeyCode::Char(_) | KeyCode::Backspace | KeyCode::Delete
+        ) {
+            self.commands_hidden = false;
+            self.candidate = 0;
+            self.notice.clear();
+        }
         match key.code {
             KeyCode::Char('j') if ctrl => self.input.insert("\n"),
             KeyCode::Enter => self.input.insert("\n"),
@@ -1094,105 +1485,105 @@ impl Ui {
         Ok(false)
     }
     pub fn render(&self, f: &mut ratatui::Frame, store: &Store) {
+        if self.inbox.active {
+            self.inbox.render(f, &self.owner);
+            return;
+        }
         let area = f.area();
-        let parts = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(2),
-                Constraint::Min(2),
-                Constraint::Length(if area.height < 15 { 3 } else { 5 }),
-                Constraint::Length(2),
-            ])
-            .split(area);
-        let name = self.data["identity"]["display_name"].as_str().unwrap_or("");
-        let header = format!(
-            " xXASSXx  ·  {}  (@{})   本机对话目录：{}",
-            safe(name),
-            self.owner,
-            safe(self.project["name"].as_str().unwrap_or(""))
+        let browsing = matches!(
+            self.panel,
+            Panel::Tasks
+                | Panel::Chats
+                | Panel::Help
+                | Panel::Identity
+                | Panel::Status
+                | Panel::Contacts
+                | Panel::Attachments
+                | Panel::AttachmentDetail
+                | Panel::AttachmentInfo
         );
+        let parts = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(3),
+            Constraint::Length(if browsing {
+                0
+            } else if area.height < 18 {
+                3
+            } else {
+                4
+            }),
+            Constraint::Length(2),
+        ])
+        .split(area);
         f.render_widget(
-            Paragraph::new(header).style(
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            ),
+            Paragraph::new(Line::from(vec![
+                Span::styled(" xXASSXx ", theme::heading()),
+                Span::raw(format!(" · @{}", self.owner)),
+                Span::styled(
+                    format!("   {}", safe(self.project["name"].as_str().unwrap_or(""))),
+                    theme::muted(),
+                ),
+                Span::styled(
+                    format!("   收件箱 {}", self.inbox.unread),
+                    if self.inbox.unread > 0 {
+                        theme::warning()
+                    } else {
+                        theme::muted()
+                    },
+                ),
+            ])),
             parts[0],
         );
-        let body = if area.width >= 80 {
-            let cols = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([Constraint::Length(26), Constraint::Min(1)])
-                .split(parts[1]);
+        let body = if area.width >= 100 {
+            let cols =
+                Layout::horizontal([Constraint::Length(25), Constraint::Min(1)]).split(parts[1]);
             self.sidebar(f, cols[0]);
             cols[1]
         } else {
             parts[1]
         };
-        let selected = self.card_label();
-        let mut lines = vec![format!("查看：{selected}（Tab 切换查看）")];
         let contact = self
             .view
             .checked_sub(1)
             .and_then(|n| self.data["presence"]["members"].as_array()?.get(n));
-        if let Some(contact) = contact {
-            let presence = &contact["presence"];
-            let mut status = presentation::presence(presence);
-            if presence["state"] == "recent" {
-                match presence["activity"].as_str() {
-                    Some("busy") => status.push_str(" · 忙碌"),
-                    Some("idle") => status.push_str(" · 空闲"),
-                    _ => {}
-                }
-            }
-            lines.push(status);
-            lines.push(format!(
-                "最近观测（本地时间）：{}",
-                presentation::local_time(presence["updated_at"].as_i64())
-            ));
-        }
+        let mut overview = Vec::new();
         if let Some(task) = self.current_task() {
-            lines.push(format!(
-                "任务：{} · {}",
-                task["title"].as_str().unwrap_or(""),
-                presentation::task_status(task, &self.owner),
+            overview.push(Line::styled(
+                safe(task["title"].as_str().unwrap_or("任务")),
+                theme::heading(),
             ));
-            lines.push(presentation::task_location(task, &self.owner));
-            if let Some(path) = task["artifact"].as_str() {
-                lines.push(format!("结果文件：{path}"));
-            }
-            if let Some(error) = task["error"].as_str() {
-                lines.push(format!("需处理：{error}"));
-            }
-            if task["protocol"] == 2 {
-                lines.push(format!(
-                    "参与人：{} · 下一步：{} · 最近更新 {}",
-                    task["participants"]
-                        .as_array()
-                        .into_iter()
-                        .flatten()
-                        .filter_map(Value::as_str)
-                        .collect::<Vec<_>>()
-                        .join("、"),
-                    if matches!(task["state"].as_str(), Some("completed" | "cancelled")) {
-                        "无"
-                    } else {
-                        task["next_owner"].as_str().unwrap_or("无")
-                    },
-                    presentation::local_time(task["updated_at"].as_i64())
-                ));
-                for q in task["questions"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .filter(|q| q["state"] == "user" && q["revision"] == task["revision"])
-                {
-                    lines.push(format!("待回答：{}", q["body"].as_str().unwrap_or("")));
-                }
-                lines.push("CtrlS 确认 · CtrlB 选问题 · CtrlE 修改/重开 · CtrlD 结果与历史 · CtrlX 取消 · CtrlY 恢复".into());
+            overview.push(Line::styled(
+                presentation::task_status(task, &self.owner),
+                theme::task(task["state"].as_str().unwrap_or("")),
+            ));
+            overview.push(Line::from(presentation::task_location(task, &self.owner)));
+            let hint = if app::task_archive::finished(task["state"].as_str().unwrap_or(""))
+                && task["protocol"] == 2
+                && task["initiator"] != self.owner
+            {
+                "/archive 归档或恢复 · CtrlD 原因与记录"
+            } else if task["ui_archived"] == true {
+                "/archive 恢复 · CtrlD 结果与记录 · CtrlE 重开"
+            } else if app::task_archive::finished(task["state"].as_str().unwrap_or("")) {
+                "/archive 归档 · CtrlD 结果与记录 · CtrlE 重开"
+            } else if task["automatic_confirmation"] == true {
+                "整理好后自动开始 · CtrlX 停止"
+            } else if task["state"] == "draft" {
+                "CtrlS 确认任务 · CtrlE 修改 · CtrlX 停止"
+            } else if task["execution_permission"]["can_allow"] == true {
+                "CtrlG 查看执行范围并授权 · CtrlX 停止"
+            } else if task["state"] == "needs_attention" {
+                "CtrlD 查看原因 · CtrlY 重试 · CtrlX 停止"
             } else {
-                lines.push("历史任务 · CtrlD 来源和记录 · CtrlG 授权 · CtrlY 恢复旧流程".into());
-            }
+                "CtrlB 回答问题 · CtrlD 详情 · CtrlX 停止"
+            };
+            overview.push(Line::styled(hint, theme::muted()));
+        } else if let Some(contact) = contact {
+            overview.push(Line::styled(self.card_label(), theme::heading()));
+            overview.push(Line::from(presentation::presence(&contact["presence"])));
+        } else if self.view > 0 {
+            overview.push(Line::styled("任务", theme::heading()));
+            overview.push(Line::from("CtrlT 查看进展、归档和历史"));
         }
         let activity = presentation::activity(
             &self.data,
@@ -1209,114 +1600,151 @@ impl Ui {
                 .map(|s| wrap(s, body.width.saturating_sub(2).max(1) as usize).len())
                 .sum::<usize>()
                 + 2)
-            .min(7) as u16
+            .min(6) as u16
+        };
+        let overview_height = if overview.is_empty() {
+            0
+        } else {
+            (overview.len() as u16 + 2).min(body.height.saturating_sub(5))
         };
         let split = Layout::vertical([
-            Constraint::Length(if body.height < 10 {
-                2
-            } else if self.current_task().is_some() {
-                if contact.is_some() { 10 } else { 8 }
-            } else if contact.is_some() {
-                6
-            } else {
-                4
-            }),
+            Constraint::Length(overview_height),
             Constraint::Min(1),
             Constraint::Length(activity_height),
         ])
         .split(body);
-        // Keep the viewed status and selected task visible independently of chat scrolling.
-        if body.height >= 10 {
-            draw_lines(f, split[0], "正在查看", &lines, 0, false);
-        } else {
-            f.render_widget(Paragraph::new(vec![Line::from(safe(&selected))]), split[0]);
+        if overview_height > 0 {
+            draw_rich(f, split[0], "任务与状态", &overview, 0, false);
         }
-        let mut lines = Vec::new();
+        let mut messages = Vec::new();
         for m in self.visible_messages() {
-            let role = if m["kind"] == "user" {
+            let user = m["kind"] == "user";
+            let kind = m["kind"].as_str().unwrap_or("");
+            let transfer = &m["transfer"];
+            let role = if user {
                 "你"
             } else if m["sender"] == "butler" {
-                "自己的助手"
+                "助手"
             } else {
                 m["sender"].as_str().unwrap_or("同伴")
             };
-            lines.push(format!(
-                "{} · {}{}",
-                role,
-                presentation::message_kind(m["kind"].as_str().unwrap_or("")),
-                m["delivery_state"]
-                    .as_str()
-                    .map(|s| format!(" · 投递 {s}"))
-                    .unwrap_or_default()
-            ));
-            if let Some(e) = m["delivery_error"].as_str() {
-                lines.push(format!("投递/处理错误：{e}"));
-            }
-            if m["kind"] == "user"
-                && matches!(m["command_state"].as_str(), Some("pending" | "processing"))
+            let style = if user {
+                theme::accent()
+            } else if kind == "task_completed"
+                || matches!(transfer["state"].as_str(), Some("received" | "delivered"))
             {
-                lines.push(
-                    if m["command_state"] == "pending" {
-                        "后台排队中"
-                    } else {
-                        "助手正在处理，可以继续输入"
-                    }
-                    .into(),
-                );
+                theme::success()
+            } else if matches!(kind, "error" | "task_attention") || transfer["state"] == "failed" {
+                theme::error()
+            } else if matches!(kind, "task_question" | "task_permission" | "task_draft") {
+                theme::warning()
+            } else {
+                Style::default().fg(Color::Magenta)
+            };
+            let label = if transfer.is_object() {
+                presentation::transfer_heading(transfer, &self.owner)
+            } else if user || matches!(kind, "assistant" | "reply") {
+                role.into()
+            } else if kind == "attachment" {
+                "文件记录".into()
+            } else if kind == "task_completed" {
+                // The same final prose is mirrored to every participant. Its
+                // second-person wording addresses the task initiator.
+                let initiator = self.data["tasks"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|task| task["id"] == m["task_id"])
+                    .and_then(|task| task["initiator"].as_str());
+                match initiator.filter(|who| !who.is_empty() && *who != self.owner) {
+                    Some(who) => format!("给 @{who} 的答复"),
+                    None => format!("{role} · 结果"),
+                }
+            } else {
+                format!("{role} · {}", presentation::message_kind(kind))
+            };
+            messages.push(Line::styled(
+                format!(
+                    "{label}   {}",
+                    presentation::message_time(m["created_at"].as_i64())
+                ),
+                style.add_modifier(Modifier::BOLD),
+            ));
+            if let Some(error) = m["delivery_error"].as_str() {
+                messages.push(Line::styled(format!("发送失败：{error}"), theme::error()));
             }
-            lines.extend(presentation::message_body(m).lines().map(str::to_owned));
-            lines.push(String::new());
+            if user && matches!(m["command_state"].as_str(), Some("pending" | "processing")) {
+                messages.push(Line::styled(
+                    if m["command_state"] == "pending" {
+                        "排队中"
+                    } else {
+                        "正在处理…"
+                    },
+                    theme::muted(),
+                ));
+            }
+            messages.extend(
+                presentation::message_body(m)
+                    .lines()
+                    .map(|line| Line::from(safe(line))),
+            );
+            messages.push(Line::from(""));
         }
         let session = self.data["sessions"]
             .as_array()
             .and_then(|a| a.iter().find(|c| c["id"] == self.session));
-        let title = session
-            .map(presentation::session_title)
-            .unwrap_or_else(|| "持久对话".into());
-        if lines.is_empty() && session.is_some_and(|s| s["recipient"] == self.owner) {
-            let block = Block::default().borders(Borders::ALL).title(safe(&title));
+        let title = if self.current_task().is_some() {
+            "任务对话".into()
+        } else {
+            session
+                .map(presentation::session_title)
+                .unwrap_or_else(|| "对话".into())
+        };
+        if messages.is_empty() {
+            let block = Block::default()
+                .borders(Borders::ALL)
+                .border_style(theme::muted())
+                .title(safe(&title));
             let inner = block.inner(split[1]);
             f.render_widget(block, split[1]);
-            if inner.width > 0 && inner.height > 0 {
-                let center = Rect::new(inner.x, inner.y + (inner.height - 1) / 2, inner.width, 1);
+            if inner.height >= 2 {
+                let center = Rect::new(
+                    inner.x,
+                    inner.y + inner.height.saturating_sub(2) / 2,
+                    inner.width,
+                    2,
+                );
                 f.render_widget(
-                    Paragraph::new("今天要做什么？").alignment(Alignment::Center),
+                    Paragraph::new(vec![
+                        Line::from("今天要做什么？"),
+                        Line::styled("直接输入，或用 / 选择操作", theme::muted()),
+                    ])
+                    .alignment(Alignment::Center),
                     center,
                 );
             }
         } else {
-            draw_lines(f, split[1], &title, &lines, self.scroll, true);
+            draw_rich(f, split[1], &title, &messages, self.scroll, true);
         }
         if !activity.is_empty() {
-            draw_lines(f, split[2], "当前进展", &activity, 0, false);
+            draw_lines(f, split[2], "进展", &activity, 0, false);
         }
         let title = match self.panel {
-            Panel::ProjectPath => "输入其他工作目录路径".to_owned(),
-            Panel::RootPath => "输入可访问目录路径（允许只读任务）".into(),
-            Panel::NewTask => "输入任务目标；@成员 指定执行人".into(),
-            Panel::Revise => "输入修改或重开要求；新修订需要确认".into(),
-            Panel::TaskAccess => "在上方选择操作 · Enter 确认 · Esc 稍后处理".into(),
-            Panel::AccessPath => "输入保存位置 · Enter 返回检查 · Esc 放弃修改".into(),
-            Panel::AccessDependency => "输入只读依赖目录 · Enter 返回检查 · Esc 放弃修改".into(),
-            Panel::AccessTimeout => "输入运行时限（分钟）· Enter 返回检查".into(),
-            Panel::AttachmentSave => "输入另存为的完整路径 · Enter 保存 · Esc 取消".into(),
-            Panel::AttachmentAnalyze => "输入附件分析问题 · Enter 创建待确认任务 · Esc 取消".into(),
-            _ => "正在与自己的助手 对话 · @成员 指定参与人 · Enter 发送".into(),
-        };
-        let title = if let Some(t) = self.current_task().filter(|_| self.panel == Panel::Chat) {
-            format!(
-                "{}「{} · {}」· CtrlB 选问题作答 · Esc 返回对话",
-                if self.selected_question.is_some() {
-                    "正在回答问题"
-                } else {
-                    "讨论任务"
-                },
-                t["short_id"].as_str().unwrap_or("历史任务"),
-                t["title"].as_str().unwrap_or("")
-            )
-        } else {
-            title
-        };
+            Panel::ProjectPath => "工作目录路径",
+            Panel::RootPath => "允许只读访问的目录",
+            Panel::NewTask => "任务目标 · @成员 指定执行人",
+            Panel::Revise => "修改要求 · 提交后重新确认",
+            Panel::Stop => "停止原因 · Tab 切换方式 · Enter 确认 · Esc 返回",
+            Panel::AccessPath => "任务文件夹的保存位置",
+            Panel::AccessDependency => "额外只读目录",
+            Panel::AccessTimeout => "运行时限（分钟）",
+            Panel::AttachmentSave => "另存为路径",
+            Panel::AttachmentAnalyze => "附件分析问题",
+            _ if self.selected_question.is_some() => "回答当前问题 · Enter 发送",
+            _ if self.selected_task.is_some() => "讨论当前任务 · Esc 返回",
+            _ => "输入消息 · / 命令 · @成员",
+        }
+        .to_owned();
         let block = Block::default()
             .borders(Borders::ALL)
             .title(safe(&title))
@@ -1349,6 +1777,7 @@ impl Ui {
                 | Panel::Revise
                 | Panel::AttachmentSave
                 | Panel::AttachmentAnalyze
+                | Panel::Stop
         ) && inner.width > 0
             && inner.height > 0
         {
@@ -1362,64 +1791,127 @@ impl Ui {
                 inner.y + (cursor_row - top).min(inner.height.saturating_sub(1) as usize) as u16,
             ));
         }
-        let network = self.data["presence"]["connection"]["state"]
-            .as_str()
-            .unwrap_or("connecting");
-        let connection = match network {
-            "connected" => "信箱连接正常",
-            "unreachable" => "信箱暂时不可达；发件已排队",
-            _ => "连接中",
+        let connected = self.data["presence"]["connection"]["state"] == "connected";
+        let alive = self.data["service"]["alive"] == true;
+        let label = if !alive {
+            "后台未运行 · /reconnect"
+        } else if connected {
+            "已连接"
+        } else {
+            "离线 · /reconnect 重连"
         };
         f.render_widget(
             Paragraph::new(vec![
-                Line::from(format!(
-                    "{connection} · 后台 {} · CtrlO 会话 · CtrlT 任务 · CtrlP 工作目录 · CtrlR 可访问目录 · CtrlQ 退出界面（后台继续）",
-                    if self.data["service"]["alive"] == true {
-                        "运行中"
-                    } else {
-                        "未运行，检查 client status"
-                    }
-                )),
-                Line::from(safe(&self.notice)).style(Style::default().fg(Color::Yellow)),
+                Line::from(vec![
+                    Span::styled(
+                        label,
+                        if connected && alive {
+                            theme::success()
+                        } else {
+                            theme::warning()
+                        },
+                    ),
+                    Span::styled(
+                        format!(
+                            "   {} · /access",
+                            if self.data["access_mode"] == "full_access" {
+                                "Full access"
+                            } else {
+                                "Ask for approval"
+                            }
+                        ),
+                        if self.data["access_mode"] == "full_access" {
+                            theme::warning()
+                        } else {
+                            theme::muted()
+                        },
+                    ),
+                    Span::styled(
+                        "   CtrlT 任务 · CtrlF 附件 · F1 帮助 · CtrlQ 退出",
+                        theme::muted(),
+                    ),
+                ]),
+                Line::styled(
+                    safe(&format!("{} {}", self.notice, self.update.notice)),
+                    theme::warning(),
+                ),
             ]),
             parts[3],
         );
-        let candidates = self.candidates();
-        if self.panel == Panel::Chat && !candidates.is_empty() {
-            let text = vec![
-                "local agent 候选（此处 Tab 确认；不会发送）".into(),
-                candidates
-                    .iter()
-                    .enumerate()
-                    .map(|(n, s)| {
-                        format!(
-                            "{}@{}",
-                            if n == self.candidate % candidates.len() {
-                                "▶ "
-                            } else {
-                                "  "
-                            },
-                            s
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join("   "),
-            ];
-            let h = 4.min(parts[1].height);
-            let popup = Rect::new(
-                body.x,
-                body.y + body.height.saturating_sub(h),
-                body.width,
-                h,
-            );
-            f.render_widget(Clear, popup);
-            draw_lines(f, popup, "@ local agent", &text, 0, false);
-        }
         if !matches!(
             self.panel,
             Panel::Chat | Panel::ProjectPath | Panel::RootPath | Panel::NewTask | Panel::Revise
         ) {
             self.panel(f, body, store);
+        }
+        if self.panel == Panel::Chat {
+            let commands = if self.commands_hidden {
+                vec![]
+            } else {
+                commands::matching(&self.input.text)
+            };
+            if !commands.is_empty() {
+                let visible = body.height.saturating_sub(2).min(8) as usize;
+                if visible > 0 {
+                    let selected = self.candidate % commands.len();
+                    let start = selected.saturating_sub(visible - 1);
+                    let lines = commands
+                        .iter()
+                        .enumerate()
+                        .skip(start)
+                        .take(visible)
+                        .map(|(n, c)| {
+                            Line::styled(
+                                format!("{:<12} {}", c.name, c.description),
+                                if n == selected {
+                                    theme::selected()
+                                } else {
+                                    Style::default()
+                                },
+                            )
+                        })
+                        .collect::<Vec<_>>();
+                    let height = lines.len() as u16 + 2;
+                    let popup = Rect::new(
+                        body.x,
+                        body.bottom().saturating_sub(height),
+                        body.width,
+                        height,
+                    );
+                    f.render_widget(Clear, popup);
+                    f.render_widget(
+                        Paragraph::new(lines).block(
+                            Block::default()
+                                .borders(Borders::ALL)
+                                .border_style(theme::accent())
+                                .title("命令 · ↑↓ 选择 · Enter 打开 · Tab 补全"),
+                        ),
+                        popup,
+                    );
+                }
+            } else {
+                let candidates = self.candidates();
+                if !candidates.is_empty() {
+                    let selected = self.candidate % candidates.len();
+                    let text = candidates
+                        .iter()
+                        .enumerate()
+                        .map(|(n, name)| {
+                            format!("{}@{}", if n == selected { "▶ " } else { "  " }, name)
+                        })
+                        .collect::<Vec<_>>()
+                        .join("   ");
+                    let height = 3.min(body.height);
+                    let popup = Rect::new(
+                        body.x,
+                        body.bottom().saturating_sub(height),
+                        body.width,
+                        height,
+                    );
+                    f.render_widget(Clear, popup);
+                    draw_lines(f, popup, "成员 · ↑↓ 选择 · Tab 补全", &[text], 0, false);
+                }
+            }
         }
     }
     fn card_label(&self) -> String {
@@ -1440,60 +1932,189 @@ impl Ui {
         "最近任务（CtrlT）".into()
     }
     fn sidebar(&self, f: &mut ratatui::Frame, area: Rect) {
-        let mut items = vec![format!(
-            "{}自己的助手",
-            if self.view == 0 { "▶ " } else { "  " }
-        )];
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(theme::muted())
+            .title("导航");
+        let inner = block.inner(area);
+        f.render_widget(block, area);
+        let mut lines = vec![
+            Line::styled(
+                "我的助手",
+                if self.view == 0 {
+                    theme::selected()
+                } else {
+                    Style::default()
+                },
+            ),
+            Line::from(""),
+        ];
+        lines.push(Line::styled("团队", theme::muted()));
         for (n, c) in self.data["contacts"]
             .as_array()
             .into_iter()
             .flatten()
             .enumerate()
         {
-            items.push(format!(
-                "{}{}的助手",
-                if self.view == n + 1 { "▶ " } else { "  " },
-                c["member_id"].as_str().unwrap_or("")
+            lines.push(Line::styled(
+                format!("@{}", c["member_id"].as_str().unwrap_or("")),
+                if self.view == n + 1 {
+                    theme::selected()
+                } else {
+                    Style::default()
+                },
             ));
         }
-        items.push(format!(
-            "{}最近任务",
-            if self.view == items.len() {
-                "▶ "
-            } else {
-                "  "
-            }
-        ));
-        items.push(String::new());
-        items.push("Tab / ShiftTab 查看卡片".into());
-        let approvals = self.data["tasks"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter(|t| t["execution_permission"]["can_allow"] == true)
-            .count();
-        if approvals > 0 {
-            items.push(format!("{approvals} 项任务需要你允许 · CtrlT"));
-        }
-        for t in self.data["tasks"]
+        lines.push(Line::from(""));
+        let active = self.data["tasks"]
             .as_array()
             .into_iter()
             .flatten()
             .rev()
-            .take(5)
-        {
-            items.push(format!(
-                "· {} [{}]",
-                t["title"].as_str().unwrap_or(""),
-                presentation::task_status(t, &self.owner)
+            .filter(|t| !app::task_archive::finished(t["state"].as_str().unwrap_or("")))
+            .collect::<Vec<_>>();
+        lines.push(Line::styled(
+            format!("待处理 {} · CtrlT", active.len()),
+            theme::heading(),
+        ));
+        for task in active.iter().take(3) {
+            lines.push(Line::from(presentation::compact(
+                task["title"].as_str().unwrap_or("任务"),
+                inner.width as usize,
+            )));
+            lines.push(Line::styled(
+                presentation::compact(
+                    &presentation::task_status(task, &self.owner),
+                    inner.width as usize,
+                ),
+                theme::task(task["state"].as_str().unwrap_or("")),
             ));
         }
-        draw_lines(f, area, "团队与任务", &items, 0, false);
+        if active.is_empty() {
+            lines.push(Line::styled("暂无待处理任务", theme::muted()));
+        }
+        lines.push(Line::from(""));
+        lines.push(Line::styled("/inbox 收件箱", theme::accent()));
+        lines.push(Line::styled("/archived 已归档", theme::muted()));
+        lines.push(Line::styled("Tab 查看成员", theme::muted()));
+        f.render_widget(Paragraph::new(lines), inner);
+    }
+    fn render_tasks(&self, f: &mut ratatui::Frame, area: Rect) {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(theme::muted())
+            .title("任务");
+        let inner = block.inner(area);
+        f.render_widget(block, area);
+        let parts = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(1),
+            Constraint::Length(1),
+        ])
+        .split(inner);
+        let tabs = ["进行中", "已结束", "已归档"]
+            .iter()
+            .enumerate()
+            .flat_map(|(n, label)| {
+                [
+                    Span::styled(
+                        format!(" {label} "),
+                        if n == self.task_filter {
+                            theme::selected()
+                        } else {
+                            theme::muted()
+                        },
+                    ),
+                    Span::raw(" "),
+                ]
+            })
+            .collect::<Vec<_>>();
+        f.render_widget(Paragraph::new(Line::from(tabs)), parts[0]);
+        let tasks = self.task_rows();
+        let visible = (parts[1].height as usize / 2).max(1);
+        let start = self.index.saturating_sub(visible - 1);
+        let mut lines = vec![];
+        for (n, task) in tasks.iter().enumerate().skip(start).take(visible) {
+            let title = presentation::compact(
+                task["title"].as_str().unwrap_or("任务"),
+                inner.width.saturating_sub(2) as usize,
+            );
+            lines.push(Line::styled(
+                format!("{}{title}", if n == self.index { "▶ " } else { "  " }),
+                if n == self.index {
+                    theme::selected()
+                } else {
+                    Style::default()
+                },
+            ));
+            lines.push(Line::styled(
+                format!(
+                    "  {}",
+                    presentation::compact(
+                        &presentation::task_status(task, &self.owner),
+                        inner.width.saturating_sub(2) as usize
+                    )
+                ),
+                theme::task(task["state"].as_str().unwrap_or("")),
+            ));
+        }
+        if tasks.is_empty() {
+            lines.push(Line::styled(
+                ["暂无进行中的任务", "暂无已结束任务", "暂无归档任务"][self.task_filter],
+                theme::muted(),
+            ));
+        }
+        f.render_widget(Paragraph::new(lines), parts[1]);
+        let hint = match self.task_filter {
+            1 => "Tab 分类 · Enter 查看 · a 归档 · A 全部归档",
+            2 => "Tab 分类 · Enter 查看 · a 恢复",
+            _ => "Tab 分类 · Enter 查看 · CtrlX 停止 · a 停止并归档",
+        };
+        f.render_widget(Paragraph::new(hint).style(theme::muted()), parts[2]);
     }
     fn panel(&self, f: &mut ratatui::Frame, area: Rect, store: &Store) {
         f.render_widget(Clear, area);
+        if self.panel == Panel::AttachmentDetail {
+            if let Some(v) = self.data["attachments"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|v| v["id"].as_str() == self.transfer_id.as_deref())
+            {
+                attachments::render(f, area, v, self.index);
+            }
+            return;
+        }
+        if self.panel == Panel::Tasks {
+            self.render_tasks(f, area);
+            return;
+        }
         let mut lines = vec![];
         let title = match self.panel {
+            Panel::AccessMode => {
+                lines.push(format!(
+                    "本机 @{} 的访问模式 · 不改变其他成员的设置",
+                    self.owner
+                ));
+                lines.push(String::new());
+                lines.push(format!(
+                    "{} Ask for approval",
+                    if self.index == 0 { "▶" } else { " " }
+                ));
+                lines.push("  先确认任务；写入/运行及发送文件按现有范围逐项批准。".into());
+                lines.push("  原文件只读，在获准的独立任务目录运行，不联网。".into());
+                lines.push(String::new());
+                lines.push(format!(
+                    "{} Full access",
+                    if self.index == 1 { "▶" } else { " " }
+                ));
+                lines.push("  允许本机文件读写、运行和联网，任务及文件发送免逐次批准。".into());
+                lines.push("  包括团队成员交给本机的任务；可修改原项目并发送所需文件。".into());
+                lines.push("  请仅在信任本机助手及团队任务时选择。".into());
+                lines.push(String::new());
+                lines.push("切换会记住；正在执行时请先停止或等本轮结束。已批准的传输继续。".into());
+                "访问模式 · ↑↓ 选择 · Enter 应用 · Esc 返回"
+            }
             Panel::TaskAccess
             | Panel::AccessPath
             | Panel::AccessDependency
@@ -1621,42 +2242,62 @@ impl Ui {
                         c["unread"]
                     ));
                 }
-                "持久会话"
+                "历史对话"
             }
-            Panel::Tasks => {
-                lines
-                    .push("↑↓ 选择 · Enter 查看任务；待你允许的任务会先展示范围 · Esc 返回".into());
-                for (n, t) in self.data["tasks"]
+            Panel::Tasks => unreachable!(),
+            Panel::Identity => {
+                lines.push(format!(
+                    "{} · @{}",
+                    self.data["identity"]["display_name"].as_str().unwrap_or(""),
+                    self.owner
+                ));
+                lines.push(format!(
+                    "团队：{}",
+                    self.data["identity"]["team_id"].as_str().unwrap_or("")
+                ));
+                lines.push(format!(
+                    "工作目录：{}",
+                    self.project["path"].as_str().unwrap_or("")
+                ));
+                "我的身份 · Esc 返回"
+            }
+            Panel::Status => {
+                lines.push(format!(
+                    "信箱：{}",
+                    if self.data["presence"]["connection"]["state"] == "connected" {
+                        "已连接"
+                    } else {
+                        "等待连接"
+                    }
+                ));
+                lines.push(format!(
+                    "后台：{}",
+                    if self.data["service"]["alive"] == true {
+                        "运行中"
+                    } else {
+                        "未运行"
+                    }
+                ));
+                lines.push(format!("版本：{}", env!("CARGO_PKG_VERSION")));
+                if let Some(error) = self.data["service"]["error"].as_str() {
+                    lines.push(format!("错误：{error}"));
+                }
+                "连接状态 · Esc 返回"
+            }
+            Panel::Contacts => {
+                for contact in self.data["presence"]["members"]
                     .as_array()
                     .into_iter()
                     .flatten()
-                    .enumerate()
                 {
                     lines.push(format!(
-                        "{}{} · {}",
-                        if n == self.index { "▶ " } else { "  " },
-                        t["title"].as_str().unwrap_or(""),
-                        presentation::task_status(t, &self.owner),
+                        "@{} · {} · {}",
+                        contact["member_id"].as_str().unwrap_or(""),
+                        contact["display_name"].as_str().unwrap_or(""),
+                        presentation::presence(&contact["presence"])
                     ));
                 }
-                if let Some(task) = self.data["tasks"]
-                    .as_array()
-                    .and_then(|a| a.get(self.index))
-                {
-                    lines.push(presentation::task_location(task, &self.owner));
-                    lines.push(format!("目标：{}", task["goal"].as_str().unwrap_or("")));
-                    lines.push(format!(
-                        "准备的材料：{}",
-                        task["materials"]
-                            .as_array()
-                            .into_iter()
-                            .flatten()
-                            .filter_map(|f| f["path"].as_str())
-                            .collect::<Vec<_>>()
-                            .join("、")
-                    ));
-                }
-                "任务卡"
+                "团队成员 · Esc 返回"
             }
             Panel::Projects => {
                 lines.push("Enter 选择 · n 输入其他路径 · Esc 返回".into());
@@ -1686,11 +2327,9 @@ impl Ui {
                     ));
                 }
                 if lines.len() == 1 {
-                    lines.push(
-                        "导入白名单为空。先添加材料所在目录，再用 CtrlG 选择少量具体文件。".into(),
-                    );
+                    lines.push("尚未允许读取任何目录 · n 添加".into());
                 }
-                "导入白名单"
+                "可读取的目录"
             }
             Panel::Attachments => {
                 lines.push("n 选择文件发送 · ↑↓ 选择 · Enter 查看 · Esc 返回".into());
@@ -1753,7 +2392,7 @@ impl Ui {
                 }
                 "发送附件给谁"
             }
-            Panel::AttachmentDetail | Panel::AttachmentSave | Panel::AttachmentAnalyze => {
+            Panel::AttachmentInfo | Panel::AttachmentSave | Panel::AttachmentAnalyze => {
                 if let Some(v) = self.data["attachments"]
                     .as_array()
                     .into_iter()
@@ -1774,12 +2413,18 @@ impl Ui {
                     if let Some(err) = v["error"].as_str() {
                         lines.push(format!("需处理：{err}"));
                     }
-                    for (n, file) in m["files"].as_array().into_iter().flatten().enumerate() {
+                    for (n, file) in m["files"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .enumerate()
+                        .filter(|(n, _)| *n == self.index)
+                    {
                         lines.push(format!(
-                            "{} {} · {} 字节",
+                            "{} {} · {}",
                             if self.index == n { "▶" } else { " " },
                             file["name"].as_str().unwrap_or(""),
-                            file["bytes"]
+                            presentation::file_size(file["bytes"].as_u64().unwrap_or(0))
                         ));
                         if let Some(local) = v["local_files"]
                             .as_array()
@@ -1787,38 +2432,11 @@ impl Ui {
                             .flatten()
                             .find(|p| p["id"] == file["id"])
                         {
-                            lines.push(format!("  已传 {} 字节", local["bytes_transferred"]));
-                            if v["state"] == "received" {
-                                lines.push(format!("  {}", local["path"].as_str().unwrap_or("")));
-                            }
+                            lines.push(format!("  {}", local["path"].as_str().unwrap_or("")));
                         }
                     }
-                    if self.panel == Panel::AttachmentDetail {
-                        let state = v["state"].as_str().unwrap_or("");
-                        let mut actions = vec![];
-                        if v["direction"] == "out" {
-                            if matches!(state, "draft" | "queued" | "unsupported") {
-                                actions.push("a 允许发送所列固定文件");
-                            }
-                            if !matches!(state, "revoked" | "expired" | "revoking") {
-                                actions.push("x 撤销发送");
-                            }
-                        } else if matches!(state, "offered" | "failed") {
-                            actions.push("d 下载到本机");
-                        }
-                        if matches!(state, "failed" | "unsupported") {
-                            actions.push("r 重试");
-                        }
-                        if !actions.is_empty() {
-                            lines.push(actions.join(" · "));
-                        }
-                        if v["direction"] == "out" || state == "received" {
-                            lines.push("↑↓ 选文件 · Enter/o 打开 · s 另存为".into());
-                        }
-                        if state == "received" {
-                            lines.push("c 继续分析".into());
-                        }
-                        lines.push("Esc 返回".into());
+                    if self.panel == Panel::AttachmentInfo {
+                        lines.push("↑↓ 滚动 · Esc 返回文件列表".into());
                     } else {
                         lines.push(
                             if self.panel == Panel::AttachmentSave {
@@ -1829,6 +2447,11 @@ impl Ui {
                             .into(),
                         );
                         lines.push(format!("> {}▏", self.input.text));
+                        lines.push(if self.panel == Panel::AttachmentSave {
+                            "Enter 保存 · Esc 返回".into()
+                        } else {
+                            "Enter 创建待确认任务 · Esc 返回".into()
+                        });
                     }
                 }
                 "附件详情"
@@ -2009,18 +2632,34 @@ impl Ui {
                 "任务详情 / 来源 / 原始记录 · ↑↓ 滚动 · Esc 返回"
             }
             Panel::Stop => {
-                lines.push("停止本端后续调度并拒绝此任务的新提交。".into());
-                lines.push("当前模型调用仍可能持续到超时；不会冒充已经终止进程。".into());
-                lines.push(
-                    if self.current_task().is_some_and(|t| t["protocol"] == 2) {
-                        "已确认任务会通知参与方取消；对方离线时持久排队。"
+                if let Some(form) = &self.stop_form {
+                    lines.push(form.task["title"].as_str().unwrap_or("当前任务").into());
+                    lines.push(String::new());
+                    lines.push(if form.task["protocol"] != 2 {
+                        "停止本端后续工作；历史任务不会自动停止对方。".into()
+                    } else if form.task["initiator"] == self.owner {
+                        "停止整个任务，并通知执行成员。对方离线时，收到通知后停止。".into()
                     } else {
-                        "历史任务不会自动取消对方任务。"
-                    }
-                    .into(),
-                );
-                lines.push("Enter 确认停止 · Esc 取消".into());
-                "停止作用范围"
+                        format!(
+                            "停止本机参与，并将原因告知发起人 @{}。",
+                            form.task["initiator"].as_str().unwrap_or("")
+                        )
+                    });
+                    lines.push("停止后保留对话和已有文件，不会把任务标为已完成。".into());
+                    lines.push("本机在途执行会退出；已经产生的文件不会自动回滚。".into());
+                    lines.push(String::new());
+                    lines.push(format!(
+                        "{} 停止并归档  · 从待办移走，可在已归档中查看",
+                        if form.archive { "▶" } else { " " }
+                    ));
+                    lines.push(format!(
+                        "{} 仅停止      · 留在已结束列表，稍后再归档",
+                        if form.archive { " " } else { "▶" }
+                    ));
+                    lines.push(String::new());
+                    lines.push("在下方填写原因；Tab 切换方式，Enter 确认。".into());
+                }
+                "停止任务 · Esc 返回"
             }
             _ => {
                 lines = HELP.lines().map(str::to_owned).collect();
@@ -2085,20 +2724,32 @@ fn expand(text: &str) -> PathBuf {
     }
     PathBuf::from(text)
 }
-fn draw_lines(
+fn draw_rich(
     f: &mut ratatui::Frame,
     area: Rect,
     title: &str,
-    lines: &[String],
+    lines: &[Line<'_>],
     scroll: usize,
     bottom: bool,
 ) {
-    let block = Block::default().borders(Borders::ALL).title(safe(title));
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(theme::muted())
+        .title(Span::styled(safe(title), theme::heading()));
     let inner = block.inner(area);
     f.render_widget(block, area);
     let mut wrapped = Vec::new();
     for line in lines {
-        wrapped.extend(wrap(line, inner.width.max(1) as usize));
+        let text = line
+            .spans
+            .iter()
+            .map(|s| s.content.as_ref())
+            .collect::<String>();
+        wrapped.extend(
+            wrap(&text, inner.width.max(1) as usize)
+                .into_iter()
+                .map(|s| Line::styled(s, line.style)),
+        );
     }
     let start = if bottom {
         wrapped
@@ -2108,15 +2759,47 @@ fn draw_lines(
     } else {
         scroll.min(wrapped.len().saturating_sub(inner.height as usize))
     };
-    let text = wrapped
-        .into_iter()
-        .skip(start)
-        .take(inner.height as usize)
-        .map(Line::from)
-        .collect::<Vec<_>>();
-    f.render_widget(Paragraph::new(text), inner);
+    f.render_widget(
+        Paragraph::new(
+            wrapped
+                .into_iter()
+                .skip(start)
+                .take(inner.height as usize)
+                .collect::<Vec<_>>(),
+        ),
+        inner,
+    );
 }
-const HELP: &str = "CtrlF 附件：n 选择接收人和文件，CtrlS 发送；Enter 查看和处理附件。\n大部分实质任务会交给 Codex；可直接让它找文件或解释材料。\n默认输入给自己的助手；@test 明确选择 test的助手。\nTab / ShiftTab 切换查看状态卡。\n@ 候选打开时：↑↓选择，Tab 确认，此时不会发送。\nEnter 发送；CtrlJ 或 AltEnter 换行；粘贴不会自动发送。\n方向键/Home/End 编辑；PageUp/PageDown 或滚轮查看历史。\nCtrlO 查看所有会话和未读消息；n 新建独立对话。\nCtrlT 选择任务；待你允许的任务按 Enter 查看范围，再选允许并开始。\nCtrlN 新建任务（@成员 指定执行人）。\nCtrlS 确认任务意图；CtrlB 选问题；CtrlE 修改或重开。\nCtrlU 仅用于兼容旧任务的固定材料授权；新任务不逐项授权。\nCtrlD 展开来源、结果位置、错误和原始往返。\nCtrlX 停止本端后续调度（需确认）；CtrlY 显式重试原任务。\nCtrlP 选择工作目录：Enter 选择，n 输入其他路径。\nCtrlR 管理白名单目录：n 添加，Delete 移除。\n选择工作目录不授权读取；白名单允许 Codex 按本地或团队请求只读查询。\nCtrlQ / CtrlC 退出界面，后台助手 继续工作。\n/identity、/status、/contacts 不调用模型。\n写入或运行：执行方 CtrlT → Enter 查看范围 → 允许并开始，发起方无需重试。\nCtrlG 打开当前任务的执行授权；可调整保存位置、依赖目录和运行时限。";
+fn draw_lines(
+    f: &mut ratatui::Frame,
+    area: Rect,
+    title: &str,
+    lines: &[String],
+    scroll: usize,
+    bottom: bool,
+) {
+    let lines = lines
+        .iter()
+        .map(|s| {
+            Line::styled(
+                safe(s),
+                if s.starts_with("▶") {
+                    theme::selected()
+                } else if s.starts_with("↑↓")
+                    || s.starts_with("Ctrl")
+                    || s.starts_with("Enter")
+                    || s.starts_with("Tab")
+                {
+                    theme::muted()
+                } else {
+                    Style::default()
+                },
+            )
+        })
+        .collect::<Vec<_>>();
+    draw_rich(f, area, title, &lines, scroll, bottom);
+}
+const HELP: &str = "输入 / 查看命令；↑↓ 选择，Enter 打开，Tab 补全。\n\n对话：Enter 发送 · CtrlJ / AltEnter 换行 · @成员 选择参与人\n任务：CtrlT 查看 · Tab 分类 · a 归档或恢复 · A 归档已结束任务\n收件箱：/inbox · n 留言 · r 回复 · m 标为已查看\n附件：CtrlF · n 发送 · Enter 查看\n历史对话：CtrlO · n 新对话\n工作目录：CtrlP · 可读取目录：CtrlR / /roots\n访问模式：/access · 手动重连：/reconnect\n\n任务确认：CtrlS · 修改：CtrlE · 回答问题：CtrlB\n执行授权：CtrlG · 详情和记录：CtrlD\n停止任务：CtrlX / /stop · 重试：CtrlY\n\n停止：填写原因，选择停止并归档或仅停止。\n归档只整理本机列表，保留历史，不会重新启动任务。\nAsk for approval 下，写入运行须执行方批准；Full access 按本机预授权自动执行。\n退出：CtrlQ（后台继续工作）";
 
 pub async fn open(args: OpenArgs) -> Result<()> {
     let default_directory = args.directory.is_none();
@@ -2150,7 +2833,21 @@ pub async fn open(args: OpenArgs) -> Result<()> {
     }
     let project = app::project(&store, &project)?;
     let mut ui = Ui::new(&store, project)?;
+    if let Some(session) = args.resume_session {
+        let project: String = store.conn.query_row(
+            "SELECT project_id FROM app_sessions WHERE id=?1",
+            [&session],
+            |r| r.get(0),
+        )?;
+        ensure!(ui.project["id"] == project, "恢复会话与工作目录不匹配");
+        ui.session = session;
+        ui.refresh(&store)?;
+    }
+    if let Ok(notice) = std::env::var("XXASSXX_UPDATE_NOTICE") {
+        ui.notice = notice;
+    }
     ui.prompt_project_access(&store)?;
+    ui.update.start();
     match service::execute(
         &store,
         service::Command::Start {
@@ -2183,14 +2880,50 @@ pub async fn open(args: OpenArgs) -> Result<()> {
     let mut interrupt = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
     let mut refresh = Instant::now() - Duration::from_secs(1);
     loop {
+        if ui.reconnect_requested {
+            ui.reconnect_requested = false;
+            if let Err(e) = service::reconnect(&store).await {
+                ui.notice = format!("重连未成功：{e}；/status 查看原因");
+                ui.reconnect_monitor = false;
+            }
+        }
         if refresh.elapsed() >= Duration::from_millis(300) {
+            if ui
+                .update
+                .poll(
+                    &db,
+                    ui.panel == Panel::Chat && ui.input.text.is_empty() && !ui.inbox.active,
+                )
+                .await
+            {
+                break;
+            }
             if let Err(e) = ui.refresh(&store) {
                 ui.notice = format!("读取后台状态失败：{e}");
+            }
+            if ui.reconnect_monitor
+                && ui.data["presence"]["connection"]["state"] == "connected"
+                && ui.data["service"]["alive"] == true
+            {
+                ui.notice = "已重新连接，消息和任务会继续同步。".into();
+                ui.reconnect_monitor = false;
+            } else if ui.reconnect_monitor && ui.data["service"]["state"] == "blocked" {
+                ui.notice = "连接未恢复；请在 /status 查看身份或配置问题。".into();
+                ui.reconnect_monitor = false;
+            } else if ui.reconnect_monitor
+                && ui.data["presence"]["connection"]["state"] == "unreachable"
+            {
+                ui.notice = "暂时无法连接，会自动重试；/status 查看原因。".into();
+            } else if ui.notice == "已重新连接，消息和任务会继续同步。"
+                && (ui.data["presence"]["connection"]["state"] != "connected"
+                    || ui.data["service"]["alive"] != true)
+            {
+                ui.notice.clear();
             }
             refresh = Instant::now();
         }
         terminal.draw(|f| ui.render(f, &store))?;
-        if ui.scroll == 0 && ui.panel == Panel::Chat {
+        if ui.scroll == 0 && ui.panel == Panel::Chat && !ui.inbox.active {
             let seq = store.conn.query_row(
                 "SELECT COALESCE(MAX(seq),0) FROM app_events WHERE session_id=?1",
                 [&ui.session],
@@ -2199,13 +2932,21 @@ pub async fn open(args: OpenArgs) -> Result<()> {
             app::mark_read(&store, &ui.session, seq)?;
         }
         if event::poll(Duration::from_millis(60))? {
+            ui.update.activity();
             match event::read()? {
                 Event::Key(key) => match ui.key(&mut store, key) {
                     Ok(true) => break,
                     Ok(false) => {}
-                    Err(e) => ui.notice = e.to_string(),
+                    Err(e) => {
+                        ui.notice = e.to_string();
+                        ui.inbox.error(e.to_string());
+                    }
                 },
                 Event::Paste(text) => {
+                    if ui.inbox.active {
+                        ui.inbox.paste(&text);
+                        continue;
+                    }
                     if matches!(
                         ui.panel,
                         Panel::Chat
@@ -2218,7 +2959,10 @@ pub async fn open(args: OpenArgs) -> Result<()> {
                             | Panel::AccessTimeout
                             | Panel::AttachmentSave
                             | Panel::AttachmentAnalyze
+                            | Panel::Stop
                     ) {
+                        ui.commands_hidden = false;
+                        ui.candidate = 0;
                         ui.input
                             .insert(&text.replace("\r\n", "\n").replace('\r', "\n"));
                     }
@@ -2237,6 +2981,15 @@ pub async fn open(args: OpenArgs) -> Result<()> {
     terminal.show_cursor()?;
     drop(terminal);
     drop(_guard);
+    if ui.update.requested {
+        let project = PathBuf::from(
+            ui.project["path"]
+                .as_str()
+                .context("missing project path")?,
+        );
+        drop(store);
+        return update::reopen(&root, &project, &ui.session, ui.update.automatic);
+    }
     if service::status(&store)?["alive"] == true {
         println!("已关闭终端界面，后台助手 继续运行。再次运行 xxassxx 即可打开界面。");
         let command = if default_directory {

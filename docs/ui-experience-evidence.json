@@ -1,0 +1,166 @@
+{
+  "date": "2026-10-13",
+  "version": "0.6.1-alpha",
+  "source": {
+    "uncommitted": true,
+    "published": false,
+    "rust_and_test_files": 83,
+    "manifest_sha256": "e94f6bdfde259718d65a66b71e4b502572c470f8ca3a3367dcecb359672e0d91"
+  },
+  "automated": {
+    "platform": "x86_64-unknown-linux-musl on Lakota",
+    "passed": 157,
+    "failed": 0,
+    "ignored": 2,
+    "format": "passed",
+    "clippy": "passed; existing libc::time_t deprecation allowed",
+    "new_tests": [
+      "local archive, revision fence and recovery without execution changes",
+      "slash completion, list categories and original result access",
+      "archived task remains in unread inbox without marking seen",
+      "menu scrolling, colors and narrow terminal sizes"
+    ]
+  },
+  "binaries": {
+    "aarch64-apple-darwin": {
+      "sha256": "eee9db5c795b07fcb94b3f847509143dbf733cd7de5d906ad8bc38c50d119338",
+      "archive_sha256": "252a90c61d0ca88bb014c59d4bb249fd9870a109b8a61e2272267c939ef39e0a"
+    },
+    "x86_64-unknown-linux-musl": {
+      "sha256": "3aa76ce606ce0a5a6402155859ecf77275cdf53019acb95322f1d5ac07c982ad",
+      "archive_sha256": "2820bef433c16feaa3dcfa827a69d1a517396fe8b0b22779017392eb624ce7e2"
+    }
+  },
+  "installation": {
+    "mac": {
+      "version": "0.6.1-alpha",
+      "background_alive": true,
+      "all_tables_and_config_identical_while_stopped": true,
+      "integrity": [
+        "ok"
+      ],
+      "schema": 10,
+      "tasks": 9,
+      "file_roots": 1,
+      "codex": {
+        "available": true,
+        "logged_in": true
+      },
+      "mailbox": {
+        "error": null,
+        "reachable_and_identity_matches": true
+      },
+      "backup_folder": "~/.local/share/xxassxx/backups/ui-061-20261013"
+    },
+    "linux": {
+      "version": "0.6.1-alpha",
+      "background_alive": true,
+      "all_tables_and_config_identical_while_stopped": true,
+      "integrity": [
+        "ok"
+      ],
+      "schema": 10,
+      "tasks": 10,
+      "file_roots": 1,
+      "codex": {
+        "available": true,
+        "logged_in": true
+      },
+      "mailbox": {
+        "error": null,
+        "reachable_and_identity_matches": true
+      },
+      "backup_folder": "~/.local/share/xxassxx/backups/ui-061-20261013"
+    }
+  },
+  "ui": {
+    "method": "Actual interactive PTY; not native Terminal window takeover",
+    "archive": "Lakota completed task archived, reopened after UI restart, original result opened, then restored; Mac demo archived and restored",
+    "no_bulk_user_history_change": true,
+    "inbox_demo_unread_preserved": true,
+    "final_installed_status_and_menu": "passed on Mac owner and Lakota test",
+    "screenshots": [
+      "smoke-output/ui-cleanup-20261013/installed/owner-slash-menu.png",
+      "smoke-output/ui-cleanup-20261013/installed/owner-tasks-finished.png",
+      "smoke-output/ui-cleanup-20261013/installed/owner-result.png"
+    ]
+  },
+  "real_model": {
+    "task_id": "e8c39a3c-8f3d-5b08-80cc-3be8aaa5bbbd",
+    "executions": [
+      {
+        "id": "bec21923-339b-5cbb-bfb6-14f00e469cb6",
+        "task_id": "e8c39a3c-8f3d-5b08-80cc-3be8aaa5bbbd",
+        "revision": 1,
+        "phase": "discover",
+        "state": "done",
+        "round": 1,
+        "snapshot_id": null
+      },
+      {
+        "id": "17a387ea-2ce0-5469-b655-e05ee4c1820e",
+        "task_id": "e8c39a3c-8f3d-5b08-80cc-3be8aaa5bbbd",
+        "revision": 1,
+        "phase": "analyze",
+        "state": "candidate",
+        "round": 1,
+        "snapshot_id": "1a65f895-13ea-5bbf-acb8-c2748b2f07a2"
+      }
+    ],
+    "runs": [
+      {
+        "id": "65f6d6b1-2e8f-4acd-b788-05c2ac263954",
+        "task_id": "17a387ea-2ce0-5469-b655-e05ee4c1820e",
+        "state": "succeeded",
+        "sandbox": "read-only",
+        "codex_version": "codex-cli 0.160.1",
+        "reads": 1,
+        "submissions": 1,
+        "turn_completed": 1,
+        "exit_code": 0,
+        "error_code": null
+      },
+      {
+        "id": "f91be9ec-3691-40ca-bd53-a075ebb7a635",
+        "task_id": "bec21923-339b-5cbb-bfb6-14f00e469cb6",
+        "state": "succeeded",
+        "sandbox": "read-only",
+        "codex_version": "codex-cli 0.160.1",
+        "reads": 1,
+        "submissions": 1,
+        "turn_completed": 1,
+        "exit_code": 0,
+        "error_code": null
+      }
+    ],
+    "source_file": "smoke-output/ui-cleanup-20261013/demo/体验样本.txt",
+    "source_sha256": "0c1be81c63e9b395651c9937f09c011a925629121d99003ff3a34d697e0875a5",
+    "expected": {
+      "marker": "UI-8061",
+      "sample_count": 37
+    },
+    "ui_binary_sha256": "17518b14a25a3ba0bbce764cba2b54523a7a085ff0dd6f80a5149544ba113739",
+    "background_version_during_run": "0.6.0-alpha",
+    "final_installed_binary_reopened_original_result": true,
+    "new_model_execution_after_install": false,
+    "answer_verified": {
+      "marker": "UI-8061",
+      "sample_count": 37,
+      "file_size_bytes": 31
+    }
+  },
+  "storage": {
+    "removed_task_temporary_caches": true,
+    "removed_allocated_bytes": 1389510656,
+    "retained_packages": "dist/v0.6.1-alpha",
+    "remote_package_backup": "lakota:~/xxassxx-tests/inbox-20261012/packages-061",
+    "repo_target_exists": false,
+    "disk_free_bytes": 48899710976
+  },
+  "limits": [
+    "No native Intel Mac validation or final-source macOS CI in this turn",
+    "Trader mailbox remains compatible 0.6.0-alpha, schema 2",
+    "Archive preference is local to this installation; plain messages cannot be archived",
+    "No new cross-machine research computation or dot retest"
+  ]
+}

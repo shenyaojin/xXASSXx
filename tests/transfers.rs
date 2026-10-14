@@ -91,7 +91,7 @@ fn attachment_input_keeps_file_context_and_names_the_action() {
     ui.key(&mut store, key(KeyCode::Char('c'))).unwrap();
     let screen = render(&ui, &store);
     assert!(screen.contains("result.bin") && screen.contains("a → b"));
-    assert!(screen.contains("输入附件分析问题"));
+    assert!(screen.contains("附件分析问题"));
     assert!(screen.contains("Enter 创建待确认任务"));
     assert!(!screen.contains("正在与自己的助手 对话"));
 }

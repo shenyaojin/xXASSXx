@@ -64,6 +64,7 @@ pub async fn run(
     let stopping = Arc::new(AtomicBool::new(false));
     let transport = async {
         let mut failures = 0u32;
+        let mut reconnect_token = crate::service::reconnect_token(&wire)?;
         while !stopping.load(Ordering::Relaxed) {
             let tick = async {
                 crate::team::sync(&mut wire).await?;
@@ -105,6 +106,12 @@ pub async fn run(
                     stopping.store(true, Ordering::Relaxed);
                 }
                 if stopping.load(Ordering::Relaxed) {
+                    break;
+                }
+                let requested = crate::service::reconnect_token(&wire)?;
+                if requested != reconnect_token {
+                    reconnect_token = requested;
+                    failures = 0;
                     break;
                 }
                 tokio::time::sleep(Duration::from_millis(100)).await;
@@ -175,6 +182,9 @@ pub async fn run(
     let joined = async {
         let attachments = async {
             while !stopping.load(Ordering::Relaxed) {
+                if let Err(e) = crate::transfers::apply_access_mode(&files) {
+                    eprintln!("attachment access: {e}");
+                }
                 if let Err(e) = crate::transfers::sync(&files).await {
                     eprintln!("attachments: {e}");
                 }

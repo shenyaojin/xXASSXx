@@ -99,6 +99,9 @@ pub enum MailboxCommand {
     Serve {
         #[arg(long)]
         config: PathBuf,
+        /// Optional OAuth-protected member MCP configuration, separate from device credentials.
+        #[arg(long)]
+        member_mcp_config: Option<PathBuf>,
         #[arg(long, default_value = "127.0.0.1:7788")]
         listen: std::net::SocketAddr,
     },
@@ -221,11 +224,22 @@ pub async fn execute(db: &Path, command: Commands) -> Result<()> {
         _ => {}
     }
     if let Commands::Mailbox {
-        action: MailboxCommand::Serve { config, listen },
+        action:
+            MailboxCommand::Serve {
+                config,
+                listen,
+                member_mcp_config,
+            },
     } = command
     {
         let config = toml::from_str(&std::fs::read_to_string(config)?)?;
-        let router = crate::mailbox::router(db, &config)?;
+        let mut router = crate::mailbox::router(db, &config)?;
+        if let Some(path) = member_mcp_config {
+            router = router.merge(crate::member_mcp::router(
+                db.to_owned(),
+                crate::member_auth::Config::load(&path)?,
+            )?);
+        }
         let listener = tokio::net::TcpListener::bind(listen).await?;
         println!(
             "{}",

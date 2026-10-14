@@ -58,7 +58,11 @@ CREATE TABLE IF NOT EXISTS relay_reports(meeting_id TEXT NOT NULL,member TEXT NO
 CREATE TABLE IF NOT EXISTS relay_system_events(id TEXT PRIMARY KEY,recipient TEXT NOT NULL,kind TEXT NOT NULL,payload TEXT NOT NULL,created_at INTEGER NOT NULL,received INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS relay_daily(member TEXT NOT NULL,team_date TEXT NOT NULL,cutoff INTEGER NOT NULL,PRIMARY KEY(member,team_date));
 CREATE TABLE IF NOT EXISTS relay_local_facts(id TEXT PRIMARY KEY,member TEXT NOT NULL,payload TEXT NOT NULL);
-PRAGMA user_version=1;COMMIT;")?;
+COMMIT;")?;
+    let version: u32 = c.pragma_query_value(None, "user_version", |r| r.get(0))?;
+    if version == 0 {
+        c.pragma_update(None, "user_version", 1)?;
+    }
     c.execute("INSERT INTO relay_task_config VALUES(1,?1) ON CONFLICT(singleton) DO UPDATE SET config=excluded.config",[serde_json::to_string(cfg)?])?;
     Ok(())
 }

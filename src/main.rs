@@ -45,6 +45,8 @@ struct RunArgs {
 
 #[derive(Subcommand)]
 enum Action {
+    /// Check, download and safely install a signed application update.
+    Update(xxassxx::update::Command),
     /// Open the xXASSXx terminal interface in a project.
     Open(xxassxx::interactive::OpenArgs),
     /// Explicitly open official Codex with temporary local agent MCP access.
@@ -132,6 +134,10 @@ async fn main() {
 }
 
 async fn execute(cli: Cli) -> Result<()> {
+    if let Some(Action::Update(args)) = cli.command {
+        return xxassxx::update::execute(args).await;
+    }
+    let _installation = xxassxx::update::install::runtime_lease()?;
     let action = match cli.command {
         None => {
             anyhow::ensure!(
@@ -177,7 +183,9 @@ async fn execute(cli: Cli) -> Result<()> {
     }
     let mut store = Store::open(&db)?;
     let output = match action {
-        Action::Open(_) | Action::Codex(_) | Action::Phase2(_) => unreachable!(),
+        Action::Open(_) | Action::Codex(_) | Action::Phase2(_) | Action::Update(_) => {
+            unreachable!()
+        }
         Action::Init => unreachable!(),
         Action::Submit { text } => {
             let text = match text {

@@ -314,7 +314,7 @@ pub fn prepare(store: &Store, p: Prepare, explicit_selection: bool) -> Result<Va
     for (index, path) in p.paths.iter().enumerate() {
         let path = std::path::absolute(path)?;
         protected(store, &path)?;
-        if !explicit_selection {
+        if !explicit_selection && !crate::access_mode::full(&store.conn)? {
             let task_directory = p
                 .task
                 .as_ref()
@@ -398,6 +398,9 @@ pub fn prepare(store: &Store, p: Prepare, explicit_selection: bool) -> Result<Va
     tx.execute("INSERT INTO transfer_grants(id,kind,task_id,revision,recipient,evidence,created_at) VALUES(?1,'files',?2,?3,?4,?5,?6)",params![m.id,m.task.as_ref().map(|t|&t.id),m.task.as_ref().map(|t|t.revision),m.recipient,evidence,now()])?;
     tx.commit()?;
     state(store, &m.id, "draft", None)?;
+    if crate::access_mode::full(&store.conn)? {
+        return allow(store, &m.id);
+    }
     get(store, &m.id)
 }
 pub fn allow(store: &Store, id: &str) -> Result<Value> {
@@ -423,6 +426,20 @@ pub fn allow(store: &Store, id: &str) -> Result<Value> {
         .execute("UPDATE file_transfers SET authorized=1 WHERE id=?1", [id])?;
     state(store, id, "queued", None)?;
     get(store, id)
+}
+pub fn apply_access_mode(store: &Store) -> Result<()> {
+    if !crate::access_mode::full(&store.conn)? {
+        return Ok(());
+    }
+    let ids = {
+        let mut q = store.conn.prepare("SELECT f.id FROM file_transfers f LEFT JOIN app_tasks t ON t.id=f.task_id WHERE f.direction='out' AND f.state='draft' AND (f.task_id IS NULL OR (t.revision=f.revision AND t.state NOT IN ('draft','cancelled','needs_attention'))) LIMIT 20")?;
+        q.query_map([], |r| r.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?
+    };
+    for id in ids {
+        allow(store, &id)?;
+    }
+    Ok(())
 }
 pub fn receive(store: &Store, id: &str) -> Result<Value> {
     let v = get(store, id)?;
@@ -609,11 +626,7 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
         return Ok(None);
     }
     let delivering_files = t["draft"]["mode"] == "files";
-    let refs = if delivering_files {
-        &out["files"]
-    } else {
-        &out["deliveries"]
-    };
+    let refs = &out["deliveries"];
     let Some(refs) = refs.as_array().filter(|r| !r.is_empty()) else {
         return Ok(None);
     };
@@ -630,7 +643,7 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
             ensure!(
                 access
                     .as_ref()
-                    .is_some_and(|a| path.starts_with(&a.directory)),
+                    .is_some_and(|a| a.full_access || path.starts_with(&a.directory)),
                 "自动交付只能选择本任务目录内的产物"
             );
         }
@@ -650,12 +663,9 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
         Prepare {
             id: id.clone(),
             recipient: t["initiator"].as_str().unwrap().into(),
-            note: out["body"]
-                .as_str()
-                .unwrap_or("")
-                .chars()
-                .take(1000)
-                .collect(),
+            // The task result keeps the explanation. The attachment note is
+            // transport context, never the executor's discovery transcript.
+            note: format!("任务附件 · {} 个文件", paths.len()),
             paths,
             session: Some(t["session_id"].as_str().unwrap().into()),
             task: Some(TaskRef {

@@ -360,17 +360,49 @@ pub fn control(store: &mut Store, i: &Instruction, retry: bool) -> Result<Value>
             params![w, id],
         )?;
     } else {
-        ensure!(
-            t["state"] != "completed",
-            "已完成任务保留结果，不能改写为停止"
-        );
-        if let Some(w) = t["workflow_id"].as_str() {
-            store.workflow_stop(w)?;
-        }
-        store.conn.execute("UPDATE app_tasks SET state='stopped',error='本人停止后续调度；在途执行会拒绝新提交，不代表已经取消对方任务' WHERE id=?1",[id])?;
+        let tx = store.conn.unchecked_transaction()?;
+        stop_in_transaction(store, i)?;
+        tx.commit()?;
     }
     get(store, id)
 }
+pub(crate) fn stop_reason(i: &Instruction) -> Result<&str> {
+    let reason = i.payload["reason"].as_str().unwrap_or(&i.body).trim();
+    ensure!(!reason.is_empty(), "请填写停止原因");
+    ensure!(
+        reason.chars().count() <= 1000,
+        "停止原因请控制在 1000 字以内"
+    );
+    Ok(reason)
+}
+pub(crate) fn stop_in_transaction(store: &Store, i: &Instruction) -> Result<()> {
+    let id = i.task_id.as_deref().context("请选择任务")?;
+    let t = get(store, id)?;
+    ensure!(t["state"] != "completed", "已完成任务可以直接归档");
+    let reason = stop_reason(i)?;
+    if let Some(w) = t["workflow_id"].as_str() {
+        crate::workflow::stop_in_transaction(&store.conn, w)?;
+    }
+    store.conn.execute(
+        "UPDATE app_tasks SET state='stopped',error=?2 WHERE id=?1",
+        params![
+            id,
+            format!("本人停止：{reason}；仅停止本端，不代表对方已停止")
+        ],
+    )?;
+    store.conn.execute("UPDATE app_commands SET state='cancelled',error='任务已由本人停止' WHERE task_id=?1 AND id!=?2 AND state='pending'",params![id,i.request_id])?;
+    if i.payload["archive"] == true {
+        super::task_archive::set_in_transaction(&store.conn, id, true)?;
+    }
+    super::respond(
+        store,
+        i,
+        "task_cancelled",
+        &format!("已停止本端任务。原因：{reason}。历史和已有文件保留。"),
+    )?;
+    Ok(())
+}
+
 pub fn browse(store: &Store, path: &Path) -> Result<Vec<Value>> {
     let path = store.allowed_source(path)?;
     ensure!(path.is_dir(), "请选择目录");

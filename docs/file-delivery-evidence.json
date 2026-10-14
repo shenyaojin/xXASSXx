@@ -1,0 +1,180 @@
+{
+  "date": "2026-10-13",
+  "version": "0.6.4-alpha",
+  "source_state": "uncommitted, not pushed or publicly released; prior changes preserved",
+  "root_cause": {
+    "task": "defc0941-301a-51b9-a2e9-f8713c27939b",
+    "revision": 3,
+    "mode": "files",
+    "old_pending_reference_files": 15,
+    "old_manifest_authorized": false,
+    "defects": [
+      "text-discovery contract leaked into binary delivery route",
+      "files evidence reused as export list",
+      "full result prose copied into attachment note",
+      "sender waiting for approval displayed as reviewing results"
+    ]
+  },
+  "automated": {
+    "host": "lakota",
+    "passed": 167,
+    "failed": 0,
+    "ignored_existing": 2,
+    "clippy": "passed; existing deprecated allowance",
+    "format": "passed",
+    "release_builds": [
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-musl"
+    ],
+    "source_files_equal": 101,
+    "source_manifest_sha256": "5670d1f8ded9412f8ff5eedf3f5331178dbaabd7d3f908b793718638e6e0aa0b",
+    "macos_ci_for_dirty_source": false
+  },
+  "real_model_pty": {
+    "binary_sha256": "25a4461bc11e6c6d8d2c1190f0e22036fe05beb8db914aadbf7ed19c8279a06e",
+    "model": "deepseek-flash and official Codex",
+    "scope": "Mac isolated A/B with synthetic study project; real local relay; not a new Mac-to-Lakota model run",
+    "request": "@b 把 study 项目最新的结果图片发给我。",
+    "task": "aadf281b-be33-50b0-88af-466638dab976",
+    "run": "2d968920-ee86-4eb9-aebe-1998c4298397",
+    "source_evidence_read": [
+      "study/status.json",
+      "study/README.md"
+    ],
+    "delivered_files": [
+      {
+        "name": "result.png",
+        "bytes": 4391,
+        "sha256": "f9cc3e23e166c3e728cea60d6f6c018b48f3da5bc05b65b490335f7a7e28762a"
+      }
+    ],
+    "approval_action": "B actual PTY a after inspecting one-image list; A automatically received",
+    "final_answer_observed": "1 个文件已送达 @a。result.png。按 CtrlF 查看文件。",
+    "sender_sidebar_observed": "等待你允许发送文件",
+    "technical_info_action": "i then Esc, selection preserved",
+    "project_program_run": false,
+    "evidence_files_sent": false
+  },
+  "installed": {
+    "method": "manual backup/install/restart; NOT the client updater",
+    "mac_owner": {
+      "installed": {
+        "installed": "/Users/shenyaojin/.local/bin/xxassxx",
+        "version": "0.6.4-alpha",
+        "sha256": "25a4461bc11e6c6d8d2c1190f0e22036fe05beb8db914aadbf7ed19c8279a06e"
+      },
+      "backup": {
+        "backup": "/Users/shenyaojin/.local/share/xxassxx/backups/files-064-20261013",
+        "database_integrity": "ok",
+        "old_binary_sha256": "f110dab4c273a61ec6061fe236558328e2e3728835e02bf9c8fea670514067e8"
+      },
+      "schema": 10,
+      "integrity": [
+        "ok"
+      ],
+      "foreign_key_violations": 0,
+      "inflight": {
+        "running_runs": 0,
+        "pending_commands": 0,
+        "runnable_jobs": 0,
+        "active_transfers": 0
+      },
+      "all_tables_and_configs_unchanged_while_stopped": true,
+      "preserved_after_ui_checks": [
+        "app_tasks",
+        "app_preferences",
+        "messages",
+        "runs",
+        "file_roots",
+        "app_commands",
+        "file_transfers",
+        "transfer_grants"
+      ],
+      "counts": {
+        "app_tasks": 11,
+        "messages": 108,
+        "runs": 15,
+        "file_roots": 1
+      },
+      "doctor_ready": true
+    },
+    "lakota_test": {
+      "installed": {
+        "installed": "/rcp/rcp42/home/shenyaojin/.local/bin/xxassxx",
+        "version": "0.6.4-alpha",
+        "sha256": "3fc16d587c06226a1be701ac50fa348d474a5b4bc034d367516bc7d95885e475"
+      },
+      "backup": {
+        "backup": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/backups/files-064-20261013",
+        "database_integrity": "ok",
+        "old_binary_sha256": "ae37650e0c3e26f37faeb2849b9f510732fe0b1f022e0595446e0bb5adb1f3b1"
+      },
+      "schema": 10,
+      "integrity": [
+        "ok"
+      ],
+      "foreign_key_violations": 0,
+      "inflight": {
+        "running_runs": 0,
+        "pending_commands": 0,
+        "runnable_jobs": 0,
+        "active_transfers": 0
+      },
+      "all_tables_and_configs_unchanged_while_stopped": true,
+      "preserved_after_ui_checks": [
+        "app_tasks",
+        "app_preferences",
+        "messages",
+        "runs",
+        "file_roots",
+        "app_commands",
+        "file_transfers",
+        "transfer_grants"
+      ],
+      "counts": {
+        "app_tasks": 12,
+        "messages": 122,
+        "runs": 37,
+        "file_roots": 2
+      },
+      "doctor_ready": true
+    },
+    "trader": "unchanged 0.6.0-alpha mailbox, schema 2",
+    "existing_15_file_draft": "preserved, not authorized/replaced/revoked",
+    "linux_installed_ui": "existing 15 files shown without long note, controls visible; /status connected 0.6.4-alpha",
+    "mac_installed_ui": "/status connected 0.6.4-alpha",
+    "directory_preference": "Linux restored to pre-inspection value; Mac unchanged"
+  },
+  "packages": [
+    {
+      "archive": "xxassxx-x86_64-unknown-linux-musl.tar.gz",
+      "archive_sha256": "96dd90325847eef74db7a5c77373bf3df50a258404acc922d4586e511f7278ef",
+      "binary_sha256": "3fc16d587c06226a1be701ac50fa348d474a5b4bc034d367516bc7d95885e475"
+    },
+    {
+      "archive": "xxassxx-aarch64-apple-darwin.tar.gz",
+      "archive_sha256": "61a231777efd0e9f17655d63957a87b36a40f9e9ebf8a72c5e7e4f9fc72e21a0",
+      "binary_sha256": "25a4461bc11e6c6d8d2c1190f0e22036fe05beb8db914aadbf7ed19c8279a06e"
+    }
+  ],
+  "cleanup": {
+    "removed_owned_temporary_paths": {
+      "/private/tmp/xxassxx-files-tooling": 1335181742,
+      "/private/tmp/xxassxx-files-pylibs": 5598096,
+      "/private/tmp/xxassxx-files-source.tar.gz": 472374,
+      "/private/tmp/xxassxx-files-rustup.sh": 29915
+    },
+    "repository_target_exists": false,
+    "retained_packages": "dist/v0.6.4-alpha/"
+  },
+  "raw_evidence": "smoke-output/file-delivery-20261013/",
+  "screens": [
+    "isolated-final/b-selected-image-before-send.png",
+    "isolated-final/b-file-info.txt",
+    "isolated-final/a-final-answer.txt",
+    "isolated-final/a-received-image.txt",
+    "installed-linux/test-existing-pending-files.txt",
+    "installed-linux/test-status.txt",
+    "installed-mac/owner-status.txt"
+  ]
+}

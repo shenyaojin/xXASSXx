@@ -9,6 +9,8 @@ use std::{
 };
 use uuid::Uuid;
 
+pub const SCHEMA_VERSION: u32 = 10;
+
 pub fn now() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -98,7 +100,7 @@ impl Store {
 
     fn migrate(conn: &Connection, version: i64) -> Result<()> {
         ensure!(
-            (0..=9).contains(&version),
+            (0..=i64::from(SCHEMA_VERSION)).contains(&version),
             "unsupported database schema {version}"
         );
         if version == 0 {
@@ -127,6 +129,9 @@ impl Store {
         }
         if version < 9 {
             conn.execute_batch(include_str!("schema_v9.sql"))?;
+        }
+        if version < 10 {
+            conn.execute_batch(include_str!("schema_v10.sql"))?;
         }
         Ok(())
     }

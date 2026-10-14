@@ -281,3 +281,34 @@ async fn butler_sigint_during_http_tick_is_not_lost() {
         );
     }
 }
+
+#[tokio::test]
+async fn legacy_relay_storage_contention_retries_but_invalid_requests_do_not() {
+    use axum::{Json, Router, http::StatusCode, routing::get};
+    use serde_json::json;
+    for (message, retryable) in [
+        ("database is locked", true),
+        ("database table is locked", true),
+        ("invalid message", false),
+        ("unknown recipient", false),
+    ] {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let app = Router::new().route(
+            "/",
+            get(move || async move { (StatusCode::BAD_REQUEST, Json(json!({"error": message}))) }),
+        );
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let response = reqwest::get(url).await.unwrap();
+        let error = xxassxx::team::response_json(response)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert_eq!(
+            xxassxx::team::transient_transport_error(&error),
+            retryable,
+            "{message}"
+        );
+        server.abort();
+    }
+}

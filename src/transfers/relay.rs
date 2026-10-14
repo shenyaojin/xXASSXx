@@ -217,7 +217,8 @@ async fn create(
     let(team,member):(u64,u64)=tx.query_row("SELECT COALESCE(SUM(bytes),0),COALESCE(SUM(CASE WHEN sender=?1 THEN bytes ELSE 0 END),0) FROM relay_file_transfers WHERE purged=0",[me],|r|Ok((r.get(0)?,r.get(1)?)))?;
     ensure!(m.bytes()<=s.limits.team_quota.saturating_sub(team)&&m.bytes()<=s.limits.member_quota.saturating_sub(member),"relay quota exhausted");
     space_available(&s.root,m.bytes().saturating_mul(2))?;
-    tx.execute("INSERT INTO relay_file_transfers(id,sender,recipient,manifest,state,bytes,expires_at,purge_at,created_at) VALUES(?1,?2,?3,?4,'uploading',?5,?6,?6,?7)",params![m.id,m.sender,m.recipient,raw,m.bytes(),now()+s.limits.retention_secs,now()])?;tx.commit()?;
+    tx.execute("INSERT INTO relay_file_transfers(id,sender,recipient,manifest,state,bytes,expires_at,purge_at,created_at) VALUES(?1,?2,?3,?4,'uploading',?5,?6,?6,?7)",params![m.id,m.sender,m.recipient,raw,m.bytes(),now()+s.limits.retention_secs,now()])?;
+    crate::inbox::project_transfer(&tx,&m,"uploading",false)?;tx.commit()?;
     Ok(Json(info(c,&m.id,me)?))
 }).await
 }
@@ -272,7 +273,9 @@ async fn complete(
         }
         ensure!(written==f.bytes&&format!("{:x}",hash.finalize())==f.sha256,"file checksum mismatch");out.as_file().sync_all()?;out.persist(&destination)?;durable_dir(&dir)?;
     }
-    c.execute("UPDATE relay_file_transfers SET state='available' WHERE id=?1 AND state='uploading'",[&id])?;
+    let tx=c.transaction()?;
+    tx.execute("UPDATE relay_file_transfers SET state='available' WHERE id=?1 AND state='uploading'",[&id])?;
+    crate::inbox::project_transfer(&tx,&m,"available",false)?;tx.commit()?;
     for f in &m.files { let dir=s.root.join(&id).join(&f.id); if dir.exists(){fs::remove_dir_all(dir)?;} }
     Ok(Json(info(c,&id,me)?))
 }).await
@@ -321,10 +324,13 @@ async fn receipt(
             "attachment unavailable"
         );
         if state == "available" {
-            c.execute(
+            let tx = c.transaction()?;
+            tx.execute(
                 "UPDATE relay_file_transfers SET state='received',purge_at=?2 WHERE id=?1",
                 params![id, now() + s.limits.receipt_retention_secs],
             )?;
+            crate::inbox::project_transfer(&tx, &m, "received", false)?;
+            tx.commit()?;
         }
         Ok(Json(json!({"received":true})))
     })
@@ -340,10 +346,13 @@ async fn revoke(
         let _lock = crate::supervisor::TaskLock::acquire(&s.db, &id)?;
         let (m, _) = load(c, &id, me)?;
         ensure!(m.sender == me, "not found");
-        c.execute(
+        let tx = c.transaction()?;
+        tx.execute(
             "UPDATE relay_file_transfers SET state='revoked',purge_at=?2 WHERE id=?1",
             params![id, now()],
         )?;
+        crate::inbox::project_transfer(&tx, &m, "revoked", false)?;
+        tx.commit()?;
         Ok(Json(
             json!({"revoked":true,"downloaded_copies_preserved":true}),
         ))
@@ -365,8 +374,16 @@ fn cleanup(s: &Relay) -> Result<()> {
         if dir.exists() {
             fs::remove_dir_all(dir)?;
         }
-        c.execute("UPDATE relay_file_transfers SET purged=1,state=CASE WHEN state IN ('received','revoked') THEN state ELSE 'expired' END WHERE id=?1",[&id])?;
-        c.execute("DELETE FROM relay_file_chunks WHERE transfer_id=?1", [&id])?;
+        let tx = c.unchecked_transaction()?;
+        tx.execute("UPDATE relay_file_transfers SET purged=1,state=CASE WHEN state IN ('received','revoked') THEN state ELSE 'expired' END WHERE id=?1",[&id])?;
+        tx.execute("DELETE FROM relay_file_chunks WHERE transfer_id=?1", [&id])?;
+        let raw: String = tx.query_row(
+            "SELECT manifest FROM relay_file_transfers WHERE id=?1",
+            [&id],
+            |r| r.get(0),
+        )?;
+        crate::inbox::project_transfer(&tx, &serde_json::from_str(&raw)?, "purged", false)?;
+        tx.commit()?;
     }
     Ok(())
 }

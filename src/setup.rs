@@ -69,6 +69,8 @@ pub enum ClientCommand {
         probe_model: bool,
     },
     Start,
+    /// Retry the mailbox connection without restarting a live task.
+    Reconnect,
     Stop,
     Status,
     Contacts,
@@ -527,6 +529,7 @@ pub async fn client(root: &Path, command: ClientCommand) -> Result<()> {
             crate::service::execute(&store, crate::service::Command::Stop { wait_secs: 30 }).await?
         }
         ClientCommand::Status => crate::service::status(&store)?,
+        ClientCommand::Reconnect => crate::service::reconnect(&store).await?,
         ClientCommand::Contacts => json!(store.contacts()?),
         ClientCommand::Whoami => {
             let mut identity = store.identity()?;

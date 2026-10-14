@@ -120,7 +120,9 @@ pub fn transient_transport_error(error: &str) -> bool {
     matches!(
         error,
         "mailbox_unavailable; outbox retained"
+            | "mailbox_unavailable; task facts retained"
             | "mailbox_unavailable; inbox unchanged"
+            | "mailbox storage busy"
             | "mailbox ack failed; local receipt retained"
             | "mailbox status unavailable"
             | "http_status_408"
@@ -672,6 +674,25 @@ impl Store {
 pub async fn response_json(mut response: reqwest::Response) -> Result<Value> {
     let status = response.status();
     if !status.is_success() {
+        // Older relays classify a concurrent SQLite write as HTTP 400. Only
+        // these exact storage errors are retryable; malformed requests are not.
+        if status == reqwest::StatusCode::BAD_REQUEST {
+            let mut body = Vec::new();
+            while let Ok(Some(chunk)) = response.chunk().await {
+                if body.len() + chunk.len() > 4096 {
+                    break;
+                }
+                body.extend_from_slice(&chunk);
+            }
+            if let Ok(value) = serde_json::from_slice::<Value>(&body) {
+                if matches!(
+                    value["error"].as_str(),
+                    Some("database is locked" | "database table is locked")
+                ) {
+                    anyhow::bail!("mailbox storage busy");
+                }
+            }
+        }
         anyhow::bail!("http_status_{}", status.as_u16());
     }
     let mut bytes = Vec::new();
@@ -689,6 +710,13 @@ pub async fn response_json(mut response: reqwest::Response) -> Result<Value> {
     serde_json::from_slice(&bytes).context("invalid JSON response")
 }
 pub async fn sync(store: &mut Store) -> Result<Value> {
+    let result = sync_inner(store).await;
+    if result.is_err() {
+        store.conn.execute("UPDATE member_inbox_sync SET error='信箱同步未完成，正在显示缓存；待发送记录已保留' WHERE singleton=1",[])?;
+    }
+    result
+}
+async fn sync_inner(store: &mut Store) -> Result<Value> {
     let cfg = store.member_config()?;
     let credential = cfg.credential()?;
     let client = reqwest::Client::builder()
@@ -884,5 +912,16 @@ pub async fn sync(store: &mut Store) -> Result<Value> {
             .await?;
         }
     }
-    Ok(json!({"sent":sent,"received":received}))
+    // Correspondence failures retain their own outbox and must not replay task execution.
+    let inbox_error = crate::inbox::local::sync(
+        store,
+        &client,
+        base,
+        &credential,
+        identity["member_inbox_protocol"] == 1,
+    )
+    .await
+    .err()
+    .map(|e| e.to_string());
+    Ok(json!({"sent":sent,"received":received,"member_inbox_error":inbox_error}))
 }

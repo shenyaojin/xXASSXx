@@ -26,11 +26,13 @@ pub fn check_binding(c: &Connection, task: &str, rev: i64) -> Result<(PathBuf, V
     let roots: Vec<PathBuf> = serde_json::from_str(&raw)?;
     for root in &roots {
         ensure!(
-            c.query_row(
-                "SELECT EXISTS(SELECT 1 FROM file_roots WHERE path=?1)",
-                [root.to_str()],
-                |r| r.get::<_, bool>(0)
-            )? && crate::file_roots::directory(root).is_ok_and(|p| p == *root),
+            (crate::access_mode::full(c)?
+                || c.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM file_roots WHERE path=?1)",
+                    [root.to_str()],
+                    |r| r.get::<_, bool>(0)
+                )?)
+                && crate::file_roots::directory(root).is_ok_and(|p| p == *root),
             "任务白名单已撤销或目录不可用"
         );
     }

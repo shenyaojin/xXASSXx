@@ -12,6 +12,9 @@ use std::{
 
 #[derive(Args, Default)]
 pub struct OpenArgs {
+    /// Reopen an existing conversation after application maintenance.
+    #[arg(long, hide = true)]
+    pub resume_session: Option<String>,
     /// Project to work in. Defaults to the current directory.
     #[arg(default_value = ".")]
     pub project: PathBuf,

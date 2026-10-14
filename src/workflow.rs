@@ -361,23 +361,28 @@ impl Store {
         let tx = self
             .conn
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let w = get(&tx, id)?;
-        ensure!(w.state != "completed", "completed workflow is immutable");
-        tx.execute(
-            "UPDATE workflows SET state='stopped',error='owner_stopped' WHERE id=?1",
-            [id],
-        )?;
-        tx.execute(
-            "UPDATE workflow_events SET state='cancelled' WHERE workflow_id=?1 AND state='pending'",
-            [id],
-        )?;
-        tx.execute(
-            "UPDATE messages SET state='cancelled' WHERE state='pending' AND conversation_id=?1",
-            [&w.conversation_id],
-        )?;
+        stop_in_transaction(&tx, id)?;
         tx.commit()?;
         Ok(())
     }
+}
+
+pub(crate) fn stop_in_transaction(conn: &Connection, id: &str) -> Result<()> {
+    let w = get(conn, id)?;
+    ensure!(w.state != "completed", "completed workflow is immutable");
+    conn.execute(
+        "UPDATE workflows SET state='stopped',error='owner_stopped' WHERE id=?1",
+        [id],
+    )?;
+    conn.execute(
+        "UPDATE workflow_events SET state='cancelled' WHERE workflow_id=?1 AND state='pending'",
+        [id],
+    )?;
+    conn.execute(
+        "UPDATE messages SET state='cancelled' WHERE state='pending' AND conversation_id=?1",
+        [&w.conversation_id],
+    )?;
+    Ok(())
 }
 
 pub fn claim(conn: &Connection, task: &str, run: &str) -> Result<()> {

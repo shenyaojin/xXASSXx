@@ -1,0 +1,243 @@
+{
+  "date": "2026-10-13",
+  "timezone": "America/Denver",
+  "version": "0.6.3-alpha",
+  "source_state": "uncommitted; not pushed or publicly released; prior changes preserved",
+  "scope": [
+    "manual stop with mandatory reason",
+    "stop and archive or stop only",
+    "participant local withdrawal; initiator global cancel",
+    "interrupt local running execution and pending model call",
+    "revision fencing and late-result rejection"
+  ],
+  "automated": {
+    "host": "lakota",
+    "passed": 164,
+    "failed": 0,
+    "ignored_existing_opt_in": 2,
+    "format": "passed",
+    "clippy": "passed with existing deprecated warning allowance",
+    "release_builds": [
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-musl"
+    ],
+    "matching_source_files": 100,
+    "source_manifest_sha256": "0de238fa17e662d7e523fcfa5457811af5f1362f06b6f33f93a8fabd0e276364",
+    "macos_ci_for_dirty_source": false
+  },
+  "real_model_pty": {
+    "binary_sha256": "e46baeede63618ab0334ef3b62bdd4f7db3b3c103c6f318ecf0f20f4edbbdfdb",
+    "model": "deepseek-flash and official Codex",
+    "scope": "isolated A/B on Mac; synthetic 66-byte files; no daily-team task",
+    "stop_task": "c276a1e9-9ad2-51b0-9ae2-8bfebbc8298c",
+    "participant_stop_while_codex_running": true,
+    "initiator_received_reason": true,
+    "participant_archived_record_read_in_ui": true,
+    "initiator_stop_only_not_archived": true,
+    "normal_task": "f5f39ba6-18c8-5e9f-939d-558e697bf2a7",
+    "normal_final_answer_observed": {
+      "marker": "STOP-7391",
+      "sample_count": 37,
+      "source_bytes": 66
+    },
+    "facts": {
+      "a": {
+        "tasks": [
+          {
+            "id": "c276a1e9-9ad2-51b0-9ae2-8bfebbc8298c",
+            "state": "cancelled",
+            "revision": 1,
+            "waiting_reason": "@a 已停止任务。原因：已收到停止说明，结束这次试用。"
+          },
+          {
+            "id": "f5f39ba6-18c8-5e9f-939d-558e697bf2a7",
+            "state": "completed",
+            "revision": 1,
+            "waiting_reason": null
+          }
+        ],
+        "runs": [
+          {
+            "id": "56b7f419-6c2e-4781-9bc7-ebabbdfa8824",
+            "task_id": "6eabf9c3-9767-50b5-9b7f-e9eb9f1078e5",
+            "state": "succeeded",
+            "error_code": null,
+            "exit_code": 0
+          },
+          {
+            "id": "211b2904-7ee4-40ad-a1b2-70044a8a5897",
+            "task_id": "fab59a7b-9e33-5e6b-846e-e3b632c3fc2e",
+            "state": "succeeded",
+            "error_code": null,
+            "exit_code": 0
+          }
+        ],
+        "archives": [],
+        "source_sha256": "9fd4ec69551723fdc9c2a2de84eb0898b7a5857b817dffcebe7a326db7bec81b"
+      },
+      "b": {
+        "tasks": [
+          {
+            "id": "c276a1e9-9ad2-51b0-9ae2-8bfebbc8298c",
+            "state": "cancelled",
+            "revision": 1,
+            "waiting_reason": "@b 已停止本机参与。原因：本次试用先停在这里，等我调整要求。。请发起人决定后续安排。"
+          }
+        ],
+        "runs": [
+          {
+            "id": "dddcaa8f-0b92-43cc-a8ba-337f8428e93d",
+            "task_id": "957afeec-c141-53db-9f56-18ed26ee32bc",
+            "state": "failed",
+            "error_code": "authorization_changed",
+            "exit_code": null
+          }
+        ],
+        "archives": [
+          {
+            "key": "task_archive:c276a1e9-9ad2-51b0-9ae2-8bfebbc8298c",
+            "value": "1"
+          }
+        ],
+        "source_sha256": "9fd4ec69551723fdc9c2a2de84eb0898b7a5857b817dffcebe7a326db7bec81b"
+      }
+    },
+    "difference_to_final_binary": "Only reason message layout was changed to newlines to avoid doubled punctuation; final binary separately checked below."
+  },
+  "final_offline_pty": {
+    "binary_sha256": "f110dab4c273a61ec6061fe236558328e2e3728835e02bf9c8fea670514067e8",
+    "relay_stopped": true,
+    "task": {
+      "id": "a5355198-3279-5b88-969a-37dbb08bb320",
+      "state": "cancelled",
+      "revision": 1,
+      "waiting_reason": "@a 已停止任务。\n原因：离线时也要能收起，不必继续执行。"
+    },
+    "archives": [
+      {
+        "key": "task_archive:a5355198-3279-5b88-969a-37dbb08bb320",
+        "value": "1"
+      }
+    ],
+    "pending_or_processing_commands": 0
+  },
+  "installed": {
+    "mac_owner": {
+      "installed": {
+        "installed": "/Users/shenyaojin/.local/bin/xxassxx",
+        "version": "0.6.3-alpha",
+        "sha256": "f110dab4c273a61ec6061fe236558328e2e3728835e02bf9c8fea670514067e8"
+      },
+      "backup": {
+        "backup": "/Users/shenyaojin/.local/share/xxassxx/backups/stop-063-20261013",
+        "database_integrity": "ok",
+        "old_binary_sha256": "b6a1c152621ff30cd10f03b90415d6ca34611ff8c40719222c2eae3269da00bd"
+      },
+      "schema": 10,
+      "integrity": [
+        "ok"
+      ],
+      "foreign_key_violations": 0,
+      "inflight": {
+        "running_runs": 0,
+        "pending_commands": 0,
+        "runnable_jobs": 0,
+        "active_transfers": 0
+      },
+      "all_tables_and_configs_unchanged_while_stopped": true,
+      "preserved_after_ui_checks": [
+        "app_tasks",
+        "app_preferences",
+        "messages",
+        "runs",
+        "file_roots",
+        "app_commands"
+      ],
+      "counts": {
+        "app_tasks": 11,
+        "messages": 101,
+        "runs": 15
+      },
+      "doctor_ready": true,
+      "ui_status": "0.6.3-alpha; background running; mailbox connected; read directly from final installed PTY"
+    },
+    "lakota_test": {
+      "installed": {
+        "installed": "/rcp/rcp42/home/shenyaojin/.local/bin/xxassxx",
+        "version": "0.6.3-alpha",
+        "sha256": "ae37650e0c3e26f37faeb2849b9f510732fe0b1f022e0595446e0bb5adb1f3b1"
+      },
+      "backup": {
+        "backup": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/backups/stop-063-20261013",
+        "database_integrity": "ok",
+        "old_binary_sha256": "15de9717601c735950ac24760ca518b4d613932783b134197d471cb71f4fa08a"
+      },
+      "schema": 10,
+      "integrity": [
+        "ok"
+      ],
+      "foreign_key_violations": 0,
+      "inflight": {
+        "running_runs": 0,
+        "pending_commands": 0,
+        "runnable_jobs": 0,
+        "active_transfers": 0
+      },
+      "all_tables_and_configs_unchanged_while_stopped": true,
+      "preserved_after_ui_checks": [
+        "app_tasks",
+        "app_preferences",
+        "messages",
+        "runs",
+        "file_roots",
+        "app_commands"
+      ],
+      "counts": {
+        "app_tasks": 12,
+        "messages": 115,
+        "runs": 36
+      },
+      "doctor_ready": true,
+      "ui_status": "0.6.3-alpha; background running; mailbox connected; read directly from final installed PTY"
+    },
+    "trader_mailbox": "unchanged 0.6.0-alpha, schema 2",
+    "other_member_computers_touched": false,
+    "daily_tasks_stopped_or_archived": false,
+    "dot_oauth_retested": false
+  },
+  "packages": [
+    {
+      "archive": "xxassxx-x86_64-unknown-linux-musl.tar.gz",
+      "archive_sha256": "cea0f9efd011deaae9b6212d9df96dcb7129e21140f0ef8a8c5fc350ce7257a3",
+      "binary_sha256": "ae37650e0c3e26f37faeb2849b9f510732fe0b1f022e0595446e0bb5adb1f3b1"
+    },
+    {
+      "archive": "xxassxx-aarch64-apple-darwin.tar.gz",
+      "archive_sha256": "5c883bdc8127d392d5b2b121c3d1ea6b144a18cc411cbc727ad7778d202360c1",
+      "binary_sha256": "f110dab4c273a61ec6061fe236558328e2e3728835e02bf9c8fea670514067e8"
+    }
+  ],
+  "cleanup": {
+    "removed_owned_temporary_paths": {
+      "/private/tmp/xxassxx-stop-tooling": 1334940642,
+      "/private/tmp/xxassxx-stop-pylibs": 5598096,
+      "/private/tmp/xxassxx-stop-source.tar.gz": 484308
+    },
+    "repository_target_exists": false,
+    "packages_retained": "dist/v0.6.3-alpha/"
+  },
+  "evidence_root": "smoke-output/manual-stop-20261013/",
+  "screens": [
+    "isolated/b-stop-with-reason.txt",
+    "isolated/b-archived-reason.txt",
+    "isolated/a-participant-stopped-notice.txt",
+    "isolated/a-initiator-stop-only-result.txt",
+    "isolated/a-normal-final-answer.txt",
+    "final-offline/a-offline-stopped.txt",
+    "final-offline/a-offline-archived-reason.txt",
+    "installed-mac/owner-stop-form.png",
+    "installed-mac/owner-status.txt",
+    "installed-linux/test-stop-form.txt",
+    "installed-linux/test-status.txt"
+  ]
+}

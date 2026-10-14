@@ -217,7 +217,13 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
     config(&mut c, "approval_policy", string("never"));
     let access = crate::task_workspace::for_execution(&store.conn, &lease.task_id)
         .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
-    if let Some(roots) = &native {
+    let full_access = native.is_some()
+        && crate::access_mode::full(&store.conn)
+            .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
+    if full_access {
+        c.arg("--strict-config");
+        config(&mut c, "sandbox_mode", string("danger-full-access"));
+    } else if let Some(roots) = &native {
         c.arg("--strict-config");
         let profile = if access.is_some() {
             "xxassxx_execute"
@@ -340,7 +346,11 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
     config(&mut c, "features.shell_tool", native.is_some().into());
     config(&mut c, "features.unified_exec", false.into());
     config(&mut c, "features.multi_agent", false.into());
-    config(&mut c, "web_search", string("disabled"));
+    config(
+        &mut c,
+        "web_search",
+        string(if full_access { "live" } else { "disabled" }),
+    );
     config(
         &mut c,
         "mcp_servers.xxassxx.command",
@@ -521,14 +531,10 @@ async fn execute(
         "xXASSXx execution event. Assigned task_id: {}. Current run_id: {}.\nCall the xxassxx MCP get_task tool with that task_id, follow its input as the task data, then call submit_task_result with that task_id, the current run_id returned by get_task, a stable idempotency_key (use the current run_id), and a nonempty result string. On retries use exactly the same key and result. This applies also after resuming: call get_task again and submit for the NEW current run_id. Do not use shell, files, or other tools to access the task database. Do not claim completion without an accepted MCP submission. Finish your turn after submission.\n",
         lease.task_id, lease.run_id
     );
-    let prompt = if crate::task_coordinator::check_execution(&store.conn, &lease.task_id)
-        .map_err(|e| Failure::new("business_task", e.to_string()))?
-        .is_some()
-    {
-        format!(
-            "xXASSXx business task execution. Assigned task_id: {}. Current run_id: {}. Call get_task for the current confirmed revision and physical scope. Follow execution_policy strictly. Use Codex native tools within authorized_roots. Follow business_task.phase: discover returns candidate paths for Rust to freeze; analyze reads only immutable materials; execute may write and run only in execution_access.directory, with sources/dependencies read-only. If necessary information is missing, use submit_task_question with body, reason, known and these task/run IDs and idempotency_key equal to run_id. Otherwise use submit_task_result following the result_contract. End this turn after one accepted submission. A question, MCP acceptance, exit 0, and turn.completed do not complete the business task. On resume read get_task again for answers. Never access the task database. Project programs may run only in phase execute under its explicit local grant.\n",
-            lease.task_id, lease.run_id
-        )
+    let business = crate::task_coordinator::check_execution(&store.conn, &lease.task_id)
+        .map_err(|e| Failure::new("business_task", e.to_string()))?;
+    let prompt = if business.is_some() {
+        crate::task_skills::prompt(&lease.task_id, &lease.run_id)
     } else if crate::workflow::for_task(&store.conn, &lease.task_id)
         .map_err(|e| Failure::new("storage_error", e.to_string()))?
         .is_some()
@@ -544,6 +550,13 @@ async fn execute(
         stdin.write_all(prompt.as_bytes()).await?;
         stdin.shutdown().await?;
         drop(stdin);
+        store.event(lease, &serde_json::json!({"type":"xxassxx.access_mode","mode":crate::access_mode::get(&store.conn)?}))?;
+        if let Some(business) = &business {
+            store.event(
+                lease,
+                &crate::task_skills::receipt(&business["phase"], prompt.len()),
+            )?;
+        }
         let events = async {
             let mut reader = BufReader::new(stdout);
             let mut failure = None;

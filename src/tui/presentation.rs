@@ -53,10 +53,13 @@ pub(super) fn presence(value: &Value) -> String {
 pub(super) fn session_title(session: &Value) -> String {
     let title = session["title"].as_str().unwrap_or("持久对话");
     let recipient = session["recipient"].as_str().unwrap_or("");
-    if matches!(title, "自己的管家" | "自己的 local agent") {
-        "自己的助手".into()
+    if matches!(
+        title,
+        "自己的管家" | "自己的 local agent" | "自己的助手" | "自己的 local agent · 新对话"
+    ) {
+        "对话".into()
     } else if title == format!("与 {recipient} 管家的对话") {
-        format!("与 {recipient} 的 local agent 对话")
+        format!("与 {recipient} 的对话")
     } else {
         title.into()
     }
@@ -70,18 +73,31 @@ pub(super) fn task_state(value: &Value) -> &str {
         "waiting" => "等待",
         "needs_attention" => "需要处理",
         "completed" => "已完成",
-        "cancelled" => "已取消",
+        "cancelled" => "已停止",
+        "stopped" => "已停止",
+        "awaiting_authorization" => "待文件授权",
+        "waiting_peer_authorization" => "等待对方授权",
+        "ready" => "排队中",
+        "running" => "执行中",
+        "waiting_peer" => "等待对方",
+        "waiting_user" => "待你回复",
         other => other,
     }
 }
 
 pub(super) fn task_status(task: &Value, owner: &str) -> String {
+    if task["automatic_confirmation"] == true {
+        return "正在整理任务，之后自动开始".into();
+    }
     let state = task_state(&task["state"]);
     if matches!(
         task["state"].as_str(),
         Some("completed" | "cancelled" | "stopped")
     ) {
         return state.into();
+    }
+    if let Some(message) = local_delivery_status(task) {
+        return message;
     }
     if let Some(item) = task["delivery"]["items"]
         .as_array()
@@ -122,6 +138,20 @@ pub(super) fn task_status(task: &Value, owner: &str) -> String {
     }
 }
 
+fn local_delivery_status(task: &Value) -> Option<String> {
+    let delivery = &task["local_delivery"];
+    let recipient = delivery["recipient"].as_str().unwrap_or("对方");
+    Some(match delivery["state"].as_str()? {
+        "draft" => "等待你允许发送文件 · CtrlF 查看".into(),
+        "queued" | "uploading" => format!("正在发送给 @{recipient}"),
+        "available" | "offered" => format!("等待 @{recipient} 收取文件"),
+        "delivered" => "文件已收到，等待任务答复".into(),
+        "failed" | "unsupported" => "文件未发出 · CtrlF 查看原因".into(),
+        "revoked" | "revoking" | "expired" => "文件发送已取消或过期 · CtrlF 查看".into(),
+        _ => return None,
+    })
+}
+
 // Internal event names remain available in the task's technical record.
 pub(super) fn message_kind(kind: &str) -> &str {
     match kind {
@@ -130,11 +160,71 @@ pub(super) fn message_kind(kind: &str) -> &str {
         "task_progress" => "进展",
         "task_question" => "需要你回答",
         "task_completed" => "结果",
+        "task_cancelled" => "停止记录",
         "task_attention" | "error" => "遇到问题",
         "task_permission" => "需要你允许",
         "assistant" | "reply" => "回复",
-        _ => "消息",
+        "attachment" => "文件记录",
+        _ => "提示",
     }
+}
+
+pub(super) fn message_time(timestamp: Option<i64>) -> String {
+    let text = local_time(timestamp);
+    text.get(..16).unwrap_or(&text).to_owned()
+}
+
+pub(super) fn file_size(bytes: u64) -> String {
+    if bytes >= 1024 * 1024 {
+        format!("{:.1} MiB", bytes as f64 / (1024.0 * 1024.0))
+    } else if bytes >= 1024 {
+        format!("{:.1} KiB", bytes as f64 / 1024.0)
+    } else {
+        format!("{bytes} B")
+    }
+}
+
+pub(super) fn transfer_heading(transfer: &Value, owner: &str) -> String {
+    let manifest = &transfer["manifest"];
+    if manifest["sender"] == owner {
+        format!(
+            "你发给 @{} 的文件",
+            manifest["recipient"].as_str().unwrap_or("")
+        )
+    } else {
+        format!("@{} 发来的文件", manifest["sender"].as_str().unwrap_or(""))
+    }
+}
+
+pub(super) fn transfer_body(transfer: &Value) -> String {
+    let mut lines =
+        vec![crate::transfers::label(transfer["state"].as_str().unwrap_or("")).to_owned()];
+    for file in transfer["manifest"]["files"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        lines.push(format!(
+            "{}  ·  {}",
+            file["name"].as_str().unwrap_or("文件"),
+            file_size(file["bytes"].as_u64().unwrap_or(0))
+        ));
+    }
+    if let Some(error) = transfer["error"].as_str().filter(|e| !e.is_empty()) {
+        lines.push(format!("原因：{error}"));
+    }
+    lines.push("CtrlF 查看文件".into());
+    lines.join("\n")
+}
+
+pub(super) fn inbox_transfer(entry: &Value, owner: &str) -> Value {
+    let facts = &entry["facts"];
+    let state = match facts["state"].as_str().unwrap_or("") {
+        "received" if entry["sender"] == owner => "delivered",
+        "available" if entry["recipient"] == owner => "offered",
+        state => state,
+    };
+    serde_json::json!({"manifest":facts["manifest"],"state":state})
 }
 
 pub(super) fn task_location(task: &Value, owner: &str) -> String {
@@ -176,6 +266,9 @@ pub(super) fn task_location(task: &Value, owner: &str) -> String {
 // Some model tools return twice-escaped paragraph breaks. Normalize prose only
 // for display; preserve stored evidence and intentional escapes in code.
 pub(super) fn message_body(message: &Value) -> String {
+    if message["transfer"].is_object() {
+        return transfer_body(&message["transfer"]);
+    }
     let body = message["body"].as_str().unwrap_or("");
     if message["sender"] == "butler"
         && !body.contains('\n')
@@ -274,6 +367,9 @@ pub(super) fn activity(
         } else if t["state"] == "queued" {
             busy = false;
             "任务已确认，等待执行成员接收；信箱送达不代表执行已开始。".into()
+        } else if let Some(message) = local_delivery_status(t) {
+            busy = false;
+            message
         } else if t["state"] == "waiting"
             || t["waiting_for"] == crate::task_coordinator::WAIT_ACCESS
         {
@@ -402,4 +498,38 @@ mod activity_tests {
         let lines = activity(&data, "s", None, "a", 115).join("\n");
         assert!(lines.contains("任务已暂停：模型超时") && lines.contains("CtrlY"));
     }
+    #[test]
+    fn sender_awaiting_file_approval_does_not_look_like_running_computation() {
+        let mut task = json!({"id":"t","session_id":"s","revision":1,"state":"processing","next_owner":"a","waiting_for":"正在核对结果","updated_at":100,"local_delivery":{"state":"draft","recipient":"a","count":1}});
+        assert!(task_status(&task, "b").contains("等待你允许发送文件"));
+        let data = json!({"service":{"alive":true},"messages":[],"tasks":[task.clone()],"presence":{"connection":{"state":"connected"}}});
+        let progress = activity(&data, "s", Some("t"), "b", 115).join("\n");
+        assert!(progress.contains("等待你允许发送文件") && !progress.contains("核对结果"));
+        task["state"] = json!("completed");
+        assert_eq!(task_status(&task, "b"), "已完成");
+    }
+}
+
+/// Fit a label to one terminal row without splitting a Unicode grapheme.
+pub(super) fn compact(text: &str, width: usize) -> String {
+    use unicode_segmentation::UnicodeSegmentation;
+    use unicode_width::UnicodeWidthStr;
+    let text = super::editor::safe(text).replace('\n', " ");
+    if text.width() <= width {
+        return text;
+    }
+    if width == 0 {
+        return String::new();
+    }
+    let mut output = String::new();
+    let mut size = 0;
+    for g in text.graphemes(true) {
+        if size + g.width() > width - 1 {
+            break;
+        }
+        output.push_str(g);
+        size += g.width();
+    }
+    output.push('…');
+    output
 }

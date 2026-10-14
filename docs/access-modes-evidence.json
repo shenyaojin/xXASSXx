@@ -1,0 +1,218 @@
+{
+  "date": "2026-10-13",
+  "version": "0.7.0-alpha",
+  "skills": "0.1.2",
+  "committed": false,
+  "published": false,
+  "test_summary": {
+    "passed": 173,
+    "failed": 0,
+    "ignored": 2
+  },
+  "real_model": {
+    "method": "Actual system PTYs; isolated A/B on Lakota; DeepSeek and official Codex 0.162.1; product file transfer.",
+    "task": "b459467e-75cd-5f77-a9d6-df035851bf05",
+    "run": "8066dce4-435d-4165-a3a3-c5cd20154229",
+    "revision": 1,
+    "a_full_b_ask_waits": true,
+    "a_confirmation_keypresses": 0,
+    "b_execution_grant_keypresses": 0,
+    "b_file_approval_keypresses": 0,
+    "b_full_wakes_waiting_job": true,
+    "network_value": 83,
+    "network_reads": 1,
+    "codex_executions": 1,
+    "existing_file_modified": true,
+    "file_outside_original_roots_modified": true,
+    "files_received": 2,
+    "file_bytes": [
+      3,
+      61
+    ],
+    "both_tasks_completed": true,
+    "initial_reconnect_did_not_restart_daemons": true,
+    "b_reverted_to_ask": true,
+    "phase_binary_sha256": "b63b62baecaa77d89362583479aff9a86a3b25a2ed3003aacf2a4c4027f23c47",
+    "later_changes": [
+      "retry exact legacy relay database-lock HTTP 400",
+      "clear stale connected notice",
+      "automatic draft UI hint"
+    ]
+  },
+  "builds": {
+    "linux_regression": "passed",
+    "clippy": "passed",
+    "source_files_equal": 128,
+    "mac_release": "passed",
+    "linux_release": "passed"
+  },
+  "installation": {
+    "mac": {
+      "installed": "/Users/shenyaojin/.local/bin/xxassxx",
+      "version": "0.7.0-alpha",
+      "sha256": "7d43879a317d6d67a5be826912225f31d44f79cd8b11bdde6f641cdea3c41a86"
+    },
+    "mac_default_mode": "Ask for approval",
+    "mac_actual_pty_reconnect": "connected",
+    "linux": {
+      "installed": "/rcp/rcp42/home/shenyaojin/.local/bin/xxassxx",
+      "version": "0.7.0-alpha",
+      "sha256": "f7ef6bf597bb3377b1eadf75324b23f655193e436ce11d4a11f3bf1d7113069f"
+    },
+    "method": "Manual backup and atomic binary replacement; not updater.",
+    "backup_name": "access-070-20261013",
+    "linux_doctor": true,
+    "linux_default_mode": "Ask for approval",
+    "linux_actual_pty_reconnect": "connected",
+    "database_tables_and_config_unchanged_on_both_hosts": true,
+    "final_linux_status": {
+      "network": {
+        "singleton": 1,
+        "state": "connected",
+        "last_success": 1791956521,
+        "error": null,
+        "presence_supported": 1
+      },
+      "mode": [],
+      "time": 1791956593.963302
+    }
+  },
+  "limitations": [
+    "No Intel Mac build requested.",
+    "No remote macOS CI claim for uncommitted source.",
+    "First temporary HTTP 400 body was not retained; database-lock compatibility is tested separately.",
+    "Lakota host load rose above 1000 during final build; isolated and daily network requests timed out intermittently.",
+    "Manual reconnect cannot repair unavailable servers or network; uncertain executions are not replayed."
+  ],
+  "raw_evidence": "smoke-output/access-mode-20261013",
+  "final_isolated_verification": {
+    "recorded_at": 1791956416.8356879,
+    "members": {
+      "a": {
+        "network": [
+          {
+            "state": "connected",
+            "error": null,
+            "last_success": 1791956416
+          }
+        ],
+        "tasks": [
+          {
+            "id": "b459467e-75cd-5f77-a9d6-df035851bf05",
+            "state": "completed",
+            "revision": 1
+          }
+        ],
+        "runs": [],
+        "grants": [],
+        "transfers": [
+          {
+            "id": "109063e7-23be-5c16-87f1-394a2228f379",
+            "state": "received",
+            "authorized": 0
+          }
+        ],
+        "mode": [
+          {
+            "value": "full_access"
+          }
+        ],
+        "service": {
+          "alive": true,
+          "error": null,
+          "instance": "3c8f4643-556e-444d-9360-8d79d09aba2d",
+          "pid": 915021,
+          "state": "running",
+          "updated_at": 1791956403,
+          "version": "0.7.0-alpha"
+        }
+      },
+      "b": {
+        "network": [
+          {
+            "state": "connected",
+            "error": null,
+            "last_success": 1791956403
+          }
+        ],
+        "tasks": [
+          {
+            "id": "b459467e-75cd-5f77-a9d6-df035851bf05",
+            "state": "completed",
+            "revision": 1
+          }
+        ],
+        "runs": [
+          {
+            "id": "8066dce4-435d-4165-a3a3-c5cd20154229",
+            "state": "succeeded",
+            "reads": 1,
+            "submissions": 1,
+            "codex_version": "codex-cli 0.162.1",
+            "sandbox": "task-workspace"
+          }
+        ],
+        "grants": [],
+        "transfers": [
+          {
+            "id": "109063e7-23be-5c16-87f1-394a2228f379",
+            "state": "delivered",
+            "authorized": 1
+          }
+        ],
+        "mode": [
+          {
+            "value": "ask_for_approval"
+          }
+        ],
+        "service": {
+          "alive": true,
+          "error": null,
+          "instance": "08591f1b-756f-4ec2-bc74-7f561d132581",
+          "pid": 915024,
+          "state": "running",
+          "updated_at": 1791956404,
+          "version": "0.7.0-alpha"
+        }
+      }
+    },
+    "files": {
+      "b/work/original.txt": {
+        "bytes": 3,
+        "sha256": "f1769867b0abc7068f5cb7dd41574a420b3cfa4553856f459857ff8e5a525b13",
+        "received": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/inbox-20261012/access-mode-20261013/isolated-access/a/member.file-transfers/incoming/109063e7-23be-5c16-87f1-394a2228f379/9b7fbbf2-86eb-5a84-860c-4aba1d58d533/original.txt",
+        "content": "83\n"
+      },
+      "b/outside.txt": {
+        "bytes": 61,
+        "sha256": "c6cff9f571b253be5084eca6008a51f3cd2d858229aa848682eacefa2628ff87",
+        "received": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/inbox-20261012/access-mode-20261013/isolated-access/a/member.file-transfers/incoming/109063e7-23be-5c16-87f1-394a2228f379/cc4acc23-a579-5e6b-a689-edc07544cd5b/outside.txt",
+        "content": "从 http://127.0.0.1:40419/value 读取的 value 数值：83\n"
+      }
+    },
+    "http_requests": [
+      {
+        "path": "/value",
+        "at": 1791954959.7538624
+      }
+    ]
+  },
+  "packages": {
+    "xxassxx-aarch64-apple-darwin.tar.gz.sha256": "7092b03049e2d4662d2e4444c0616e6e1caf80785c4feab2a1fa0fde4731e148",
+    "xxassxx-x86_64-unknown-linux-musl.tar.gz.sha256": "6083b6e37e75856fd533eff2c8c2da83ec184881ca04528e33aea60b657d31e8"
+  },
+  "cleanup": [
+    {
+      "path": "/private/tmp/xxassxx-access-mode-tooling",
+      "bytes_removed": 1348435024,
+      "removed": true
+    },
+    {
+      "path": "/private/tmp/xxassxx-access-mode-pylibs",
+      "bytes_removed": 21351487,
+      "removed": true
+    }
+  ],
+  "repository_target_exists": false,
+  "pty_controller_note": "Rapid bracketed-paste following Esc on final Lakota UI produced one failed non-task input [200~/reconnect; retained. Retried with raw key events and observed local command success."
+}

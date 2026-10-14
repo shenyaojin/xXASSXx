@@ -2,7 +2,9 @@
 pub mod bridge;
 pub mod daemon;
 pub mod model;
+pub mod task_archive;
 pub mod tasks;
+pub mod timeline;
 use crate::{
     store::{Store, now},
     team::stable_id,
@@ -230,7 +232,7 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
         } else {
             None
         };
-    let tx = store.conn.transaction()?;
+    let tx = store.conn.unchecked_transaction()?;
     if let Some(revision) = confirmation {
         event(
             &tx,
@@ -254,6 +256,20 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
         Some(&input.request_id),
         None,
     )?;
+    // Manual stops are bounded local state changes. Apply atomically now, even
+    // while the dialogue worker is awaiting a model or the network is offline.
+    if input.action == "stop_task" {
+        let id = input.task_id.as_deref().context("请选择任务")?;
+        if crate::task_coordinator::is_task(&store.conn, id)? {
+            crate::task_coordinator::cancel_in_transaction(store, input)?;
+        } else {
+            tasks::stop_in_transaction(store, input)?;
+        }
+        tx.execute(
+            "UPDATE app_commands SET state='done' WHERE id=?1",
+            [&input.request_id],
+        )?;
+    }
     if input.task_id.is_none() && (peer.is_some() || input.action == "create_task") {
         let target = peer.or_else(|| input.payload["peer"].as_str());
         crate::task_coordinator::create(&tx, input, &owner, target)?;
@@ -326,6 +342,29 @@ pub fn events(store: &Store, session: &str, after: i64) -> Result<Vec<Value>> {
     q.query_map(params![session,after],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,Option<String>>(3)?)))?.map(|r|{let (seq,kind,payload,task)=r?;Ok(json!({"seq":seq,"kind":kind,"payload":serde_json::from_str::<Value>(&payload)?,"task_id":task}))}).collect()
 }
 pub fn snapshot(store: &Store, session: &str) -> Result<Value> {
+    let history = history(store, session)?;
+    let timeline = timeline::messages(store, session, &history)?;
+    let hidden = timeline::hidden_transfers(store)?;
+    let attachments: Vec<_> = crate::transfers::list(store)?
+        .into_iter()
+        .filter(|t| !t["id"].as_str().is_some_and(|id| hidden.contains(id)))
+        .collect();
+    let archived = task_archive::ids(store)?;
+    let automatic = crate::access_mode::full(&store.conn)?;
+    let owner = store.owner()?;
+    let mut tasks = tasks::list(store, None)?;
+    for task in &mut tasks {
+        task["ui_archived"] = json!(task["id"].as_str().is_some_and(|id| archived.contains(id)));
+        task["automatic_confirmation"] = json!(
+            automatic
+                && task["protocol"] == 2
+                && task["initiator"] == owner
+                && task["state"] == "draft"
+                && task["draft"]["questions"]
+                    .as_array()
+                    .is_none_or(|q| q.is_empty())
+        );
+    }
     let mut q=store.conn.prepare("SELECT s.id,s.title,s.recipient,p.path,p.name,s.read_cursor FROM app_sessions s JOIN app_projects p ON p.id=s.project_id ORDER BY s.created_at")?;
     let mut sessions=q.query_map([],|r|Ok(json!({"id":r.get::<_,String>(0)?,"title":r.get::<_,String>(1)?,"recipient":r.get::<_,String>(2)?,"project":r.get::<_,String>(3)?,"project_name":r.get::<_,String>(4)?,"read_cursor":r.get::<_,i64>(5)?})))?.collect::<rusqlite::Result<Vec<_>>>()?;
     for chat in &mut sessions {
@@ -347,7 +386,7 @@ pub fn snapshot(store: &Store, session: &str) -> Result<Value> {
         |r| r.get(0),
     )?;
     Ok(
-        json!({"identity":store.identity()?,"contacts":store.contacts()?,"presence":crate::presence::view(store)?,"service":crate::service::status(store)?,"sessions":sessions,"messages":history(store,session)?,"tasks":tasks::list(store,None)?,"attachments":crate::transfers::list(store)?,"unread":unread,"roots":store.file_roots()?}),
+        json!({"identity":store.identity()?,"contacts":store.contacts()?,"presence":crate::presence::view(store)?,"service":crate::service::status(store)?,"sessions":sessions,"messages":history,"timeline":timeline,"tasks":tasks,"attachments":attachments,"unread":unread,"roots":store.file_roots()?,"access_mode":crate::access_mode::get(&store.conn)?}),
     )
 }
 pub fn mark_read(store: &Store, session: &str, through: i64) -> Result<()> {

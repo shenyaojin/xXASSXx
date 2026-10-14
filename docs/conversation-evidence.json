@@ -1,0 +1,138 @@
+{
+  "date": "2026-10-13",
+  "version": "0.6.2-alpha",
+  "source_uncommitted": true,
+  "published": false,
+  "supported_targets": [
+    "aarch64-apple-darwin",
+    "x86_64-unknown-linux-musl"
+  ],
+  "intel_support": "discontinued at explicit user request; previous native acceptance TODO withdrawn",
+  "validation": {
+    "linux_full_tests": {
+      "passed": 158,
+      "failed": 0,
+      "ignored": 2
+    },
+    "format": "passed",
+    "clippy": "passed (existing libc::time_t deprecation allowed)",
+    "mac_release": "passed",
+    "linux_release": "passed",
+    "matching_source_files": 100,
+    "mac_ci_for_current_source": false
+  },
+  "binaries": {
+    "aarch64-apple-darwin": "b6a1c152621ff30cd10f03b90415d6ca34611ff8c40719222c2eae3269da00bd",
+    "x86_64-unknown-linux-musl": "15de9717601c735950ac24760ca518b4d613932783b134197d471cb71f4fa08a"
+  },
+  "packages": {
+    "xxassxx-aarch64-apple-darwin.tar.gz": "4371b8d4755f51a88ce1475acad64e941cd346b34ea4ec336920bdc11af4f51a",
+    "xxassxx-x86_64-unknown-linux-musl.tar.gz": "f14ec9005ca73836352bcca8a77187acf925048fc82f715234c93af2b4ee78b9"
+  },
+  "real_pty_model_task": {
+    "environment": "isolated A/B team, final Apple Silicon binary and backend",
+    "task_id": "e8e0bf69-65c2-56bf-ba59-9e1c0d1347ac",
+    "revision": 1,
+    "model": "DeepSeek deepseek-flash",
+    "executor": "official Codex",
+    "run_ids": [
+      "300c89d1-bba1-4226-92cd-529bef879bf1",
+      "3ce85756-919b-41d6-9990-9754ba61167e"
+    ],
+    "flow": "typed request, CtrlS confirmation, read meaningful final reply",
+    "final_marker": "CHAT-6248",
+    "final_sample_count": 37,
+    "source_bytes": 66,
+    "source_sha256": "e7164e82df259ec5054e533e7afb51f1705942ca66935e912b07ee9fc0c3d9fe",
+    "source_unchanged": true,
+    "screen": "smoke-output/conversation-cleanup-20261013/isolated/a-result-check.txt"
+  },
+  "installed_pty": {
+    "mac_file_card": "smoke-output/conversation-cleanup-20261013/installed-preview/owner-file-record.png",
+    "linux_file_card": "smoke-output/conversation-cleanup-20261013/lakota-installed/test-file-record.txt",
+    "existing_transfer_id": "d2c3da84-135f-5060-b45f-04d030d50ca8",
+    "one_card_per_batch": true,
+    "timestamps_present": true,
+    "raw_transport_note_absent": true,
+    "inbox_unread_retained": 1,
+    "new_daily_model_tasks_or_messages": false,
+    "new_cross_machine_file_transfer": false
+  },
+  "display_cleanup": {
+    "hidden_completed_test_batches": [
+      {
+        "id": "0db96c58-b7d9-541d-a517-2ec007e5f8ea",
+        "files": [
+          "upgrade-check-9MiB.dat",
+          "upgrade-check.csv"
+        ]
+      },
+      {
+        "id": "23e76863-8e3c-4687-bed1-b3dd1d7f42d1",
+        "files": [
+          "upgrade-check-return.dat"
+        ]
+      },
+      {
+        "id": "887b8146-b813-54c1-8c93-e643a31e42d2",
+        "files": [
+          "upgrade-check-9MiB.dat",
+          "upgrade-check.csv"
+        ]
+      },
+      {
+        "id": "c4060d39-8322-4acb-91f2-924d1b54050e",
+        "files": [
+          "upgrade-check-032-return.dat"
+        ]
+      }
+    ],
+    "original_messages_files_and_permissions_preserved": true
+  },
+  "deployment": {
+    "mac": {
+      "version": "0.6.2-alpha",
+      "backend_alive": true,
+      "all_stopped_database_tables_and_config_equal": true,
+      "integrity": [
+        "ok"
+      ],
+      "foreign_key_violations": 0,
+      "task_count": 9,
+      "schema": 10,
+      "backup": "/Users/shenyaojin/.local/share/xxassxx/backups/chat-062-20261013",
+      "mailbox_identity_matches": true
+    },
+    "linux": {
+      "version": "0.6.2-alpha",
+      "backend_alive": true,
+      "all_stopped_database_tables_and_config_equal": true,
+      "integrity": [
+        "ok"
+      ],
+      "foreign_key_violations": 0,
+      "task_count": 10,
+      "schema": 10,
+      "backup": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/backups/chat-062-20261013",
+      "mailbox_identity_matches": true
+    }
+  },
+  "cache_cleanup": {
+    "removed": [
+      "/private/tmp/xxassxx-chat-tooling",
+      "/private/tmp/xxassxx-chat-pylibs",
+      "/private/tmp/xxassxx-chat-source.tar.gz"
+    ],
+    "released_kib": 1347184,
+    "repository_target_exists": false,
+    "mac_and_linux_packages_verified_and_kept": true
+  },
+  "boundaries": [
+    "Trader mailbox remains compatible 0.6.0-alpha",
+    "No changes to other member computers",
+    "No new OAuth/dot validation",
+    "No schema migration",
+    "No full rollback rehearsal",
+    "Original model prose and audit history retained"
+  ]
+}

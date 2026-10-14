@@ -8,11 +8,26 @@ cfg={}
 for n,arg in enumerate(args):
     if arg=='-c':
         key,value=args[n+1].split('=',1);cfg[key]=tomllib.loads('x='+value)['x']
-profile=cfg['default_permissions']
-assert profile in ['xxassxx_read','xxassxx_execute']
-assert cfg[f'permissions.{profile}.network.enabled'] is False
+full=cfg.get('sandbox_mode')=='danger-full-access'
+profile=cfg.get('default_permissions')
+assert cfg['approval_policy']=='never'
+if full:
+    assert profile is None and cfg['web_search']=='live'
+else:
+    assert profile in ['xxassxx_read','xxassxx_execute']
+    assert cfg[f'permissions.{profile}.network.enabled'] is False
 assert cfg['features.shell_tool'] is True
 prompt=sys.stdin.read();task=re.search(r'Assigned task_id: ([a-f0-9-]+)',prompt)[1];run=re.search(r'Current run_id: ([a-f0-9-]+)',prompt)[1]
+# Validate the bytes actually supplied to both exec and exec resume, independent
+# of cwd. The fixture still performs the real task-bound MCP round trip below.
+import hashlib
+bundle=re.findall(r'<skill name="([^"]+)">\n(.*?)\n</skill>',prompt,re.S)
+assert [name for name,_ in bundle]==['xxassxx-task-intake','xxassxx-task-execution','xxassxx-task-handoff']
+digest=hashlib.sha256()
+for name,text in bundle:
+    assert f'name: {name}\n' in text
+    digest.update(name.encode()+b'\0'+text.encode()+b'\0')
+assert re.search(r'Skill bundle: ([\d.]+) / ([a-f0-9]{64})',prompt)[2]==digest.hexdigest()
 session=str(uuid.uuid5(uuid.NAMESPACE_DNS,task))
 if 'resume' in args: assert args[args.index('resume')+1]==session
 
@@ -36,7 +51,16 @@ rpc('initialize',{'protocolVersion':'2025-06-18','capabilities':{},'clientInfo':
 ctx=json.loads(tool('get_task',{'task_id':task})['input']);business=ctx['business_task'];base={'task_id':task,'run_id':run,'idempotency_key':run}
 root=ctx['authorized_roots'][0]['path'];assert os.getcwd()==ctx['working_directory']
 refresh='补充材料回归' in business['original']
-if business['phase']=='execute':
+if business['phase']=='execute' and full:
+    from pathlib import Path
+    assert ctx['access_mode']=='full_access' and ctx['execution_access']['full_access']
+    workspace=Path.cwd()
+    (workspace/'fast.py').write_text('iterations=20 # changed under full access')
+    outside=workspace.parent/'outside-result.txt';outside.write_text('Full access output: 210')
+    index=next(i for i,r in enumerate(ctx['authorized_roots']) if r['path']=='/')
+    ref={'root':index,'path':str(outside).lstrip('/'),'reason':'Actual output outside the allowed directory'}
+    tool('submit_task_result',{**base,'result':json.dumps({'body':'已按要求修改原文件并生成结果210。','files':[ref],'deliveries':[ref]},ensure_ascii=False)})
+elif business['phase']=='execute':
     from pathlib import Path
     assert profile=='xxassxx_execute'
     access=ctx['execution_access'];workspace=Path(access['directory'])
@@ -54,6 +78,19 @@ if business['phase']=='execute':
     (workspace/'stdout.log').write_text(run_result.stdout)
     emit({'type':'item.completed','item':{'type':'command_execution','command':'python calculation.py','exit_code':run_result.returncode,'status':'completed','aggregated_output':run_result.stdout}})
     tool('submit_task_result',{**base,'result':json.dumps({'body':'已在独立目录写入并实际运行，结果为55。原文件未修改。','files':[{'root':0,'path':p,'reason':'实际生成的结果证据'} for p in ['calculation.py','result.txt','stdout.log']]},ensure_ascii=False)})
+elif business['confirmed_intent'].get('mode')=='files':
+    from pathlib import Path
+    # The actual startup prompt must not reintroduce a metadata-only discovery
+    # stage after get_task has supplied the direct file-selection contract.
+    assert 'discover returns candidate paths for Rust to freeze' not in prompt
+    assert 'business_task.contract' in prompt
+    assert 'discovery' not in business['contract']
+    assert 'UTF-8 text only' not in json.dumps(business['material_budget'])
+    assert (Path(root)/'result.png').read_bytes().startswith(b'\x89PNG')
+    evidence=[{'root':0,'path':'status.json','reason':'Identifies the selected result'}]
+    bad=rpc('tools/call',{'name':'submit_task_result','arguments':{**base,'result':json.dumps({'body':'Reference record is not a delivery','files':evidence})}})
+    assert bad.get('isError'),bad
+    tool('submit_task_result',{**base,'result':json.dumps({'body':'已找到结果图片，等待允许发送。','files':evidence,'deliveries':[{'root':0,'path':'result.png','reason':'Requested latest result image'}]},ensure_ascii=False)})
 elif business['phase']=='discover':
     paths=[]
     names=['fast.py','precise.py']
