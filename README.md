@@ -12,7 +12,7 @@
 
 ### 1. 安装程序
 
-当前测试版为 [0.7.0 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.0-alpha)。历史版本保留原有下载；本版只提供 M 系 Mac 和 Linux x86_64 安装包。
+当前测试版为 [0.7.1 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.1-alpha)，修复普通问答提交、执行中补充要求及 zsh 临时文件错误。历史版本保留原有下载；本版只提供 M 系 Mac 和 Linux x86_64 安装包。
 
 从 Release 下载对应系统的 `.tar.gz`、`install.sh` 和 `SHA256SUMS` 到同一目录，进入该目录执行：
 
