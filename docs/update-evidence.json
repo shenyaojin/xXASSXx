@@ -1,0 +1,130 @@
+{
+  "date": "2026-10-12",
+  "timezone": "America/Denver",
+  "version": "0.5.0-alpha",
+  "published": false,
+  "runtime_source_sha256": "b77b3af8d5cf141a5b02c2c09094897ff778732bf483b171e23cbc6904a86149",
+  "source_verification": "Cargo.toml, Cargo.lock and every local src file match Linux build inputs; four AppleDouble tar metadata files excluded on Linux.",
+  "binaries": {
+    "aarch64-apple-darwin": "eb2cf2b501d0ea0c106fa4c09681675a4e8cfe53682490ef33640ad3a9a77202",
+    "x86_64-unknown-linux-musl": "97ec23c00aa22e72fd900483bfe49cb14dd813240178b622cc7fa5e9b571d6a0"
+  },
+  "automated": {
+    "macos": {
+      "passed": 146,
+      "failed": 0,
+      "ignored": 2
+    },
+    "linux_musl": {
+      "passed": 146,
+      "failed": 0,
+      "ignored": 2
+    },
+    "macos_clippy": "passed",
+    "cargo_fmt": "passed",
+    "shell_syntax": "passed"
+  },
+  "macos_real_pty": {
+    "status": "passed",
+    "automatic": true,
+    "old_version": "xxassxx 0.4.99-alpha",
+    "new_version": "xxassxx 0.5.0-alpha",
+    "session": "50823b9a-02c6-4bd9-a7d6-8b74879a04d0",
+    "identity_config_roots_history_session_preserved": true,
+    "task": "0c2551a4-59e9-5019-809d-8292f6ea77e9",
+    "runs": [
+      {
+        "state": "succeeded",
+        "turn_completed": 1,
+        "exit_code": 0,
+        "session_id": "01a13256-3ef3-7653-b537-be5a020318aa"
+      },
+      {
+        "state": "succeeded",
+        "turn_completed": 1,
+        "exit_code": 0,
+        "session_id": "01a13256-7de7-7291-90d4-c5b20e4bfd67"
+      }
+    ],
+    "termios_restored": true,
+    "final_answer": "已按只读方式读取工作目录中的 update-check.txt，结果如下：\n\nmarker 的准确值是 UPDATER-8247，sample_count 的准确值是 42。\n\n两个值都来自该测试文件本身：marker 取自文件第 2 行的 marker 字段，sample_count 取自第 3 行的 sample_count 字段（即 update-check.txt 第 2 行 marker=UPDATER-8247，第 3 行 sample_count=42）。本次仅读取了这一份测试文件，未创建、修改或删除任何文件，也未运行任何程序或脚本。\n\n说明：这次只检查了这一个文件（71 字节），因此以上结论只针对该文件，不代表工作目录中其他内容的情况。附件为可选的导出，与结果本身无关，无需为此重跑任务。"
+  },
+  "lakota_real_pty": {
+    "status": "passed",
+    "automatic": false,
+    "old_version": "xxassxx 0.4.99-alpha",
+    "new_version": "xxassxx 0.5.0-alpha",
+    "session": "57e3a2d1-3f84-431d-b16b-4e652c66fa43",
+    "identity_config_roots_history_session_preserved": true,
+    "task": "b9a270db-59d6-52c4-9e16-4554f2dcf734",
+    "runs": [
+      {
+        "state": "succeeded",
+        "turn_completed": 1,
+        "exit_code": 0,
+        "session_id": "01a13258-f4bd-7631-a70a-17d1b4b09aeb"
+      },
+      {
+        "state": "succeeded",
+        "turn_completed": 1,
+        "exit_code": 0,
+        "session_id": "01a13259-4a6a-7133-bafd-0b97b4ea9ad8"
+      }
+    ],
+    "termios_restored": true,
+    "final_answer": "已完成。只读读取了工作目录下的 update-check.txt（该文件为 71 字节），未修改任何文件、未运行项目程序、也未生成或发送附件。\n\n报告结果：marker 的准确值为 UPDATER-8247，sample_count 的准确值为 42。\n\n来源说明：这两个值均取自 update-check.txt，文件内对应原文为「marker=UPDATER-8247」和「sample_count=42」。本次仅核对了这一个指定文件，除此之外未读取其他文件。"
+  },
+  "trader_https": {
+    "status": "passed",
+    "old_version": "xxassxx 0.4.99-alpha",
+    "new_version": "xxassxx 0.5.0-alpha",
+    "running_mailbox_prevents_replacement": true,
+    "server_identity_preserved": true,
+    "binary_sha256": "97ec23c00aa22e72fd900483bfe49cb14dd813240178b622cc7fa5e9b571d6a0",
+    "cases": [
+      {
+        "source": "bad-signature",
+        "exit_code": 1
+      },
+      {
+        "source": "truncated",
+        "exit_code": 1
+      },
+      {
+        "source": "verified",
+        "exit_code": 1
+      },
+      {
+        "source": "verified",
+        "exit_code": 0
+      }
+    ]
+  },
+  "sample": {
+    "file": "update-check.txt",
+    "bytes": 71,
+    "marker": "UPDATER-8247",
+    "sample_count": 42,
+    "sha256": "dc13b6a065b9c75fba7873d4dc84530b553a79114b75d75ea208bd6b3621ff18",
+    "unchanged": true
+  },
+  "legacy_bootstrap": "Actual 0.4.0-alpha binary installed in isolated prefix, then replaced with 0.5.0-alpha using install.sh; only updater-capable binary received installation receipt.",
+  "github_check": "Real public Releases API: current 0.5.0-alpha, no newer version. Actual binary delivery tested over Trader HTTPS, not a newly published GitHub Release.",
+  "cleanup": {
+    "caddy_original_restored": true,
+    "temporary_route_http_status": 404,
+    "mailbox_unauthenticated_http_status": 401,
+    "trader_original_pid": 2304639,
+    "trader_original_service": "active",
+    "lakota_original_pid": 2943552,
+    "lakota_original_service": "running",
+    "daily_installations_replaced": false
+  },
+  "limits": [
+    "Intel macOS was not built or exercised on this host; existing three-platform CI retained.",
+    "Automatic install only for equal database schema; incompatible migrations are blocked.",
+    "Idle auto-install is attached to an open TUI; no headless automatic installation.",
+    "GitHub signing secret not configured; no commit, push or Release publication."
+  ],
+  "raw_evidence": "smoke-output/update-20261012; Lakota ~/xxassxx-tests/update-20261012; Trader ~/xxassxx-tests/update-20261012"
+}

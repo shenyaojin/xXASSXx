@@ -1,0 +1,297 @@
+{
+  "date": "2026-10-12",
+  "timezone": "America/Denver",
+  "verified_at_utc": "2026-10-12T23:54:15.272026+00:00",
+  "version": "0.5.0-alpha",
+  "scope": "First installation of updater-enabled version into the three daily installations, explicitly authorized by the user. No Git commit, push or public release.",
+  "published": false,
+  "runtime_source_sha256": "b77b3af8d5cf141a5b02c2c09094897ff778732bf483b171e23cbc6904a86149",
+  "packages": {
+    "aarch64-apple-darwin": {
+      "archive_sha256": "77f5b300b710948cab60b191f8ab54165322d112350f60069355fc17920106b3",
+      "binary_sha256": "eb2cf2b501d0ea0c106fa4c09681675a4e8cfe53682490ef33640ad3a9a77202"
+    },
+    "x86_64-unknown-linux-musl": {
+      "archive_sha256": "a425a473acac3b2a785c64a8687f986b9e8fae506644943614a775390f10b456",
+      "binary_sha256": "97ec23c00aa22e72fd900483bfe49cb14dd813240178b622cc7fa5e9b571d6a0"
+    }
+  },
+  "procedure": [
+    "Read-only in-flight, integrity, identity/config/grants/history audit.",
+    "Gracefully stop both old personal services, confirm no running old UI; stop Trader user systemd mailbox.",
+    "Use scripts/install.sh with validated offline packages and SHA256SUMS in the existing install prefixes. No init command or data-directory replacement.",
+    "Compare every database table and config-file digest while stopped: exactly unchanged on each host.",
+    "Restart mailbox with its existing systemd user service, then personal services. Verify actual running versions, hashes, authenticated mailbox access, Codex login and runtime leases.",
+    "Operate real PTYs on both daily clients: /identity, /contacts, /update, /identity; inspect rendered screen, exact session preserved, CtrlQ exits UI and keeps service running."
+  ],
+  "update_settings": {
+    "source": "github",
+    "channel": "preview",
+    "policy": "notify",
+    "defaults_preserved": true,
+    "github_check_all_hosts": "passed; no newer published version"
+  },
+  "database_backup_created": false,
+  "previous_binaries_retained_in_private_deployment_directories": true,
+  "machines": {
+    "mac": {
+      "role": "personal client",
+      "member_id": "mba",
+      "binary": "/Users/shenyaojin/.local/xxassxx/bin/xxassxx",
+      "previous_version": "0.4.0-alpha",
+      "version": "0.5.0-alpha",
+      "old_pid": 23924,
+      "new_pid": 48154,
+      "backend_running": true,
+      "schema_before_and_after": 9,
+      "inflight_at_stop": {
+        "running_runs": 0,
+        "pending_commands": 0,
+        "runnable_jobs": 0,
+        "active_transfers": 0
+      },
+      "installation_receipt_verified": true,
+      "runtime_lease_verified": true,
+      "doctor": {
+        "ready": true,
+        "codex": {
+          "available": true,
+          "logged_in": true
+        },
+        "mailbox": {
+          "error": null,
+          "reachable_and_identity_matches": true
+        },
+        "model_inference": "not repeated during deployment"
+      },
+      "allowed_directories_before_and_after": [
+        "/Users/shenyaojin"
+      ],
+      "data_verification": {
+        "stopped_vs_installed_exact": true,
+        "config_files_unchanged": true,
+        "protected_tables_unchanged": {
+          "identity": true,
+          "file_roots": true,
+          "task_workspaces": true,
+          "transfer_grants": true
+        },
+        "old_history_preserved": {
+          "app_tasks": true,
+          "tasks": true,
+          "runs": true,
+          "messages": true,
+          "app_messages": true
+        },
+        "history_counts": {
+          "app_tasks": [
+            2,
+            2
+          ],
+          "tasks": [
+            0,
+            0
+          ],
+          "runs": [
+            0,
+            0
+          ],
+          "messages": [
+            19,
+            19
+          ],
+          "app_messages": [
+            26,
+            32
+          ]
+        },
+        "integrity": [
+          "ok"
+        ],
+        "foreign_key_violations": 0
+      },
+      "real_pty": {
+        "status": "passed",
+        "project": "/Users/shenyaojin",
+        "session": "1c224b64-44dc-5a0a-9d26-5c2c26eae683",
+        "commands": [
+          "/identity",
+          "/contacts",
+          "/update",
+          "/identity"
+        ],
+        "same_session_after_update": true,
+        "termios_restored": true,
+        "screen_manually_inspected": true,
+        "service_kept_running": true,
+        "evidence_directory": "smoke-output/update-deployment-20261012/mac-pty"
+      }
+    },
+    "lakota": {
+      "role": "personal client",
+      "member_id": "test",
+      "binary": "/rcp/rcp42/home/shenyaojin/.local/bin/xxassxx",
+      "previous_version": "0.3.2-alpha (patched)",
+      "version": "0.5.0-alpha",
+      "old_pid": 2943552,
+      "new_pid": 195328,
+      "backend_running": true,
+      "schema_before_and_after": 9,
+      "inflight_at_stop": {
+        "running_runs": 0,
+        "pending_commands": 0,
+        "runnable_jobs": 0,
+        "active_transfers": 0
+      },
+      "installation_receipt_verified": true,
+      "runtime_lease_verified": true,
+      "doctor": {
+        "ready": true,
+        "codex": {
+          "available": true,
+          "logged_in": true
+        },
+        "mailbox": {
+          "error": null,
+          "reachable_and_identity_matches": true
+        },
+        "model_inference": "not repeated during deployment"
+      },
+      "allowed_directories_before_and_after": [
+        "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts"
+      ],
+      "data_verification": {
+        "stopped_vs_installed_exact": true,
+        "config_files_unchanged": true,
+        "protected_tables_unchanged": {
+          "identity": true,
+          "file_roots": true,
+          "task_workspaces": true,
+          "transfer_grants": true
+        },
+        "old_history_preserved": {
+          "app_tasks": true,
+          "tasks": true,
+          "runs": true,
+          "messages": true,
+          "app_messages": true
+        },
+        "history_counts": {
+          "app_tasks": [
+            10,
+            10
+          ],
+          "tasks": [
+            24,
+            24
+          ],
+          "runs": [
+            31,
+            31
+          ],
+          "messages": [
+            103,
+            103
+          ],
+          "app_messages": [
+            106,
+            112
+          ]
+        },
+        "integrity": [
+          "ok"
+        ],
+        "foreign_key_violations": 0
+      },
+      "real_pty": {
+        "status": "passed",
+        "project": "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts",
+        "session": "c2e29d50-368f-5182-b02f-cd7faaadb9bc",
+        "commands": [
+          "/identity",
+          "/contacts",
+          "/update",
+          "/identity"
+        ],
+        "same_session_after_update": true,
+        "termios_restored": true,
+        "screen_manually_inspected": true,
+        "service_kept_running": true,
+        "evidence_directory": "smoke-output/update-deployment-20261012/lakota-pty"
+      }
+    },
+    "trader": {
+      "role": "mailbox",
+      "binary": "/home/ubuntu/.local/bin/xxassxx",
+      "previous_version": "0.3.2-alpha (patched)",
+      "version": "0.5.0-alpha",
+      "old_pid": 2304639,
+      "new_pid": 3710124,
+      "systemd_user_unit": "xxassxx-mailbox.service",
+      "state": "active/running",
+      "unexpected_restarts": 0,
+      "running_process_binary_sha256": "97ec23c00aa22e72fd900483bfe49cb14dd813240178b622cc7fa5e9b571d6a0",
+      "installation_receipt_verified": true,
+      "runtime_lease_verified": true,
+      "schema_before_and_after": 1,
+      "data_verification": {
+        "stopped_vs_installed_exact": true,
+        "config_files_unchanged": true,
+        "protected_tables_unchanged": {
+          "relay_members": true
+        },
+        "old_history_preserved": {
+          "relay_messages": true
+        },
+        "history_counts": {
+          "relay_messages": [
+            118,
+            118
+          ]
+        },
+        "integrity": [
+          "ok"
+        ],
+        "foreign_key_violations": 0
+      },
+      "authenticated_identity_verified_from_both_clients": true,
+      "unauthenticated_https_status": 401,
+      "server_config_credentials_and_caddy_unchanged": true
+    }
+  },
+  "evidence_boundaries": {
+    "same_validated_binaries": "docs/update-evidence.json",
+    "existing_automated_regressions": {
+      "macos": {
+        "passed": 146,
+        "failed": 0,
+        "ignored": 2
+      },
+      "linux_musl": {
+        "passed": 146,
+        "failed": 0,
+        "ignored": 2
+      },
+      "macos_clippy": "passed",
+      "cargo_fmt": "passed",
+      "shell_syntax": "passed"
+    },
+    "real_model_tasks_reused_from_same_binary_acceptance": [
+      "0c2551a4-59e9-5019-809d-8292f6ea77e9",
+      "b9a270db-59d6-52c4-9e16-4554f2dcf734"
+    ],
+    "new_model_inference_or_business_computation": false,
+    "new_cross_machine_business_messages": false,
+    "local_pty_history_added": "Each client gained three local commands and six chat rows; prior rows and task counts are preserved.",
+    "test_harness_corrections": [
+      "macOS system Python SQLite read-only audit failed after old WAL closed; Python 3.12 read-only audit succeeded.",
+      "Lakota filesystem requires read/write descriptor for an exclusive flock probe; retried with r+ without writing file contents, and verified busy lease.",
+      "Terminal rendering preserves original carriage returns by reading ANSI as bytes."
+    ],
+    "not_performed": [
+      "Intel Mac installation",
+      "GitHub signing secret configuration",
+      "Public release"
+    ]
+  }
+}
