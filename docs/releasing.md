@@ -58,6 +58,18 @@ sh scripts/install.sh --from dist/v0.7.0-alpha --prefix /tmp/xxassxx-070-check
 
 手动触发只生成 Actions 产物。标签推送成功不等于 Release 已发布；单个平台成功也不等于发布完成。Alpha 安装显式传入 `--version v0.7.0-alpha`，不依赖稳定版 latest。
 
+## 0.7.0-alpha 发布结果
+
+2026-10-14T06:06:04Z，[v0.7.0-alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.0-alpha) 已公开，prerelease、非 draft；标签指向 `2a7e998ee6b6e21a7a7ca4a873c5af8de79b8e54`。五段提交分别涵盖更新器基础、成员收件箱与 OAuth、内置技能、客户端集成与权限重连、版本与打包。
+
+- [两平台 CI](https://github.com/shenyaojin/xXASSXx/actions/runs/38519443106) 各 173 项测试通过、2 项既有忽略，发布构建与离线安装通过。
+- 六项文件已核对签名、平台、版本、校验值及公开匿名下载；更新器接受真实签名并拒绝篡改清单。
+- Mac 与 Lakota 分别使用最终包在独立目录安装通过，并亲自启动实际 PTY。Lakota 日常安装已更换，全部数据库表和配置一致，备份为 `~/.local/share/xxassxx/backups/release-070-20261014/`。
+- Mac 原界面仍占用运行锁，未强制结束；其日常程序仍是先前的 0.7.0 本地候选，后台恢复运行，正式包替换待退出窗口后完成。Trader 信箱、MBA 和 pengchao 未改。
+- 此次首次公开签名版本使用正式密钥。旧本地候选包需要一次手动迁移公钥；这次部署不是通过更新器。正式包及证据留存，本机无新 Rust target。
+
+源代码与上一轮实测相比只有公钥变化；真实模型与 DSS 证据沿用对应阶段，不把安装检查描述成重跑科研计算。完整记录见 [发布证据](releases/v0.7.0-alpha-evidence.json)。
+
 ## 0.4.0-alpha 发布结果
 
 2026-10-09T03:15:02Z（America/Denver 10 月 8 日），[v0.4.0-alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.4.0-alpha) 已公开发布，prerelease、非 draft。源码标签指向 `987fdf0900235d171998bc37871797241c284374`，包含本轮全部实现和测试。

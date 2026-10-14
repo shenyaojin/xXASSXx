@@ -14,7 +14,7 @@
 
 当前测试版为 [0.7.0 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.0-alpha)。历史版本保留原有下载；本版只提供 M 系 Mac 和 Linux x86_64 安装包。
 
-解压安装包，进入包含 `install.sh` 和 `SHA256SUMS` 的目录：
+从 Release 下载对应系统的 `.tar.gz`、`install.sh` 和 `SHA256SUMS` 到同一目录，进入该目录执行：
 
 ```sh
 sh ./install.sh --from .

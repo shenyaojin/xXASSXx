@@ -1,0 +1,144 @@
+{
+  "version": "0.7.0-alpha",
+  "recorded_at": "2026-10-14T06:11:18.625914+00:00",
+  "release": {
+    "url": "https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.0-alpha",
+    "published_at": "2026-10-14T06:06:04Z",
+    "draft": false,
+    "prerelease": true,
+    "source_commit": "2a7e998ee6b6e21a7a7ca4a873c5af8de79b8e54",
+    "tag": "v0.7.0-alpha"
+  },
+  "implementation_commits": [
+    "cb71643e8658a107f388ebba38a53fadb8d9e505 Add signed updater foundations and release validation tools",
+    "7511a7586880b65df64470989d1607732de29cb1 Add persistent member inbox and OAuth MCP service modules",
+    "2f159539107faaa5670243bc3f1b142d6f8a6c08 Bundle Codex skills for task intake, execution and handoff",
+    "aea9e5b52fb0dcad057508c6348838fdef33115f Integrate inbox and skills with clearer tasks, access modes and reconnect",
+    "2a7e998ee6b6e21a7a7ca4a873c5af8de79b8e54 Prepare 0.7.0-alpha signed installers for Apple Silicon and Linux"
+  ],
+  "ci": {
+    "url": "https://github.com/shenyaojin/xXASSXx/actions/runs/38519443106",
+    "apple_silicon": {
+      "passed": 173,
+      "failed": 0,
+      "ignored": 2,
+      "suites": 25
+    },
+    "linux_musl": {
+      "passed": 173,
+      "failed": 0,
+      "ignored": 2,
+      "suites": 25
+    },
+    "release_builds_and_fresh_prefix_installs": "passed"
+  },
+  "source_comparison": {
+    "previous_validation_files": 128,
+    "changed_files": [
+      "src/update/public-key.hex"
+    ],
+    "release_commit": "2a7e998ee6b6e21a7a7ca4a873c5af8de79b8e54"
+  },
+  "signed_release": {
+    "version": "0.7.0-alpha",
+    "schema": 10,
+    "signature_verified": true,
+    "public_key": "ee06eef54d768e3445f2c3cf167dc7445c33c4fe67d22ccb06896738c772cbd1",
+    "assets": {
+      "SHA256SUMS": {
+        "size": 209,
+        "sha256": "8561b6247190f5140e618d5bfd657de1a5723dce154377f2c00dec8714663491"
+      },
+      "install.sh": {
+        "size": 3612,
+        "sha256": "8f63a694adc788ebfa57bd0a1b9d0b206644961eb3b3f366a9dcc3bd7ab4ec6c"
+      },
+      "update.json": {
+        "size": 3009,
+        "sha256": "da658ea2c47a4d0e78d2c84bd860016419718cc66bc1c46ae94cd84701be44ed"
+      },
+      "update.json.sig": {
+        "size": 129,
+        "sha256": "147b25be09959fed873634ec5ed9e7a3ac7fb1159f58de8c012e6a809325a7d6"
+      },
+      "xxassxx-aarch64-apple-darwin.tar.gz": {
+        "size": 7504415,
+        "sha256": "d05790b571f38be09a7319acf66fdb36789b4f9a819b491db274bbd46e4ed98f"
+      },
+      "xxassxx-x86_64-unknown-linux-musl.tar.gz": {
+        "size": 8661338,
+        "sha256": "6aba37a67648436cdfcf537775b3cd830249b4b7c87c1650af99beaa8c5749d7"
+      }
+    },
+    "binaries": {
+      "aarch64-apple-darwin": {
+        "size": 21019440,
+        "sha256": "131495e6b9601bc00f2257823134e831ff339a6149589bf174b7149078d87f8d"
+      },
+      "x86_64-unknown-linux-musl": {
+        "size": 24583656,
+        "sha256": "c455073604543484da1698cb5a57dc1cebe5178e35d1adde29fb45659453478e"
+      }
+    }
+  },
+  "anonymous_downloads": {
+    "SHA256SUMS": {
+      "size": 209,
+      "sha256": "8561b6247190f5140e618d5bfd657de1a5723dce154377f2c00dec8714663491",
+      "anonymous_http_status": 200
+    },
+    "install.sh": {
+      "size": 3612,
+      "sha256": "8f63a694adc788ebfa57bd0a1b9d0b206644961eb3b3f366a9dcc3bd7ab4ec6c",
+      "anonymous_http_status": 200
+    },
+    "update.json": {
+      "size": 3009,
+      "sha256": "da658ea2c47a4d0e78d2c84bd860016419718cc66bc1c46ae94cd84701be44ed",
+      "anonymous_http_status": 200
+    },
+    "update.json.sig": {
+      "size": 129,
+      "sha256": "147b25be09959fed873634ec5ed9e7a3ac7fb1159f58de8c012e6a809325a7d6",
+      "anonymous_http_status": 200
+    },
+    "xxassxx-aarch64-apple-darwin.tar.gz": {
+      "size": 7504415,
+      "sha256": "d05790b571f38be09a7319acf66fdb36789b4f9a819b491db274bbd46e4ed98f",
+      "anonymous_http_status": 200
+    },
+    "xxassxx-x86_64-unknown-linux-musl.tar.gz": {
+      "size": 8661338,
+      "sha256": "6aba37a67648436cdfcf537775b3cd830249b4b7c87c1650af99beaa8c5749d7",
+      "anonymous_http_status": 200
+    }
+  },
+  "tampered_metadata_rejected": true,
+  "real_machine_validation": {
+    "mac": {
+      "fresh_prefix_install": "passed",
+      "signed_metadata_check": "passed",
+      "pty": "opened actual published binary; /access shows Ask for approval and connected",
+      "daily_install": "deferred because user terminal PID 49489 holds runtime lease; old service was restarted; no binary replacement",
+      "existing_binary_sha256": "7d43879a317d6d67a5be826912225f31d44f79cd8b11bdde6f641cdea3c41a86"
+    },
+    "lakota": {
+      "fresh_prefix_install": "passed",
+      "signed_metadata_check": "passed",
+      "daily_install": {
+        "installed": "/rcp/rcp42/home/shenyaojin/.local/bin/xxassxx",
+        "version": "0.7.0-alpha",
+        "sha256": "c455073604543484da1698cb5a57dc1cebe5178e35d1adde29fb45659453478e"
+      },
+      "backup": {
+        "backup": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/backups/release-070-20261014",
+        "database_integrity": "ok",
+        "old_binary_sha256": "f7ef6bf597bb3377b1eadf75324b23f655193e436ce11d4a11f3bf1d7113069f"
+      },
+      "database_and_config_unchanged": true,
+      "pty": "actual installed binary; /access shows Ask for approval; /reconnect reports connected; existing DSS delivered result remains readable"
+    }
+  },
+  "scope": "This release used the prior real DeepSeek/Codex and DSS business evidence; it did not rerun scientific calculations. Trader, MBA and pengchao installations were not changed. No Intel package. Private signing key, invitations, credentials and databases are excluded.",
+  "raw_evidence": "smoke-output/release-v0.7.0-alpha/"
+}

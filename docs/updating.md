@@ -56,7 +56,7 @@ xxassxx update --from /path/to/signed-release
 python3 scripts/sign_release.py dist/v0.5.0-alpha --key /private/path/ed25519.pem
 ```
 
-私钥不入库、不放进安装包。GitHub Actions 在创建草稿 Release 前，从 `XXASSXX_RELEASE_SIGNING_KEY` secret 读取 PEM 私钥；缺失或公钥不匹配会明确失败。发布者须在首次发布前配置此 secret，并安全保存密钥。此开发环境的密钥保存在 `~/.config/xxassxx-release-signing/ed25519.pem`（文件 600，目录 700）；文档只记录位置，不记录内容。2026-10-13 首次公开发布准备中，已配置 GitHub secret；正式签名公钥已写入源码。此前未公开候选包的私钥未在原位置找到，因此没有沿用候选公钥；这些本地候选安装需手动替换一次正式发布包，不能用旧公钥验证新签名。首次公开签名版本为 0.7.0-alpha，发布结果见 [发布记录](releasing.md)。
+私钥不入库、不放进安装包。GitHub Actions 在创建草稿 Release 前，从 `XXASSXX_RELEASE_SIGNING_KEY` secret 读取 PEM 私钥；缺失或公钥不匹配会明确失败。发布者须在首次发布前配置此 secret，并安全保存密钥。此开发环境的密钥保存在 `~/.config/xxassxx-release-signing/ed25519.pem`（文件 600，目录 700）；文档只记录位置，不记录内容。2026-10-14 已首次公开发布 0.7.0-alpha，并配置 GitHub secret；正式签名公钥已写入源码。此前未公开候选包的私钥未在原位置找到，因此没有沿用候选公钥；这些本地候选安装需手动替换一次正式发布包，不能用旧公钥验证新签名。首次公开签名版本为 0.7.0-alpha，发布结果见 [发布记录](releasing.md)。
 
 清单包含格式版本、应用版本、数据库 schema、简短说明，以及各平台的文件名、大小与哈希。只有托管位置与 GitHub 版本发现放在 `update/release.rs`；更新编排、包验证、文件替换分别位于另外三个模块。服务状态、空闲判定和停止仍由 `service.rs` 负责，TUI 不自行下载或解析发布数据。
 
@@ -65,3 +65,5 @@ python3 scripts/sign_release.py dist/v0.5.0-alpha --key /private/path/ed25519.pe
 ## 验收
 
 自动回归见 `tests/update.rs`。真实 PTY 与实际模型的可复跑入口为 `scripts/check_update_pty.py`；独立服务器及 HTTPS 失败路径入口为 `scripts/check_update_server.py`。两个脚本都要求显式的测试安装位置与测试目录，不替换日常安装。实测结果和边界见 `update-validation.md`。
+
+已有安装记录的旧本地候选包会被 `install.sh` 拒绝覆盖。首次正式公钥迁移须由维护人员在停止后台、退出全部旧界面并保存可恢复副本后，替换为已验证的正式程序及安装记录；不能删除运行锁或在旧界面占用期间强行覆盖。此次 Lakota 已完成，Mac 待旧窗口退出。

@@ -1,10 +1,14 @@
 # 项目理念与接续摘要
 
-更新日期：2026-10-13（America/Denver）。现用本机 Mac `owner` 与 Lakota `test` 已备份手动安装 `0.7.0-alpha`；Trader 团队信箱继续运行 `0.6.0-alpha`，个人库 schema 10、信箱 schema 2。三个内置 Codex 技能已接入，真实 DSS 的取文件、找位置、解释结果、授权运行、回答后接续和成果回传均已有真实模型与终端证据。未操作 MBA 或 pengchao 的电脑，本轮按用户要求分段提交并准备公开发布 0.7.0-alpha，最终 CI、发布与安装状态见下方发布记录。这几轮安装均不是客户端更新器实测。
+更新日期：2026-10-14（America/Denver）。`0.7.0-alpha` 已分段提交、推送并公开发布，仅提供 M 系 Mac 与 Linux x86_64 musl。Lakota `test` 已安装本次正式发布包；Mac `owner` 仍运行此前同版本本地候选包，原界面占用运行锁，正式包已独立试装，日常替换待退出旧窗口。Trader 团队信箱继续运行 `0.6.0-alpha`，个人库 schema 10、信箱 schema 2。三个内置 Codex 技能和真实 DSS 业务的验收证据见下文。未操作 MBA 或 pengchao 的电脑，本次 Lakota 安装为停服备份后手动替换，不是更新器安装。
 
-## 0.7.0-alpha 公开发布准备（2026-10-13）
+## 0.7.0-alpha 公开发布（2026-10-14）
 
-用户已明确授权分段提交 GitHub 并上传安装包。本轮将此前 0.5–0.7 本地候选的更新器、收件箱、执行技能及客户端改动整理提交；只发布 Apple Silicon 与 Linux x86_64 musl。原本记录的候选签名私钥未在原位置找到，已生成并安全保存正式签名密钥、配置 GitHub Actions secret，源码内置新公钥。尚未发布过带签名元数据的公开版本，因此此次为首次公开建立更新信任；现用候选客户端需手动替换一次正式包。密钥内容不入库，只有公钥和管理说明提交。下文各阶段“未提交/未发布”是当时的验收状态，不替代本节最终发布记录。
+五段实现与发布提交已推送，标签 `v0.7.0-alpha` 指向 `2a7e998ee6b6e21a7a7ca4a873c5af8de79b8e54`。[Release](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.0-alpha) 已公开，prerelease、非 draft；[本次 CI](https://github.com/shenyaojin/xXASSXx/actions/runs/38519443106) 在 M 系 Mac 与 Linux musl 分别通过 173 项测试、2 项既有忽略，优化构建和离线安装均通过。两个包、SHA256SUMS、install.sh、update.json、update.json.sig 共六项，签名及匿名下载哈希全部核对。
+
+正式签名私钥安全保存在此前约定位置并配置 GitHub Actions secret，内容不入库。原候选私钥未在原位置找到，因此正式包使用新公钥；此前没有公开过签名更新版本。现用未公开候选客户端须手动替换一次本次发布包，之后才能验证后续签名。两台真实机器均通过正式包独立目录安装和签名读取，篡改清单被拒绝；Mac 的正式包实际 PTY 正常。Lakota 已停服备份后安装，全部数据库表和配置一致，实际终端 `/access` 与 `/reconnect` 正常，默认仍为 Ask for approval。Mac 旧窗口仍占用运行锁，未强制关闭；替换尚未执行，后台已恢复。Lakota 备份为 `~/.local/share/xxassxx/backups/release-070-20261014/`。
+
+发布源码与此前 128 份实测代码／测试／技能文件相比，仅更换签名公钥，业务证据沿用下文真实 DeepSeek/Codex 和 DSS 场景，未重跑科研计算。本机没有新建 Rust target；正式包位于 `dist/v0.7.0-alpha/`，旧候选包归档保留。精简记录见 [发布证据](releases/v0.7.0-alpha-evidence.json)。下文各阶段“未提交/未发布”是当时的状态，不替代本节最终发布记录。
 
 ## 访问模式与手动重连（2026-10-13）
 
