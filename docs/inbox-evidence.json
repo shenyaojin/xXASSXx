@@ -1,0 +1,112 @@
+{
+  "date": "2026-10-12 America/Denver",
+  "scope": "isolated same-machine PTY; no production deployment; no real dot login",
+  "first_round_binary_sha256": "f327a482773ff909affe3b1a02c4bda71aed66021b126d43fc78894d149b4670",
+  "task": [
+    {
+      "id": "5123bf23-3d25-522a-8b24-754edfb51ef6",
+      "revision": 1,
+      "state": "completed",
+      "result": "{\"body\":\"任务已完成。当前工作目录中的 inbox-check.txt 已只读读取，两个值如下：\\n\\n- marker：INBOX-6319\\n- sample_count：37\\n\\n来源：工作目录里的测试文件 inbox-check.txt（本地成员 a 的工作目录下，member://a/work/inbox-check.txt），该文件为 67 字节的普通文本文件；读取时复制得到的副本校验值（sha256）为 e32fd84be1cd27f3e42f47e8c8f85307d407ee83a380c9e71d500fcc88584d99。\\n\\n按你的要求，本次为只读操作：未修改任何文件、未运行项目程序，也未生成或发送任何附件，结果仅在对话中报告。需说明的是，此次只是读取了这一个测试文件，不代表工作目录中文件的全貌。\",\"candidates\":[{\"member\":\"a\",\"result\":{\"attachment\":null,\"body\":\"marker 的准确值为 INBOX-6319；sample_count 的准确值为 37。来源：工作目录中的 inbox-check.txt（member://a/work/inbox-check.txt）。\",\"execution_id\":\"21a923c9-ac7a-53b5-8110-d6acb856de27\",\"files\":[{\"path\":\"root-0/inbox-check.txt\",\"reason\":\"实际读取的测试文件，包含 marker=INBOX-6319 和 sample_count=37；原文件位于工作目录的 inbox-check.txt。\",\"root\":0}],\"run_id\":\"97392d8e-a4aa-4ece-a698-2246293ab3af\",\"sources\":[{\"bytes\":67,\"captured_at\":1791862624,\"member\":\"a\",\"path\":\"inbox-check.txt\",\"root\":0,\"sha256\":\"e32fd84be1cd27f3e42f47e8c8f85307d407ee83a380c9e71d500fcc88584d99\",\"snapshot_id\":\"402214ce-9999-5c47-a9c6-b8e92a29974c\",\"snapshot_path\":\"root-0/inbox-check.txt\"}]},\"revision\":1}],\"completed_at\":1791862651,\"revision\":1}"
+    }
+  ],
+  "runs": [
+    {
+      "id": "0e6296e2-a7b8-4df1-92ed-7af77df753b4",
+      "state": "succeeded",
+      "turn_completed": 1,
+      "exit_code": 0
+    },
+    {
+      "id": "8fd67f86-b1a2-448d-88a4-ed7bd3227ec4",
+      "state": "succeeded",
+      "turn_completed": 1,
+      "exit_code": 0
+    },
+    {
+      "id": "97392d8e-a4aa-4ece-a698-2246293ab3af",
+      "state": "succeeded",
+      "turn_completed": 1,
+      "exit_code": 0
+    }
+  ],
+  "ordinary_messages": [
+    {
+      "sender": "a",
+      "recipient": "b",
+      "body": "请核对测试编号 INBOX-6319，样本数是 37。这是一条普通留言。",
+      "copies": 1
+    },
+    {
+      "sender": "b",
+      "recipient": "a",
+      "body": "已核对：INBOX-6319，37 个样本。这里只回复，不发起执行。",
+      "copies": 1
+    },
+    {
+      "sender": "b",
+      "recipient": "a",
+      "body": "离线补充：恢复连接后只投递一次。",
+      "copies": 1
+    }
+  ],
+  "human_read_cursors": [
+    {
+      "member": "a",
+      "seen_seq": 0,
+      "baseline_seq": 0
+    },
+    {
+      "member": "b",
+      "seen_seq": 1,
+      "baseline_seq": 0
+    }
+  ],
+  "synthetic_source_sha256": "e32fd84be1cd27f3e42f47e8c8f85307d407ee83a380c9e71d500fcc88584d99",
+  "validation": {
+    "passed_tests": 153,
+    "ignored_existing_opt_in": 2,
+    "fmt": true,
+    "clippy": true,
+    "mac_arm64_release": true,
+    "linux_and_intel_mac": false,
+    "mcp_http_with_mock_introspection": true,
+    "real_oauth_code_refresh_revocation": false,
+    "real_dot": false,
+    "real_pty_attachment_received": true,
+    "database_integrity": {
+      "a_schema": 10,
+      "b_schema": 10,
+      "relay_schema": 2,
+      "all_integrity_checks": "ok"
+    },
+    "isolated_services_stopped": true
+  },
+  "limits": [
+    "First real task freeze rejected a metadata consistency change; restored through CtrlY, no safety check weakened.",
+    "Two synthetic file selections rejected metadata consistency changes. Third selection via the same real TUI completed; receiver UI and saved bytes verified. Metadata-change trigger remains unexplained; original protection unchanged.",
+    "One initial inbox HTTP 503; write transactions serialized with BEGIN IMMEDIATE and concurrent retry regression added; exact original 503 cause was not logged."
+  ],
+  "attachments": [
+    {
+      "id": "ac0b077a-e94e-5692-9f81-81b55d261811",
+      "state": "received",
+      "bytes": 67,
+      "sha256": "e32fd84be1cd27f3e42f47e8c8f85307d407ee83a380c9e71d500fcc88584d99"
+    }
+  ],
+  "screens": [
+    "attempt2/a-final-build-unread-reply.txt",
+    "attempt2/b-offline-queued.txt",
+    "attempt2/b-recovered-confirmed.txt",
+    "attempt2/a-real-task-retry-result.txt",
+    "attempt2/a-attachment-received.txt",
+    "attempt2/a-file-detail-confirmed.txt"
+  ],
+  "terminal_final_binary_sha256": "1f85dca7f13345b050bcdf4b41464fde4f212672034608ec43e5efef174efb7b",
+  "terminal_release_build_sha256": "090aca2bdf3aca02e61bc7dd06988d4ac5ca36dfd12b5f05dccc66c4e77e5d1f",
+  "current_debug_binary_sha256": "ecccd87e7b093cbdb27091165b7590e9d6ca8cca2395e990faa4e9b7e4752963",
+  "subsequent_change": "MCP list_contacts structuredContent wrapped as an object; all six HTTP MCP tools and boundary tests rerun. TUI unchanged.",
+  "current_release_binary_sha256": "a96627d43eb0aba8afdc817155af04e8c8b083e9d1efde489570f7a139803ed7",
+  "followup_evidence": "inbox-platform-oauth-evidence.json (2026-10-13)"
+}

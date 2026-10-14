@@ -1,0 +1,242 @@
+{
+  "date": "2026-10-13 America/Denver",
+  "scope": "isolated Trader OAuth/MCP deployment, native Linux PTY, Intel binary on Apple Silicon through Rosetta; no daily binary/database upgrade or Git publication",
+  "source_manifest_sha256": "fefa78730fc6843e891e07a813cb0c4a7ebd2e052413155dfdc6fdd5bb5f90dc",
+  "binaries": {
+    "aarch64-apple-darwin": "88deeebf2a64453dbf75a1bca238769ee73defcdc1b873954ec87dcca122a1f2",
+    "x86_64-apple-darwin": "a855437a877c48614034b6380ea43a42b33d18e6e533a96cfec1ac378224f29b",
+    "x86_64-unknown-linux-musl": "3a6eb0a6ef3c7ee3e197b1a24cf19a3465a2c6f5f4739dafa57b34a85499e738"
+  },
+  "checks": {
+    "linux_final_full_suite": {
+      "passed": 153,
+      "failed": 0,
+      "ignored": 2
+    },
+    "intel_rosetta_full_suite_before_basic_fix": {
+      "passed": 153,
+      "failed": 0,
+      "ignored": 2
+    },
+    "intel_final_basic_fix_regression": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "apple_silicon_final_basic_fix_regression": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "fmt": true,
+    "clippy_all_targets_deny_warnings": true,
+    "release_builds_all_three_targets": true,
+    "offline_installs_linux_and_intel_rosetta": true,
+    "native_intel_hardware_or_final_source_ci": false,
+    "linux_source_matches_local_manifest": true
+  },
+  "provider": {
+    "name": "Keycloak",
+    "version": "26.8.0",
+    "archive_sha256": "9e41da899f838a58cd510fc98ed4f7cadc715aed5683e42aca20a0c9a2a3980a",
+    "java": "Temurin 21.0.12.1+1",
+    "java_archive_sha256": "ce79869e1307ed8ee1e2baa86a412b1eb5b75d10a01006d788a6f968bcfaee94",
+    "storage": "single-node H2 dev-file; isolated acceptance only",
+    "resource": "https://xxassxx.shenyaojin.com/mcp",
+    "issuer": "https://xxassxx.shenyaojin.com/oauth/realms/inbox-test",
+    "resource_client_id": "https://xxassxx.shenyaojin.com/mcp",
+    "dot_client_id": "xxassxx-dot-test",
+    "test_client_id": "inbox-validation",
+    "subject_binding": "synthetic inbox-b -> member b in inbox-dot-test",
+    "pkce_and_refresh": {
+      "issuer": "https://xxassxx.shenyaojin.com/oauth/realms/inbox-test",
+      "pkce": "S256",
+      "authorization_code_exchange": true,
+      "refresh_token_present": true,
+      "token_type": "Bearer",
+      "expires_in": 180,
+      "refresh_succeeded": true,
+      "refresh_token_rotated": true
+    },
+    "introspection": {
+      "active": true,
+      "iss": "https://xxassxx.shenyaojin.com/oauth/realms/inbox-test",
+      "aud": "https://xxassxx.shenyaojin.com/mcp",
+      "sub": "1d2c15a7-893c-4d77-b720-fafc4fe2d6e0",
+      "client_id": "inbox-validation",
+      "scope": "openid email inbox.read profile inbox.send",
+      "exp": 1791872173
+    },
+    "binding_checks": {
+      "before": 200,
+      "revoked_binding": 403,
+      "wrong_subject_binding": 403,
+      "restored": 200
+    },
+    "membership_checks": {
+      "before": 200,
+      "removed_member": 403,
+      "restored": 200
+    },
+    "provider_revocation": {
+      "provider_revoke_status": 200,
+      "mcp_after_revocation": 401,
+      "refresh_after_revocation": 400,
+      "refresh_error": "invalid_grant"
+    }
+  },
+  "openai_browser": {
+    "custom_mcp_oauth_discovery": "passed",
+    "callback": "https://chatgpt.com/connector_platform_oauth_redirect",
+    "client_registration": "predefined public client + PKCE S256",
+    "display_name": "xXASSXx 收件箱验收",
+    "consent_member_label": "测试成员 B（inbox-b）",
+    "consent_scopes": [
+      "inbox.read",
+      "inbox.send",
+      "Offline Access",
+      "profile",
+      "email (synthetic .invalid address)"
+    ],
+    "status": "connected; real ChatGPT Work and personal dot read/reply verified",
+    "real_dot_identity_read_reply": true,
+    "screenshot": "smoke-output/inbox-20261012/dot/openai-connected.jpg",
+    "no_bypass_of_rejected_consent": true,
+    "user_approved_full_test_scopes": true,
+    "browser_control_error": "Unable to load browser request-header policy; retry and session reset did not recover",
+    "browser_control_error_resolved": true,
+    "live_followup_evidence": "dot-live-evidence.json",
+    "real_openai_offline_refresh_verified": true
+  },
+  "terminal": {
+    "intel_sender": "a",
+    "linux_recipient": "b",
+    "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+    "marker": "DOT-7421",
+    "sample_count": 37,
+    "a_original_entry": "2ac3f0b5-fa28-497d-98b4-d13c68890225",
+    "linux_reply_entry": "da0d73e9-7af0-4349-af06-b6006799f407",
+    "both_directions_observed_in_real_pty": true,
+    "real_oauth_validation_read_same_thread": true,
+    "b_unread_after_oauth_read_and_terminal_reply": 1,
+    "both_human_seen_seq": 0,
+    "task_or_execution_created": false,
+    "linux_membership_test_recovery": "device credential correctly blocked with HTTP 401 when b removed; member restored, client explicitly restarted and terminal sync recovered",
+    "screens": [
+      "dot/intel-pty/a-intel-final-reply.txt",
+      "dot/linux-pty-copy/b-linux-restored.txt"
+    ],
+    "personal_clients_stopped_after_validation": true,
+    "local_task_counts": {
+      "a": 0,
+      "b": 0
+    }
+  },
+  "server_audit": {
+    "binary_sha256": "3a6eb0a6ef3c7ee3e197b1a24cf19a3465a2c6f5f4739dafa57b34a85499e738",
+    "server_schema": [
+      {
+        "user_version": 2
+      }
+    ],
+    "integrity": [
+      {
+        "integrity_check": "ok"
+      }
+    ],
+    "entries": [
+      {
+        "id": "2ac3f0b5-fa28-497d-98b4-d13c68890225",
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "seq": 1,
+        "sender": "a",
+        "recipient": "b",
+        "origin": "terminal",
+        "body": "隔离验收原始记录：标记 DOT-7421，样本数 37。请在我明确要求时确认这两个值；本留言不要求运行任务或读取文件。",
+        "reply_to": null
+      },
+      {
+        "id": "da0d73e9-7af0-4349-af06-b6006799f407",
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "seq": 2,
+        "sender": "b",
+        "recipient": "a",
+        "origin": "terminal",
+        "body": "Linux 真实终端已核对：DOT-7421，样本数 37。此回复来自测试成员 B 的终端，仅确认原始留言。",
+        "reply_to": "2ac3f0b5-fa28-497d-98b4-d13c68890225"
+      }
+    ],
+    "human_read": [
+      {
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "member": "a",
+        "seen_seq": 0,
+        "baseline_seq": 0
+      },
+      {
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "member": "b",
+        "seen_seq": 0,
+        "baseline_seq": 0
+      }
+    ],
+    "actor_receipts": [
+      {
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "member": "b",
+        "actor": "dot:test-b-validation",
+        "through_seq": 1,
+        "updated_at": 1791872880
+      }
+    ],
+    "old_queue_count": [
+      {
+        "count": 0
+      }
+    ],
+    "members": [
+      {
+        "id": "a",
+        "name": "测试成员 A"
+      },
+      {
+        "id": "b",
+        "name": "测试成员 B"
+      },
+      {
+        "id": "c",
+        "name": "测试成员 C"
+      }
+    ],
+    "daily_schema": [
+      {
+        "user_version": 1
+      }
+    ],
+    "services": "MainPID=3817639\nNRestarts=0\nId=xxassxx-inbox-mcp.service\nActiveState=active\nSubState=running\n\nMainPID=3808954\nNRestarts=0\nId=xxassxx-inbox-oauth.service\nActiveState=active\nSubState=running\n\nMainPID=3710124\nNRestarts=0\nId=xxassxx-mailbox.service\nActiveState=active\nSubState=running\n"
+  },
+  "deployment": {
+    "trader_test_root": "/home/ubuntu/xxassxx-tests/inbox-dot-20261012",
+    "units": [
+      "xxassxx-inbox-oauth.service",
+      "xxassxx-inbox-mcp.service"
+    ],
+    "units_enabled": true,
+    "daily_mailbox_pid_unchanged": 3710124,
+    "daily_mailbox_schema": 1,
+    "caddy_original_sha256": "4a5e28488d3d6e93ad956032dbf081dc316276178bb221f81c7cee59b363aab9",
+    "added_routes": [
+      "/oauth/realms/inbox-test/*",
+      "/oauth/resources/*",
+      "/mcp",
+      "/.well-known/oauth-protected-resource",
+      "/.well-known/oauth-protected-resource/mcp",
+      "/inbox-test/*"
+    ],
+    "admin_endpoint_publicly_exposed": false
+  },
+  "remaining": [
+    "Native Intel hardware or final-source Intel CI",
+    "Git commit/release and daily cross-schema rollout were not authorized in this follow-up"
+  ]
+}

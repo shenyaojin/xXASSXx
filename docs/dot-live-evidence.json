@@ -1,0 +1,290 @@
+{
+  "date": "2026-10-13 America/Denver",
+  "scope": "Isolated inbox-dot-test members only; no daily rollout, commit, or release",
+  "failure": {
+    "user_message": "We cannot connect to your account. Please try again.",
+    "stage": "authorization-code token exchange after successful login and consent",
+    "provider_error": "not_allowed: Offline tokens not allowed for the user or client"
+  },
+  "fix": {
+    "before": {
+      "user_has_role": false,
+      "scope_maps_role": true
+    },
+    "after": {
+      "user_has_role": true,
+      "scope_maps_role": true,
+      "client_full_scope_allowed": false,
+      "client_has_optional_offline_scope": true
+    },
+    "subject": "1d2c15a7-893c-4d77-b720-fafc4fe2d6e0",
+    "client_id": "xxassxx-dot-test",
+    "scope": "offline_access"
+  },
+  "authorization": {
+    "explicit_user_approval": true,
+    "scopes": [
+      "openid",
+      "profile",
+      "email (synthetic .invalid)",
+      "inbox.read",
+      "inbox.send",
+      "offline_access"
+    ],
+    "connected_account": "member-b@inbox-test.invalid",
+    "oauth_events": [
+      {
+        "time": 1791916867775,
+        "type": "REFRESH_TOKEN",
+        "clientId": "xxassxx-dot-test",
+        "userId": "1d2c15a7-893c-4d77-b720-fafc4fe2d6e0",
+        "details": {
+          "grant_type": "refresh_token",
+          "scope": "openid offline_access email inbox.read profile inbox.send",
+          "client_auth_method": "client-secret",
+          "refresh_token_type": "Offline"
+        }
+      },
+      {
+        "time": 1791916865164,
+        "type": "REFRESH_TOKEN",
+        "clientId": "xxassxx-dot-test",
+        "userId": "1d2c15a7-893c-4d77-b720-fafc4fe2d6e0",
+        "details": {
+          "grant_type": "refresh_token",
+          "scope": "openid offline_access email inbox.read profile inbox.send",
+          "client_auth_method": "client-secret",
+          "refresh_token_type": "Offline"
+        }
+      },
+      {
+        "time": 1791916168430,
+        "type": "CODE_TO_TOKEN",
+        "clientId": "xxassxx-dot-test",
+        "userId": "1d2c15a7-893c-4d77-b720-fafc4fe2d6e0",
+        "details": {
+          "grant_type": "authorization_code",
+          "scope": "openid offline_access email inbox.read profile inbox.send",
+          "client_auth_method": "client-secret",
+          "refresh_token_type": "Offline"
+        }
+      },
+      {
+        "time": 1791916166316,
+        "type": "LOGIN",
+        "clientId": "xxassxx-dot-test",
+        "userId": "1d2c15a7-893c-4d77-b720-fafc4fe2d6e0",
+        "details": {
+          "auth_method": "openid-connect",
+          "consent": "persistent_consent"
+        }
+      },
+      {
+        "time": 1791915968974,
+        "type": "CODE_TO_TOKEN_ERROR",
+        "clientId": "xxassxx-dot-test",
+        "userId": "1d2c15a7-893c-4d77-b720-fafc4fe2d6e0",
+        "error": "not_allowed",
+        "details": {
+          "reason": "Offline tokens not allowed for the user or client",
+          "grant_type": "authorization_code",
+          "client_auth_method": "client-secret"
+        }
+      },
+      {
+        "time": 1791915955421,
+        "type": "LOGIN",
+        "clientId": "xxassxx-dot-test",
+        "userId": "1d2c15a7-893c-4d77-b720-fafc4fe2d6e0",
+        "details": {
+          "auth_method": "openid-connect",
+          "consent": "consent_granted"
+        }
+      },
+      {
+        "time": 1791915738889,
+        "type": "LOGIN_ERROR",
+        "clientId": "xxassxx-dot-test",
+        "error": "user_not_found",
+        "details": {
+          "auth_method": "openid-connect"
+        }
+      },
+      {
+        "time": 1791915732037,
+        "type": "LOGIN_ERROR",
+        "clientId": "xxassxx-dot-test",
+        "error": "expired_code",
+        "details": {}
+      },
+      {
+        "time": 1791905709929,
+        "type": "LOGIN_ERROR",
+        "clientId": "xxassxx-dot-test",
+        "error": "expired_code",
+        "details": {}
+      }
+    ],
+    "real_openai_offline_refresh_verified": true,
+    "refresh_audit_note": "REFRESH_TOKEN was not originally among enabled stored event types; enabled REFRESH_TOKEN and REFRESH_TOKEN_ERROR only in this isolated realm before final live reread."
+  },
+  "real_ui": {
+    "chatgpt_work": {
+      "url": "https://chatgpt.com/c/6ace78c4-13fc-83ea-b6f8-82be612b8e35",
+      "title": "只读验收报告",
+      "identity_read_reply_verified": true,
+      "reply_entry_id": "33d5554f-c908-4980-b549-71a0983cc277",
+      "idempotency_key": "dot-7421-openai-reply-20261013"
+    },
+    "personal_dot": {
+      "url": "https://chatgpt.com/dots/home",
+      "identity_read_reply_verified": true,
+      "reply_entry_id": "634aaf0d-06dd-4533-87fc-d10700d96e5d",
+      "idempotency_key": "dot-7421-personal-dot-20261013",
+      "final_live_read_verified": true
+    },
+    "both_sends_while_b_client_stopped": true,
+    "expected_marker": "DOT-7421",
+    "expected_sample_count": 37,
+    "a_terminal_observed_sender": "b",
+    "a_terminal_observed_source": "经 dot 委托发出",
+    "reply_to": "2ac3f0b5-fa28-497d-98b4-d13c68890225",
+    "b_offline_recovery_observed": true,
+    "human_unread_preserved": true,
+    "local_caches": {
+      "a": {
+        "entries": 4,
+        "distinct_ids": 4,
+        "tasks": 0
+      },
+      "b": {
+        "entries": 4,
+        "distinct_ids": 4,
+        "tasks": 0
+      }
+    }
+  },
+  "server_audit": {
+    "binary_sha256": "3a6eb0a6ef3c7ee3e197b1a24cf19a3465a2c6f5f4739dafa57b34a85499e738",
+    "server_schema": [
+      {
+        "user_version": 2
+      }
+    ],
+    "integrity": [
+      {
+        "integrity_check": "ok"
+      }
+    ],
+    "entries": [
+      {
+        "id": "2ac3f0b5-fa28-497d-98b4-d13c68890225",
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "seq": 1,
+        "sender": "a",
+        "recipient": "b",
+        "origin": "terminal",
+        "body": "隔离验收原始记录：标记 DOT-7421，样本数 37。请在我明确要求时确认这两个值；本留言不要求运行任务或读取文件。",
+        "reply_to": null
+      },
+      {
+        "id": "da0d73e9-7af0-4349-af06-b6006799f407",
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "seq": 2,
+        "sender": "b",
+        "recipient": "a",
+        "origin": "terminal",
+        "body": "Linux 真实终端已核对：DOT-7421，样本数 37。此回复来自测试成员 B 的终端，仅确认原始留言。",
+        "reply_to": "2ac3f0b5-fa28-497d-98b4-d13c68890225"
+      },
+      {
+        "id": "33d5554f-c908-4980-b549-71a0983cc277",
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "seq": 3,
+        "sender": "b",
+        "recipient": "a",
+        "origin": "dot:test-b-dot",
+        "body": "真实 dot 已核对：DOT-7421，样本数 37。这条普通回复由测试成员 B 委托 dot 发出；不构成任务执行授权。",
+        "reply_to": "2ac3f0b5-fa28-497d-98b4-d13c68890225"
+      },
+      {
+        "id": "634aaf0d-06dd-4533-87fc-d10700d96e5d",
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "seq": 4,
+        "sender": "b",
+        "recipient": "a",
+        "origin": "dot:test-b-dot",
+        "body": "个人 dot 入口复核完成：DOT-7421，样本数 37；这是一条由测试成员 B 委托发送的普通留言。",
+        "reply_to": "2ac3f0b5-fa28-497d-98b4-d13c68890225"
+      }
+    ],
+    "human_read": [
+      {
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "member": "a",
+        "seen_seq": 0,
+        "baseline_seq": 0
+      },
+      {
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "member": "b",
+        "seen_seq": 0,
+        "baseline_seq": 0
+      }
+    ],
+    "actor_receipts": [
+      {
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "member": "b",
+        "actor": "dot:test-b-validation",
+        "through_seq": 1,
+        "updated_at": 1791872880
+      },
+      {
+        "thread_id": "392c97fc-4080-4160-a23b-3a8bc37b6ce9",
+        "member": "b",
+        "actor": "dot:test-b-dot",
+        "through_seq": 4,
+        "updated_at": 1791916665
+      }
+    ],
+    "old_queue_count": [
+      {
+        "count": 0
+      }
+    ],
+    "members": [
+      {
+        "id": "a",
+        "name": "测试成员 A"
+      },
+      {
+        "id": "b",
+        "name": "测试成员 B"
+      },
+      {
+        "id": "c",
+        "name": "测试成员 C"
+      }
+    ],
+    "daily_schema": [
+      {
+        "user_version": 1
+      }
+    ],
+    "services": "MainPID=3817639\nNRestarts=0\nId=xxassxx-inbox-mcp.service\nActiveState=active\nSubState=running\n\nMainPID=3808954\nNRestarts=0\nId=xxassxx-inbox-oauth.service\nActiveState=active\nSubState=running\n\nMainPID=3710124\nNRestarts=0\nId=xxassxx-mailbox.service\nActiveState=active\nSubState=running\n"
+  },
+  "screens": [
+    "smoke-output/inbox-20261012/dot/openai-connected.jpg",
+    "smoke-output/inbox-20261012/dot/personal-dot-success.jpg",
+    "smoke-output/inbox-20261012/dot/intel-pty/a-received-personal-dot-final.txt",
+    "smoke-output/inbox-20261012/dot/linux-pty-copy/b-personal-dot-offline-recovered-final.txt"
+  ],
+  "binary_changes_this_fix": false,
+  "negative_auth_evidence": "Provider revocation, wrong subject, connection revocation and membership removal were separately tested using inbox-validation; see inbox-platform-oauth-evidence.json. These were not OpenAI UI disconnect tests.",
+  "remaining": [
+    "Native Intel hardware or final-source Intel CI",
+    "Daily cross-schema rollout and Git publication remain separate work"
+  ],
+  "personal_test_clients_stopped_after_validation": true
+}

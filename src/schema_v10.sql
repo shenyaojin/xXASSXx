@@ -1,0 +1,10 @@
+BEGIN IMMEDIATE;
+CREATE TABLE member_inbox_sync(singleton INTEGER PRIMARY KEY, cursor INTEGER NOT NULL DEFAULT 0, supported INTEGER NOT NULL DEFAULT 0, synced_at INTEGER, error TEXT);
+INSERT INTO member_inbox_sync(singleton) VALUES(1);
+CREATE TABLE member_inbox_threads(id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+CREATE TABLE member_inbox_entries(id TEXT PRIMARY KEY, thread_id TEXT NOT NULL, seq INTEGER NOT NULL, payload TEXT NOT NULL, UNIQUE(thread_id,seq));
+CREATE TABLE member_inbox_outbox(id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, payload TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'pending', result TEXT, error TEXT, created_at INTEGER NOT NULL);
+CREATE TABLE member_inbox_viewed(thread_id TEXT PRIMARY KEY, through_seq INTEGER NOT NULL, sent_seq INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE member_inbox_facts(thread_id TEXT PRIMARY KEY, revision INTEGER NOT NULL, sequence INTEGER NOT NULL, payload TEXT NOT NULL, sent INTEGER NOT NULL DEFAULT 0);
+PRAGMA user_version=10;
+COMMIT;

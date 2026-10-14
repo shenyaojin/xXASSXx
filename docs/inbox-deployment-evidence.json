@@ -1,0 +1,209 @@
+{
+  "date": "2026-10-13",
+  "authorization": "User requested remote builds, upgrade of the three endpoints and a simple real feature demonstration.",
+  "version": "0.6.0-alpha",
+  "committed": false,
+  "pushed": false,
+  "public_release": false,
+  "actual_local_identity_note": "Current computer is owner, not the MBA installation described in earlier deployment records; actual installation inspected before update.",
+  "platforms": {
+    "mac": {
+      "member": "owner",
+      "binary": "/Users/shenyaojin/.local/bin/xxassxx",
+      "before_version": "0.3.2-alpha",
+      "binary_sha256": "2d70d72e6ea620f8473b0519cd9210f716518f27d8c956d2fb982fa55a575cf0",
+      "backup": "/Users/shenyaojin/.local/share/xxassxx/backups/inbox-060-20261013",
+      "version": "0.6.0-alpha",
+      "comparison": {
+        "schema_before": 9,
+        "schema_after": 10,
+        "all_prior_table_rows_retained": true,
+        "changed_or_missing_rows": {},
+        "config_files_unchanged": true,
+        "integrity": [
+          "ok"
+        ],
+        "foreign_key_violations": 0
+      },
+      "status_after_pty_exit": {
+        "alive": true,
+        "error": null,
+        "instance": "a81a2a5d-06f6-47d0-8106-7c361a63f205",
+        "log_path": "/Users/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+        "pid": 33316,
+        "state": "running",
+        "updated_at": 1791918771,
+        "version": "0.6.0-alpha"
+      },
+      "doctor": {
+        "allowed_directories": [
+          "/Users/shenyaojin"
+        ],
+        "codex": {
+          "available": true,
+          "logged_in": true
+        },
+        "mailbox": {
+          "error": null,
+          "reachable_and_identity_matches": true
+        },
+        "model": {
+          "model": "deepseek-flash",
+          "provider": "deepseek",
+          "tool_roundtrip": "not_requested"
+        },
+        "note": "Without --probe-model, model inference and tool capability are not tested. Codex login status does not prove available inference quota.",
+        "ready": true
+      },
+      "backup_verified": "SQLite integrity and foreign keys; full data directory, configuration and old binary retained; full rollback not exercised"
+    },
+    "lakota": {
+      "member": "test",
+      "binary": "/rcp/rcp42/home/shenyaojin/.local/bin/xxassxx",
+      "before_version": "0.5.0-alpha",
+      "binary_sha256": "728de56dbee06af35db3538f5b6a6347cadfcda3e13478c289730788a8c8936c",
+      "backup": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/backups/inbox-060-20261013",
+      "version": "0.6.0-alpha",
+      "comparison": {
+        "schema_before": 9,
+        "schema_after": 10,
+        "all_prior_table_rows_retained": true,
+        "changed_or_missing_rows": {},
+        "config_files_unchanged": true,
+        "integrity": [
+          "ok"
+        ],
+        "foreign_key_violations": 0
+      },
+      "status_after_pty_exit": {
+        "alive": true,
+        "error": null,
+        "instance": "58915d5b-68b7-4763-87dd-a91d6be46fa4",
+        "log_path": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+        "pid": 532569,
+        "state": "running",
+        "updated_at": 1791918763,
+        "version": "0.6.0-alpha"
+      },
+      "doctor": {
+        "allowed_directories": [
+          "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner/scripts"
+        ],
+        "codex": {
+          "available": true,
+          "logged_in": true
+        },
+        "mailbox": {
+          "error": null,
+          "reachable_and_identity_matches": true
+        },
+        "model": {
+          "model": "deepseek-flash",
+          "provider": "deepseek",
+          "tool_roundtrip": "not_requested"
+        },
+        "note": "Without --probe-model, model inference and tool capability are not tested. Codex login status does not prove available inference quota.",
+        "ready": true
+      },
+      "backup_verified": "SQLite integrity and foreign keys; full data directory, configuration and old binary retained; full rollback not exercised"
+    },
+    "trader": {
+      "role": "server",
+      "binary": "/home/ubuntu/.local/bin/xxassxx",
+      "before_version": "0.5.0-alpha",
+      "binary_sha256": "728de56dbee06af35db3538f5b6a6347cadfcda3e13478c289730788a8c8936c",
+      "backup": "/home/ubuntu/.local/share/xxassxx/backups/inbox-060-20261013",
+      "version": "0.6.0-alpha",
+      "comparison": {
+        "schema_before": 1,
+        "schema_after": 2,
+        "all_prior_business_rows_retained": true,
+        "changed_or_missing_rows": {},
+        "excluded_dynamic_tables": [
+          "sqlite_sequence",
+          "relay_presence"
+        ],
+        "config_files_unchanged": true,
+        "integrity": [
+          "ok"
+        ],
+        "foreign_key_violations": 0
+      },
+      "status_after_demo": "MainPID=4010767\nNRestarts=0\nActiveState=active\nSubState=running\n",
+      "backup_verified": "SQLite integrity and foreign keys; full data directory, configuration and old binary retained; full rollback not exercised"
+    }
+  },
+  "build": {
+    "linux_host": "lakota",
+    "passed": 153,
+    "failed": 0,
+    "ignored": 2,
+    "source_files_verified": 131,
+    "source_manifest_sha256": "756975a90d8fa2a83c40cb8fdbe8371fdd49d8979fd8ce3b591c1851d5c8594f",
+    "mac_build": "Existing release cache, version-only incremental build, both architectures report 0.6.0-alpha",
+    "intel_sha256": "bf4bf2e5afde922519fea93f61131f18eda482af0c23b1f3efbf3f3ab458e182",
+    "native_intel_current_source_ci_verified": false,
+    "prior_behavior_evidence": [
+      "inbox-platform-oauth-evidence.json",
+      "dot-live-evidence.json"
+    ],
+    "packages_saved_on_lakota": "~/xxassxx-tests/inbox-20261012/packages-060",
+    "all_three_package_checksums_verified_on_lakota": true
+  },
+  "storage": {
+    "local_target_removed": true,
+    "approx_cache_gib_removed": 21,
+    "free_gib_before": 2.6,
+    "free_gib_after": 25,
+    "future_policy": "Linux builds/tests on Lakota; macOS targets on corresponding GitHub Actions macOS runners."
+  },
+  "demo": {
+    "method": "Actual installed binaries in system PTYs on Mac and Lakota; real daily HTTPS mailbox. No direct business database writes.",
+    "thread_id": "3cf3803c-1427-4ce2-a0b3-fd7e6395dd93",
+    "subject": "收件箱小演示 · 10 月 13 日",
+    "messages": [
+      {
+        "id": "ece2a02e-7a04-42c7-8258-120c80c02201",
+        "sender": "owner",
+        "recipient": "test",
+        "body": "这是一条普通留言：今天先看收件箱功能，不需要运行计算。收到后请回复：可以在同一条对话里继续交流。",
+        "reply_to": null,
+        "origin": "terminal"
+      },
+      {
+        "id": "13d6e845-8a83-4dee-b2b2-80985a1ef056",
+        "sender": "test",
+        "recipient": "owner",
+        "body": "收到，可以在同一条对话里继续交流。这是 Lakota 发回的普通留言，没有启动计算任务。",
+        "reply_to": "ece2a02e-7a04-42c7-8258-120c80c02201",
+        "origin": "terminal"
+      }
+    ],
+    "entry_count": 2,
+    "local_human_unread_preserved": true,
+    "seen_seq": 0,
+    "app_task_count_before_after": {
+      "mac": [
+        8,
+        8
+      ],
+      "lakota": [
+        10,
+        10
+      ]
+    },
+    "relay_task_message_count_before_after": [
+      118,
+      118
+    ],
+    "human_mark_viewed_not_performed": true,
+    "terminal_capture": "smoke-output/inbox-deployment-20261013/mac-pty/owner-reply-received.txt",
+    "rendered_terminal_capture": "smoke-output/inbox-deployment-20261013/received-reply.png",
+    "pty_closed_backgrounds_running": true
+  },
+  "boundaries": [
+    "Real dot connection remains restricted to the isolated test team.",
+    "Native Intel hardware/current-source CI pending.",
+    "No model inference or business computation rerun for this version-only installation batch."
+  ]
+}
