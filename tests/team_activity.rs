@@ -104,11 +104,25 @@ fn observer_sees_bounded_shared_progress_and_result_but_not_old_or_private_tasks
         &c,
         &message(&id, "b", "candidate", 2, json!({"body":"unreviewed"})),
     );
+    project(
+        &c,
+        &message(
+            &id,
+            "a",
+            "progress",
+            3,
+            json!({"state":"processing","next_owner":"b","body":"delayed acceptance echo"}),
+        ),
+    );
+    let reviewing = activity::changes(&c, "c", 0).unwrap();
+    assert_eq!(reviewing["events"].as_array().unwrap().len(), 2);
+    assert_eq!(reviewing["events"][1]["state"], "reviewing");
+    assert_eq!(reviewing["events"][1]["next_owner"], "a");
     let complete = message(
         &id,
         "a",
         "complete",
-        3,
+        4,
         json!({"body":"Three measurements total 83; next step is review of the pending experiment.","candidates":[{"member":"b","result":{"sources":[{"member":"b","root":0,"path":"progress.md","sha256":"abc","bytes":42,"private_path":"SECRET"}]}}],"private":"SECRET"}),
     );
     project(&c, &complete);

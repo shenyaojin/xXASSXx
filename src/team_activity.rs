@@ -151,6 +151,17 @@ pub fn project(c: &Connection, m: &Message, at: i64) -> Result<()> {
     if w.sequence <= previous {
         return Ok(());
     }
+    // The initiator's acknowledgement of an executor starting can arrive after
+    // that executor's candidate. Only an explicit continuation/retry can return
+    // submitted work to processing; this delayed echo must not change ownership.
+    if state == "reviewing"
+        && w.event == "progress"
+        && w.data["state"] == "processing"
+        && w.data["continue"] != true
+        && w.data["retry"] != true
+    {
+        return Ok(());
+    }
     let (state, body, mut next) = match w.event.as_str() {
         "complete" => {
             ensure!(m.sender == initiator, "only initiator can complete");
