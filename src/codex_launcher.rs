@@ -27,7 +27,8 @@ pub fn command(store: &Store, path: &Path) -> Result<tokio::process::Command> {
     } else {
         executable
     };
-    let mut command = tokio::process::Command::new(executable);
+    let mut command = tokio::process::Command::new(&executable);
+    crate::codex::runtime_path(&mut command, &executable);
     command
         .current_dir(path)
         .stdin(Stdio::inherit())

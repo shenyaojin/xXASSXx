@@ -5,11 +5,14 @@ use xxassxx::codex_launcher;
 #[test]
 fn manual_codex_uses_exact_directory_without_shell_or_automated_permission_flags() {
     let team = Team::new();
-    let s = team.store("a");
+    let mut s = team.store("a");
     let root = team.dir.path().join("a/work");
     s.allow_directory(&root).unwrap();
     let sub = root.join("space and $(touch not-a-command)");
     std::fs::create_dir(&sub).unwrap();
+    let mut cfg = s.member_config().unwrap();
+    cfg.executor.codex = team.dir.path().join("nvm/bin/codex");
+    s.configure_member(&cfg).unwrap();
     let command = codex_launcher::command(&s, &sub).unwrap();
     let command = command.as_std();
     assert_eq!(
@@ -17,6 +20,16 @@ fn manual_codex_uses_exact_directory_without_shell_or_automated_permission_flags
         Some(sub.canonicalize().unwrap().as_path())
     );
     assert_eq!(command.get_args().count(), 0);
+    let path = command
+        .get_envs()
+        .find(|(key, _)| *key == std::ffi::OsStr::new("PATH"))
+        .unwrap()
+        .1
+        .unwrap();
+    assert_eq!(
+        std::env::split_paths(path).next().unwrap(),
+        team.dir.path().join("nvm/bin")
+    );
     assert!(codex_launcher::directory(&s, team.dir.path()).is_err());
     symlink(team.dir.path().join("b/work"), root.join("outside")).unwrap();
     assert!(codex_launcher::directory(&s, &root.join("outside")).is_err());

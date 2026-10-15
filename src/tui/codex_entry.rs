@@ -34,7 +34,10 @@ impl CodexEntry {
                 self.roots.insert(0, current);
             }
         }
-        self.index = 0;
+        self.index = codex_launcher::directory(store, current)
+            .ok()
+            .and_then(|current| self.roots.iter().position(|p| p == &current))
+            .unwrap_or(0);
         self.editing = false;
         self.editor.clear();
         self.notice.clear();
