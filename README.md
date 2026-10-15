@@ -12,7 +12,7 @@
 
 ### 1. 安装程序
 
-当前测试版为 [0.7.2 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.7.2-alpha)，修复自然语言发文件选错电脑、远端任务重试与 Linux Codex 启动问题。历史版本保留原有下载；本版只提供 M 系 Mac 和 Linux x86_64 安装包。
+本版为 [0.8.0 Alpha](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.8.0-alpha)：local agent 可以跨白名单查找、读取小文本，工具不足时携带实际发现交给 Codex，并接续文件交付。历史版本保留原有下载；本版只提供 M 系 Mac 和 Linux x86_64 安装包。
 
 从 Release 下载对应系统的 `.tar.gz`、`install.sh` 和 `SHA256SUMS` 到同一目录，进入该目录执行：
 
@@ -96,7 +96,7 @@ xxassxx open "$HOME/Research/project"
 
 也可以先运行 `xxassxx`，在首次启动提示或界面中的 **Ctrl+R** 添加目录。白名单初始为空；加入后，Codex 可按你的请求或团队请求读取其中的文件并返回答案，无需每次重新授权。添加目录不会自动上传整个目录，但获准读取的文本可能进入模型上下文，回复会经过团队信箱。查找、查看和解释文件默认只读。Ask for approval 下，明确要求写文件或运行程序时，执行方需要为这一项已确认任务单独开放工作目录；原文件仍只读。设备主人也可以通过 `/access` 选择持久的 Full access，让明确任务、执行及文件发送免逐次批准，适用于无人值守客户端；真正缺少业务决定时仍需回答。
 
-开发中的下一版允许 local agent 自己跨多个白名单列目录、检索和读取小文本，工具不足时携带实际发现交给 Codex。简单问答和已定位文件的发送可直接完成；这批架构改动尚未包含在公开的 0.7.2-alpha 中。实现和验证边界见[本地读取与 Codex 交接](docs/local-agent-handoff.md)。
+0.8.0 起，local agent 可以自己跨多个白名单列目录、检索和读取小文本，工具不足时携带实际发现交给 Codex。简单问答和已定位文件的发送可直接完成；需要专门解析、修改或运行时交接。实现和验证边界见[本地读取与 Codex 交接](docs/local-agent-handoff.md)。
 
 进入界面后，直接输入请求，例如“找一下与 history matching 有关的文件”。联系同伴时输入 `@bob` 加请求正文；需要确认的任务会显示任务卡，检查后按 Ctrl+S。明确索取已有文件和本机 Full access 下的清楚请求可自动开始；执行与发送使用各台电脑自己的访问模式。用户名可用 `xxassxx client contacts` 查看。
 
