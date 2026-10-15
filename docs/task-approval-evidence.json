@@ -1,0 +1,263 @@
+{
+  "date": "2026-10-15",
+  "timezone": "America/Denver",
+  "status": "accepted",
+  "version": "0.9.0-alpha",
+  "product_source_commit": "15b70840ae4ab5d5db85e8d10abb482a565bbafa",
+  "ci_source_commit": "b909500f8c4d13a38cba63b9297af3e758a0156a",
+  "linux_test_binary_sha256": "51f9889e60dab34a5ca8badf205766ce0a65237f5d501f95cb518a2e17e4ac45",
+  "input_identity": {
+    "files_verified": 119,
+    "mismatches": 0,
+    "note": "Exact inputs of the real-test product commit matched Lakota. Subsequent change is update.rs test synchronization only."
+  },
+  "schema": {
+    "member": 12,
+    "relay": 3
+  },
+  "real_test": {
+    "task": {
+      "id": "7fe9309a-aa83-5635-9908-b1dc13d8e874",
+      "revision": 1,
+      "state": "completed"
+    },
+    "initiator": "Lakota / a",
+    "executor": "Trader / b",
+    "both_modes": "ask_for_approval",
+    "models": [
+      "DeepSeek real API",
+      "Codex CLI 0.162.1"
+    ],
+    "terminal": "interactive system PTY on both machines, screens and raw ANSI saved",
+    "local_approvals": 1,
+    "execution_runs": [
+      {
+        "id": "c8d9be31-0a82-4a5c-b507-69c122acacc5",
+        "state": "succeeded",
+        "sandbox": "task-full-access",
+        "session_id": "01a14198-f5a6-7313-9661-77b45873f169",
+        "resumed_session_id": null,
+        "exit_code": 0,
+        "codex_version": "codex-cli 0.162.1"
+      },
+      {
+        "id": "db4834ea-1e91-405b-ae99-1e981be11e87",
+        "state": "succeeded",
+        "sandbox": "task-full-access",
+        "session_id": "01a14198-f5a6-7313-9661-77b45873f169",
+        "resumed_session_id": "01a14198-f5a6-7313-9661-77b45873f169",
+        "exit_code": 0,
+        "codex_version": "codex-cli 0.162.1"
+      }
+    ],
+    "resume_same_session": true,
+    "private_key_reused_and_not_sent": true,
+    "source_repo_commit": "0be0c447cd5e97132c5ad94c844102b212d62e5c",
+    "tracked_repository_files_unchanged": true,
+    "independent_input_check": {
+      "samples": 3,
+      "sum": 83
+    },
+    "files": [
+      {
+        "transfer": "07182b5c-3049-51d4-8a44-5a2cc465acfa",
+        "name": "public_key.txt",
+        "bytes": 100,
+        "sha256": "51875be77ca8425f3a140be42fa1763e45302d8724b22262c194f51d3e804884"
+      },
+      {
+        "transfer": "1744def2-d7ac-5f80-9665-b30c3d13b274",
+        "name": "result.json",
+        "bytes": 25,
+        "sha256": "3bf0110a4fbf54d99b3ce473ebd192525424c8f64672104543ceb6ec6e887107"
+      },
+      {
+        "transfer": "1744def2-d7ac-5f80-9665-b30c3d13b274",
+        "name": "run-report.txt",
+        "bytes": 1401,
+        "sha256": "20bab3f08160d0613f13541d759eaf4da091194dbe8ca0f16facb63fa53b74da"
+      }
+    ],
+    "sender_states": [
+      "delivered",
+      "delivered",
+      "delivered"
+    ],
+    "recipient_states": [
+      "received",
+      "received",
+      "received"
+    ],
+    "open_questions": 0,
+    "final_body": "任务已完成。b 按约定分阶段执行：先按工作目录中的 SERVER-final.md 配置了测试 Git 服务并生成专用 SSH 密钥（私钥仅留在本机 secrets-final，未外发），把 public_key.txt 作为附件发送；收到你「已加入授权」的回复后，才克隆测试仓库、按 README 建立虚拟环境、离线安装仓库自带的 fixture-math 依赖并运行 check.py，各步骤均成功，未接触真实量化项目。\n\n运行结果：实际样本数为 3 个（17、29、37），总和为 83；b 已独立核算并与生成的 result.json 一致。result.json 和包含全部阶段、命令与核算过程的简短运行报告已作为附件发回并已收到。\n\n这两份附件就是你要求的交付物。若后续需要，可查看运行报告了解所用命令与版本等细节。",
+    "final_bodies_equal": true,
+    "databases_integrity": [
+      "ok",
+      "ok"
+    ],
+    "fault_injection": {
+      "method": "stop dedicated test mailbox after staged delivery, submit ordinary chat answer, restart same mailbox",
+      "initiator_while_offline": {
+        "task": [
+          {
+            "id": "7fe9309a-aa83-5635-9908-b1dc13d8e874",
+            "revision": 1,
+            "state": "waiting",
+            "next_owner": "b",
+            "waiting_reason": "答案已提交，等待执行方接收",
+            "error": null
+          }
+        ],
+        "questions": [
+          {
+            "id": "448a33b1-2fcc-53b7-9036-aa612d034a4a",
+            "state": "answered",
+            "body": "请先将附件 public_key.txt 中的专用 SSH 公钥加入测试 Git 服务授权，并由 a 回复“已加入授权”。收到明确回复后再继续克隆、创建虚拟环境、安装本地依赖和运行 check.py。",
+            "answer": "新的公钥已加入授权，请接着克隆项目、安装依赖并交付运行结果。"
+          }
+        ],
+        "runs": []
+      },
+      "executor_while_offline": {
+        "task": [
+          {
+            "id": "7fe9309a-aa83-5635-9908-b1dc13d8e874",
+            "revision": 1,
+            "state": "waiting",
+            "next_owner": "a",
+            "waiting_reason": "等待发起方补充信息",
+            "error": null
+          }
+        ],
+        "questions": [
+          {
+            "id": "448a33b1-2fcc-53b7-9036-aa612d034a4a",
+            "state": "coordinating",
+            "body": "请先将附件 public_key.txt 中的专用 SSH 公钥加入测试 Git 服务授权，并由 a 回复“已加入授权”。收到明确回复后再继续克隆、创建虚拟环境、安装本地依赖和运行 check.py。",
+            "answer": null
+          }
+        ],
+        "runs": [
+          {
+            "id": "c8d9be31-0a82-4a5c-b507-69c122acacc5",
+            "state": "succeeded",
+            "sandbox": "task-full-access",
+            "session_id": "01a14198-f5a6-7313-9661-77b45873f169",
+            "resumed_session_id": null
+          }
+        ]
+      },
+      "clone_absent_until_answer_received": true,
+      "automatic_reconnect": true
+    }
+  },
+  "earlier_trial": {
+    "task": "cc5f7d71-635b-5157-acaf-14732004aa5c",
+    "product_binary_sha256": "cf449203abb1fe5955badd0ce1151d153a450831304f5d285d28684763b8ccce",
+    "outcome": "Completed, but resolver paraphrase added redundant approval question. Fixed generic question presentation and repeated fresh full task. First task installed missing venv support under its task approval."
+  },
+  "automated": {
+    "lakota_full_before_last_question_presentation_fix": {
+      "passed": 197,
+      "failed": 0,
+      "ignored": 3
+    },
+    "lakota_targeted_after_fix": {
+      "passed": 97,
+      "failed": 0,
+      "ignored": 0
+    },
+    "lakota_update_test_after_fixture_sync": {
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0
+    },
+    "format": "passed",
+    "clippy": "passed, pre-existing libc::time_t deprecation warning",
+    "first_ci": "https://github.com/shenyaojin/xXASSXx/actions/runs/38814657388",
+    "first_ci_failure": "ARM Mac update rollback test observed normal directory display_name sync between snapshots. Synchronize before starting service; do not weaken preservation assertions.",
+    "final_ci": "https://github.com/shenyaojin/xXASSXx/actions/runs/38815365686",
+    "final_ci_evidence": {
+      "run": {
+        "id": 38815365686,
+        "head_sha": "b909500f8c4d13a38cba63b9297af3e758a0156a",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/shenyaojin/xXASSXx/actions/runs/38815365686"
+      },
+      "jobs": [
+        {
+          "id": 116698561233,
+          "name": "build (macos-15, aarch64-apple-darwin)",
+          "status": "completed",
+          "conclusion": "success",
+          "tests": {
+            "passed": 196,
+            "failed": 0,
+            "ignored": 3
+          }
+        },
+        {
+          "id": 116698561516,
+          "name": "build (ubuntu-22.04, x86_64-unknown-linux-musl)",
+          "status": "completed",
+          "conclusion": "success",
+          "tests": {
+            "passed": 197,
+            "failed": 0,
+            "ignored": 3
+          }
+        },
+        {
+          "id": 116701198958,
+          "name": "release",
+          "status": "completed",
+          "conclusion": "skipped"
+        }
+      ],
+      "artifacts": [
+        {
+          "id": 12010956833,
+          "name": "x86_64-unknown-linux-musl",
+          "size_in_bytes": 8848418,
+          "expired": false
+        },
+        {
+          "id": 12010667694,
+          "name": "aarch64-apple-darwin",
+          "size_in_bytes": 7684643,
+          "expired": false
+        }
+      ]
+    }
+  },
+  "deployment": {
+    "released": false,
+    "daily_clients_updated": false,
+    "live_user_task_resumed": false,
+    "quant_project_used": false
+  },
+  "cleanup": {
+    "test_uis_closed": true,
+    "test_services_stopped": true,
+    "dedicated_mailbox_stopped": true,
+    "dedicated_git_ssh_server_stopped": true,
+    "ssh_tunnels_stopped": true,
+    "local_rust_target_created": false
+  },
+  "evidence_directory": "smoke-output/task-approval-20261015",
+  "packages": [
+    {
+      "target": "aarch64-apple-darwin",
+      "name": "xxassxx-aarch64-apple-darwin.tar.gz",
+      "bytes": 7713172,
+      "sha256": "83243827c06aca8146f03e71f9cbec0d52e6a9d9b0fb9300e0fa044c82d51f80"
+    },
+    {
+      "target": "x86_64-unknown-linux-musl",
+      "name": "xxassxx-x86_64-unknown-linux-musl.tar.gz",
+      "bytes": 8913950,
+      "sha256": "637bfcdaa75123df79a85649e4afabc5bdb23047502aa4424b117f5aba629c7d"
+    }
+  ]
+}
