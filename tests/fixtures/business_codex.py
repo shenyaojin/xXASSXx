@@ -51,9 +51,22 @@ rpc('initialize',{'protocolVersion':'2025-06-18','capabilities':{},'clientInfo':
 ctx=json.loads(tool('get_task',{'task_id':task})['input']);business=ctx['business_task'];base={'task_id':task,'run_id':run,'idempotency_key':run}
 root=ctx['authorized_roots'][0]['path'];assert os.getcwd()==ctx['working_directory']
 refresh='补充材料回归' in business['original']
-if business['phase']=='execute' and full:
+if business['phase']=='execute' and '阶段交付回归' in business['original']:
     from pathlib import Path
-    assert ctx['access_mode']=='full_access' and ctx['execution_access']['full_access']
+    assert full and ctx['execution_access']['full_access'] and ctx['access_mode']=='ask_for_approval'
+    checkpoint=Path.cwd()/'checkpoint.txt'
+    if not any(q['state']=='answered' for q in business['questions_and_answers']):
+        checkpoint.write_text('staged public artifact')
+        tool('submit_task_question',{**base,'body':'请选择最终结果模式','reason':'用户需要先收到阶段文件再决定','known':'阶段文件已生成，尚未运行后续步骤','deliveries':[{'root':0,'path':'checkpoint.txt','reason':'Requested intermediate artifact'}]})
+    else:
+        assert checkpoint.read_text()=='staged public artifact'
+        outside=Path.cwd().parent/'final.txt';outside.write_text('83\n')
+        index=next(i for i,r in enumerate(ctx['authorized_roots']) if r['path']=='/')
+        ref={'root':index,'path':str(outside).lstrip('/'),'reason':'Actual task output outside workspace'}
+        tool('submit_task_result',{**base,'result':json.dumps({'body':'任务已经按回答生成结果83。','files':[ref],'deliveries':[ref]},ensure_ascii=False)})
+elif business['phase']=='execute' and full and (ctx['access_mode']=='full_access' or '整项任务批准回归' in business['original']):
+    from pathlib import Path
+    assert ctx['execution_access']['full_access']
     workspace=Path.cwd()
     (workspace/'fast.py').write_text('iterations=20 # changed under full access')
     outside=workspace.parent/'outside-result.txt';outside.write_text('Full access output: 210')
@@ -62,21 +75,21 @@ if business['phase']=='execute' and full:
     tool('submit_task_result',{**base,'result':json.dumps({'body':'已按要求修改原文件并生成结果210。','files':[ref],'deliveries':[ref]},ensure_ascii=False)})
 elif business['phase']=='execute':
     from pathlib import Path
-    assert profile=='xxassxx_execute'
     access=ctx['execution_access'];workspace=Path(access['directory'])
     assert workspace==Path.cwd()
-    permissions=cfg[f'permissions.{profile}.filesystem']
-    assert permissions[str(workspace)]=='write'
-    assert all(permissions[r]=='read' for r in access['read_roots'])
-    shell_env=cfg['shell_environment_policy.set']
-    assert shell_env['TMPPREFIX']==str(workspace/'.tmp/zsh')
-    assert Path(shell_env['TMPDIR']).is_dir()
-    # Exercise the actual shell's here-document handling with the configured
-    # environment; sandbox enforcement is covered separately by real Codex.
-    import shutil
-    if zsh := shutil.which('zsh'):
-        check=subprocess.run([zsh,'-c',"cat <<'EOF'\nworkspace temporary input\nEOF"],env={**os.environ,**shell_env},capture_output=True,text=True)
-        assert check.returncode==0 and check.stdout=='workspace temporary input\n',check
+    assert full==access['full_access']
+    if not full:
+        assert profile=='xxassxx_execute'
+        permissions=cfg[f'permissions.{profile}.filesystem']
+        assert permissions[str(workspace)]=='write'
+        assert all(permissions[r]=='read' for r in access['read_roots'])
+        shell_env=cfg['shell_environment_policy.set']
+        assert shell_env['TMPPREFIX']==str(workspace/'.tmp/zsh')
+        assert Path(shell_env['TMPDIR']).is_dir()
+        import shutil
+        if zsh := shutil.which('zsh'):
+            check=subprocess.run([zsh,'-c',"cat <<'EOF'\nworkspace temporary input\nEOF"],env={**os.environ,**shell_env},capture_output=True,text=True)
+            assert check.returncode==0 and check.stdout=='workspace temporary input\n',check
     source=Path(access['read_roots'][0])/'fast.py'
     assert source.read_text()=='iterations=10 # fast original'
     script=workspace/'calculation.py';script.write_text(source.read_text()+'\nprint(sum(range(iterations+1)))\n')

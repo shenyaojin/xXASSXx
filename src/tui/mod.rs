@@ -88,7 +88,6 @@ enum Panel {
     Revise,
     TaskAccess,
     AccessPath,
-    AccessDependency,
     AccessTimeout,
     Attachments,
     AttachmentDetail,
@@ -104,9 +103,7 @@ struct AccessForm {
     initiator: String,
     parent: PathBuf,
     roots: Vec<PathBuf>,
-    read_dirs: Vec<PathBuf>,
     timeout_secs: u64,
-    deliver_files: bool,
 }
 struct StopForm {
     task: Value,
@@ -690,9 +687,7 @@ impl Ui {
             initiator: t["initiator"].as_str().unwrap_or("").into(),
             parent: permission["parent"].as_str().unwrap_or("").into(),
             roots: serde_json::from_value(permission["read_roots"].clone())?,
-            read_dirs: vec![],
             timeout_secs: 1800,
-            deliver_files: false,
         });
         self.input.clear();
         self.panel = Panel::TaskAccess;
@@ -715,7 +710,7 @@ impl Ui {
         if self.panel == Panel::TaskAccess {
             match key.code {
                 KeyCode::Up => self.index = self.index.saturating_sub(1),
-                KeyCode::Down | KeyCode::Tab => self.index = (self.index + 1) % 7,
+                KeyCode::Down | KeyCode::Tab => self.index = (self.index + 1) % 4,
                 KeyCode::Enter => match self.index {
                     0 => {
                         let form = self.access_form.as_ref().context("请重新打开授权范围")?;
@@ -725,13 +720,10 @@ impl Ui {
                                 task: form.task.clone(),
                                 revision: form.revision,
                                 parent: form.parent.clone(),
-                                read_dirs: form.read_dirs.clone(),
+                                read_dirs: vec![],
                                 timeout_secs: form.timeout_secs,
                             },
                         )?;
-                        if form.deliver_files {
-                            crate::transfers::allow_task(store, &form.task, form.revision)?;
-                        }
                         self.access_form = None;
                         self.panel = Panel::Chat;
                         self.notice = "已允许并排队，助手会自动开始；发起方无需重试。".into();
@@ -742,27 +734,13 @@ impl Ui {
                         self.access_form = None;
                         self.notice = "暂未允许，任务保留；准备好后按 CtrlG。".into();
                     }
-                    6 => {
-                        if let Some(form) = self.access_form.as_mut() {
-                            form.deliver_files = !form.deliver_files;
-                        }
-                    }
                     2 => {
                         self.input.clear();
                         self.panel = Panel::AccessPath;
                     }
                     3 => {
                         self.input.clear();
-                        self.panel = Panel::AccessDependency;
-                    }
-                    4 => {
-                        self.input.clear();
                         self.panel = Panel::AccessTimeout;
-                    }
-                    5 => {
-                        if let Some(form) = &mut self.access_form {
-                            form.read_dirs.clear();
-                        }
                     }
                     _ => {}
                 },
@@ -774,18 +752,7 @@ impl Ui {
             match self.panel {
                 Panel::AccessPath => {
                     let path = crate::file_roots::directory(&expand(text))?;
-                    ensure!(
-                        form.roots.iter().any(|r| path.starts_with(r)),
-                        "请选择已允许读取的目录；会在其中新建任务文件夹"
-                    );
                     form.parent = path;
-                }
-                Panel::AccessDependency => {
-                    let path = crate::file_roots::directory(&expand(text))?;
-                    ensure!(form.read_dirs.len() < 32, "最多添加 32 个依赖目录");
-                    if !form.roots.contains(&path) && !form.read_dirs.contains(&path) {
-                        form.read_dirs.push(path);
-                    }
                 }
                 Panel::AccessTimeout => {
                     let minutes: u64 = text.parse().context("请输入 1 到 1440 之间的分钟数")?;
@@ -949,7 +916,7 @@ impl Ui {
         }
         if matches!(
             self.panel,
-            Panel::TaskAccess | Panel::AccessPath | Panel::AccessDependency | Panel::AccessTimeout
+            Panel::TaskAccess | Panel::AccessPath | Panel::AccessTimeout
         ) {
             return self.access_key(store, key);
         }
@@ -1773,7 +1740,6 @@ impl Ui {
             Panel::Revise => "修改要求 · 提交后重新确认",
             Panel::Stop => "停止原因 · Tab 切换方式 · Enter 确认 · Esc 返回",
             Panel::AccessPath => "任务文件夹的保存位置",
-            Panel::AccessDependency => "额外只读目录",
             Panel::AccessTimeout => "运行时限（分钟）",
             Panel::AttachmentSave => "另存为路径",
             Panel::AttachmentAnalyze => "附件分析问题",
@@ -2140,24 +2106,27 @@ impl Ui {
                     "{} Ask for approval",
                     if self.index == 0 { "▶" } else { " " }
                 ));
-                lines.push("  先确认任务；写入/运行及发送文件按现有范围逐项批准。".into());
-                lines.push("  原文件只读，在获准的独立任务目录运行，不联网。".into());
+                lines.push(
+                    "  逐任务批准：执行方点一次，允许整项任务所需操作及指定成果发送。".into(),
+                );
+                lines.push(
+                    "  包括读写、运行、联网、安装依赖和本机凭据使用；旧批准保留原范围。".into(),
+                );
                 lines.push(String::new());
                 lines.push(format!(
                     "{} Full access",
                     if self.index == 1 { "▶" } else { " " }
                 ));
-                lines.push("  允许本机文件读写、运行和联网，任务及文件发送免逐次批准。".into());
+                lines.push(
+                    "  信任团队、自动接受：本机任务所需操作和指定成果发送免逐次批准。".into(),
+                );
                 lines.push("  包括团队成员交给本机的任务；可修改原项目并发送所需文件。".into());
                 lines.push("  请仅在信任本机助手及团队任务时选择。".into());
                 lines.push(String::new());
                 lines.push("切换会记住；正在执行时请先停止或等本轮结束。已批准的传输继续。".into());
                 "访问模式 · ↑↓ 选择 · Enter 应用 · Esc 返回"
             }
-            Panel::TaskAccess
-            | Panel::AccessPath
-            | Panel::AccessDependency
-            | Panel::AccessTimeout => {
+            Panel::TaskAccess | Panel::AccessPath | Panel::AccessTimeout => {
                 if let Some(form) = &self.access_form {
                     lines.push(format!("@{} 请你执行：{}", form.initiator, form.goal));
                     lines.push(format!(
@@ -2165,46 +2134,32 @@ impl Ui {
                         form.revision
                     ));
                     lines.push(format!(
-                        "新文件保存到：{}",
+                        "默认产物与日志目录：{}",
                         form.parent
                             .join(format!("xxassxx-task-{}-r{}", form.task, form.revision))
                             .display()
                     ));
                     lines.push(format!(
-                        "可读取的目录：{}",
+                        "公共资料目录：{}",
                         form.roots
                             .iter()
-                            .chain(&form.read_dirs)
                             .map(|p| p.display().to_string())
                             .collect::<Vec<_>>()
                             .join("、")
                     ));
                     lines.push(format!("运行时限：{} 分钟", form.timeout_secs / 60));
                     lines.push(
-                        "只在新任务文件夹里修改副本和运行程序；原文件和依赖只读，不联网。".into(),
+                        "一次批准包括本任务所需的读写原文件、运行、联网、安装依赖及本机凭据使用。"
+                            .into(),
                     );
-                    lines.push(format!(
-                        "交付本任务目录内选定结果文件：{}",
-                        if form.deliver_files {
-                            "允许"
-                        } else {
-                            "暂不允许；产物准备好后可单独允许发送"
-                        }
-                    ));
-                    lines.push("允许后自动开始，结果说明返回发起方。".into());
+                    lines.push("指定成果自动发送给约定接收人；私钥留在本机。仍遵守任务的只读、路径和顺序要求。".into());
+                    lines.push("默认目录不限制任务所需操作；无关文件保持不变。旧版受限批准只有本次确认后才扩大。".into());
                     lines.push(String::new());
                     if self.panel == Panel::TaskAccess {
-                        for (n, label) in [
-                            "允许并开始",
-                            "暂时不允许",
-                            "修改保存位置",
-                            "添加只读依赖目录（可选）",
-                            "修改运行时限",
-                            "清空额外依赖目录",
-                            "切换：允许交付本任务结果附件",
-                        ]
-                        .iter()
-                        .enumerate()
+                        for (n, label) in
+                            ["允许并开始", "暂时不允许", "修改保存位置", "修改运行时限"]
+                                .iter()
+                                .enumerate()
                         {
                             lines.push(format!(
                                 "{}{}",
@@ -2217,7 +2172,6 @@ impl Ui {
                         lines.push(
                             match self.panel {
                                 Panel::AccessTimeout => "输入分钟数（1–1440）：",
-                                Panel::AccessDependency => "输入需要额外读取的本机目录：",
                                 _ => "输入新任务文件夹的上级目录：",
                             }
                             .into(),
@@ -3046,7 +3000,6 @@ pub async fn open(args: OpenArgs) -> Result<()> {
                             | Panel::NewTask
                             | Panel::Revise
                             | Panel::AccessPath
-                            | Panel::AccessDependency
                             | Panel::AccessTimeout
                             | Panel::AttachmentSave
                             | Panel::AttachmentAnalyze

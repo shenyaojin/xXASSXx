@@ -354,9 +354,7 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
     let access = crate::task_workspace::for_execution(&store.conn, &lease.task_id)
         .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
     let full_access = native.is_some()
-        && !crate::native_tasks::shared_read(&store.conn, &lease.task_id)
-            .map_err(|e| Failure::new("authorization_changed", e.to_string()))?
-        && crate::access_mode::full(&store.conn)
+        && crate::task_workspace::execution_full(&store.conn, &lease.task_id)
             .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
     let executable = if native.is_some() && !full_access {
         sandbox_executable(store, &options.codex)

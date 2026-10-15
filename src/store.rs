@@ -9,7 +9,7 @@ use std::{
 };
 use uuid::Uuid;
 
-pub const SCHEMA_VERSION: u32 = 11;
+pub const SCHEMA_VERSION: u32 = 12;
 
 pub fn now() -> i64 {
     SystemTime::now()
@@ -136,6 +136,9 @@ impl Store {
         if version < 11 {
             conn.execute_batch(include_str!("schema_v11.sql"))?;
         }
+        if version < 12 {
+            conn.execute_batch(include_str!("schema_v12.sql"))?;
+        }
         Ok(())
     }
 
@@ -244,10 +247,17 @@ impl Store {
             resume_id: session,
         };
         tx.execute("INSERT INTO runs(id,task_id,token_hash,resumed_session_id,workdir,sandbox,deadline) VALUES(?1,?2,?3,?4,?5,'read-only',?6)", params![lease.run_id,id,digest(&lease.token),lease.resume_id,workdir.to_string_lossy(),now()+timeout as i64+1])?;
-        if crate::task_workspace::for_execution(&tx, id)?.is_some() {
+        if let Some(access) = crate::task_workspace::for_execution(&tx, id)? {
             tx.execute(
-                "UPDATE runs SET sandbox='task-workspace' WHERE id=?1",
-                [&lease.run_id],
+                "UPDATE runs SET sandbox=?2 WHERE id=?1",
+                params![
+                    lease.run_id,
+                    if access.full_access {
+                        "task-full-access"
+                    } else {
+                        "task-workspace"
+                    }
+                ],
             )?;
         }
         tx.execute(

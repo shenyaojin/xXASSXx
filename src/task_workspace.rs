@@ -1,4 +1,4 @@
-//! Explicit, revision-bound local permission for isolated write/run tasks.
+//! One local approval covers the operations needed by this confirmed task.
 use crate::{
     store::{Store, now},
     task_coordinator,
@@ -13,7 +13,7 @@ use std::{fs, io::Read, path::PathBuf};
 
 #[derive(Subcommand)]
 pub enum Command {
-    /// Locally authorize this confirmed revision. Originals remain read-only.
+    /// Approve this task's required local read/write, execution, network and delivery.
     Allow {
         task: String,
         #[arg(long)]
@@ -55,6 +55,20 @@ pub fn has_grant(c: &Connection, task: &str, rev: i64) -> Result<bool> {
     )?)
 }
 
+/// Persisted local decision only; peer messages and model prose cannot set it.
+pub fn task_full(c: &Connection, task: &str, rev: i64) -> Result<bool> {
+    Ok(c.query_row(
+        "SELECT EXISTS(SELECT 1 FROM task_workspaces WHERE task_id=?1 AND revision=?2 AND full_access=1)",
+        params![task, rev], |r| r.get(0),
+    )?)
+}
+
+pub fn execution_full(c: &Connection, execution: &str) -> Result<bool> {
+    Ok(!crate::native_tasks::shared_read(c, execution)?
+        && (crate::access_mode::full(c)?
+            || for_execution(c, execution)?.is_some_and(|a| a.full_access)))
+}
+
 /// Local-only presentation data. A remote task's conversation directory is not
 /// an execution directory, and remote messages can never confer permission.
 pub fn view(store: &Store, t: &Value) -> Result<Value> {
@@ -91,14 +105,14 @@ pub fn view(store: &Store, t: &Value) -> Result<Value> {
             json!(store.file_roots()?),
         )
     };
-    let started: bool = store.conn.query_row(
-        "SELECT EXISTS(SELECT 1 FROM task_executions WHERE task_id=?1 AND revision=?2)",
+    let running: bool = store.conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM task_executions e JOIN tasks x ON x.id=e.id WHERE e.task_id=?1 AND e.revision=?2 AND x.state='running')",
         params![id, rev],
         |r| r.get(0),
     )?;
     Ok(
-        json!({"can_allow":!crate::access_mode::full(&store.conn)? && t["draft"]["mode"] == "execute" && t["confirmed"] == t["revision"] && !matches!(t["state"].as_str(),Some("draft"|"completed"|"cancelled")) && grant.is_none() && !started,
-        "directory":grant,"parent":parent,"read_roots":roots,"timeout_secs":1800}),
+        json!({"can_allow":!crate::access_mode::full(&store.conn)? && t["draft"]["mode"] == "execute" && t["confirmed"] == t["revision"] && !matches!(t["state"].as_str(),Some("draft"|"completed"|"cancelled")) && !task_full(&store.conn,id,rev)? && !running,
+        "legacy_approval":grant.is_some() && !task_full(&store.conn,id,rev)?,"directory":grant,"parent":parent,"read_roots":roots,"timeout_secs":1800}),
     )
 }
 
@@ -115,15 +129,15 @@ pub fn binding(c: &Connection, task: &str, rev: i64) -> Result<Access> {
             full_access: true,
         });
     }
-    let (dir, raw, timeout): (String, String, u64) = c.query_row(
-        "SELECT directory,read_roots,timeout_secs FROM task_workspaces WHERE task_id=?1 AND revision=?2",
-        params![task,rev], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?)),
+    let (dir, raw, timeout, full_access): (String, String, u64, bool) = c.query_row(
+        "SELECT directory,read_roots,timeout_secs,full_access FROM task_workspaces WHERE task_id=?1 AND revision=?2",
+        params![task,rev], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?)),
     ).optional()?.context("执行方尚未允许本任务写文件和运行程序。请执行方按 CtrlT 选择任务，按 Enter 查看范围并允许；允许后自动继续。")?;
-    let access = Access {
+    let mut access = Access {
         directory: dir.into(),
         read_roots: serde_json::from_str(&raw)?,
         timeout_secs: timeout,
-        full_access: false,
+        full_access,
     };
     for p in access
         .read_roots
@@ -134,6 +148,14 @@ pub fn binding(c: &Connection, task: &str, rev: i64) -> Result<Access> {
             crate::file_roots::directory(p).is_ok_and(|real| real == *p),
             "本任务的执行目录或依赖目录已改变，请检查本地授权"
         );
+    }
+    if full_access
+        && !access
+            .read_roots
+            .iter()
+            .any(|p| p == std::path::Path::new("/"))
+    {
+        access.read_roots.push("/".into());
     }
     Ok(access)
 }
@@ -187,10 +209,6 @@ pub fn execute(store: &Store, command: Command) -> Result<Value> {
             crate::task_materials::bind(store, &t)?;
             let (_, roots) = crate::task_materials::check_binding(&store.conn, &task, revision)?;
             let parent = crate::file_roots::directory(&parent)?;
-            ensure!(
-                roots.iter().any(|r| parent.starts_with(r)),
-                "新任务目录必须放在本地已允许读取的目录中"
-            );
             let mut read_roots = roots;
             for p in read_dirs {
                 let p = crate::file_roots::directory(&p)?;
@@ -200,15 +218,50 @@ pub fn execute(store: &Store, command: Command) -> Result<Value> {
             }
             let directory = parent.join(format!("xxassxx-task-{task}-r{revision}"));
             if let Ok(existing) = binding(&store.conn, &task, revision) {
+                let existing_roots: Vec<_> = existing
+                    .read_roots
+                    .iter()
+                    .filter(|p| p.as_path() != std::path::Path::new("/") || read_roots.contains(p))
+                    .cloned()
+                    .collect();
                 ensure!(
                     existing.directory == directory
-                        && existing.read_roots == read_roots
+                        && existing_roots == read_roots
                         && existing.timeout_secs == timeout_secs,
                     "已存在不同的执行授权；请撤销后重开并确认新版本"
                 );
+                let running: bool = store.conn.query_row("SELECT EXISTS(SELECT 1 FROM task_executions e JOIN tasks x ON x.id=e.id WHERE e.task_id=?1 AND e.revision=?2 AND x.state='running')", params![task,revision], |r|r.get(0))?;
+                ensure!(
+                    existing.full_access || !running,
+                    "请等待当前执行结束后再扩大本任务授权"
+                );
+                store.conn.execute(
+                    "UPDATE task_workspaces SET full_access=1 WHERE task_id=?1 AND revision=?2",
+                    params![task, revision],
+                )?;
+                let executions = {
+                    let mut q = store.conn.prepare("SELECT n.task_id,n.roots FROM native_tasks n JOIN task_executions e ON e.id=n.task_id WHERE e.task_id=?1 AND e.revision=?2 AND e.phase='execute'")?;
+                    q.query_map(params![task, revision], |r| {
+                        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+                    })?
+                    .collect::<rusqlite::Result<Vec<_>>>()?
+                };
+                for (id, raw) in executions {
+                    let mut roots: Vec<PathBuf> = serde_json::from_str(&raw)?;
+                    if !roots
+                        .iter()
+                        .any(|p| p.as_path() == std::path::Path::new("/"))
+                    {
+                        roots.push("/".into());
+                        store.conn.execute(
+                            "UPDATE native_tasks SET roots=?2 WHERE task_id=?1",
+                            params![id, serde_json::to_string(&roots)?],
+                        )?;
+                    }
+                }
                 task_coordinator::access_granted(store, &t)?;
                 tx.commit()?;
-                return Ok(json!(existing));
+                return Ok(json!(binding(&store.conn, &task, revision)?));
             }
             // Never adopt pre-existing contents, including symlinks, as a fresh workspace.
             fs::create_dir(&directory)
@@ -217,7 +270,7 @@ pub fn execute(store: &Store, command: Command) -> Result<Value> {
             fs::set_permissions(&directory, fs::Permissions::from_mode(0o700))?;
             fs::create_dir(directory.join(".tmp"))?;
             store.conn.execute(
-                "INSERT INTO task_workspaces VALUES(?1,?2,?3,?4,?5,?6)",
+                "INSERT INTO task_workspaces(task_id,revision,directory,read_roots,timeout_secs,created_at,full_access) VALUES(?1,?2,?3,?4,?5,?6,1)",
                 params![
                     task,
                     revision,
@@ -230,7 +283,7 @@ pub fn execute(store: &Store, command: Command) -> Result<Value> {
             task_coordinator::access_granted(store, &t)?;
             tx.commit()?;
             Ok(
-                json!({"task":task,"revision":revision,"directory":directory,"read_roots":read_roots,"timeout_secs":timeout_secs,"scope":"只有新建任务目录可写；原文件和依赖只读，禁止联网。确认内容变化后需要重新授权。"}),
+                json!({"task":task,"revision":revision,"directory":directory,"read_roots":read_roots,"timeout_secs":timeout_secs,"full_access":true,"scope":"已批准整项任务所需的本机文件读写、运行、联网、依赖安装、本机凭据使用与指定成果发送。遵守任务的只读和路径要求，保留无关文件；私钥不作为成果发送。改变任务目标后需要重新批准。"}),
             )
         }
         Command::Revoke { task, revision } => {

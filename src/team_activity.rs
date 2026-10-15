@@ -163,6 +163,10 @@ pub fn project(c: &Connection, m: &Message, at: i64) -> Result<()> {
         return Ok(());
     }
     let (state, body, mut next) = match w.event.as_str() {
+        // Attachment transport and chat supplements do not restart a waiting task.
+        "progress" if w.data["stage"] == "attachment" || w.data["supplement"].is_string() => {
+            return Ok(());
+        }
         "complete" => {
             ensure!(m.sender == initiator, "only initiator can complete");
             ("completed", text(&w.data, "body", 12000), None)
@@ -191,9 +195,36 @@ pub fn project(c: &Connection, m: &Message, at: i64) -> Result<()> {
             Some(initiator.clone()),
         ),
         "answer" => (
-            "processing",
-            "已补充信息，执行成员继续处理。".into(),
-            entry["executors"][0].as_str().map(str::to_owned),
+            "waiting",
+            if w.data["pending_questions"] == true {
+                "回答已提交，仍有其他问题等待回答。"
+            } else {
+                "回答已提交，等待执行成员接收并处理。"
+            }
+            .into(),
+            if w.data["pending_questions"] == true {
+                Some(initiator.clone())
+            } else {
+                entry["executors"][0].as_str().map(str::to_owned)
+            },
+        ),
+        "progress" if w.data["stage"] == "answer_received" => (
+            if w.data["pending_questions"] == true {
+                "waiting"
+            } else {
+                "processing"
+            },
+            if w.data["pending_questions"] == true {
+                "执行成员已接收回答，仍在等待其他信息。"
+            } else {
+                "执行成员已接收回答，正在准备续接。"
+            }
+            .into(),
+            if w.data["pending_questions"] == true {
+                Some(initiator.clone())
+            } else {
+                Some(m.sender.clone())
+            },
         ),
         "accepted" => (
             "processing",
@@ -207,7 +238,12 @@ pub fn project(c: &Connection, m: &Message, at: i64) -> Result<()> {
         ),
         "progress" if w.data["state"] == "waiting" || w.data["stage"] == "access_required" => (
             "waiting",
-            "等待执行成员在本机处理权限或任务要求。".into(),
+            if w.data["question_id"].is_string() {
+                "等待负责成员回答当前问题。"
+            } else {
+                "等待执行成员在本机处理权限或任务要求。"
+            }
+            .into(),
             Some(m.sender.clone()),
         ),
         "progress" => (

@@ -193,6 +193,55 @@ fn new_revision_and_stale_events_do_not_regress_shared_result() {
     assert_eq!(page["events"].as_array().unwrap().len(), 2);
     assert_eq!(page["events"][1]["revision"], 2);
 }
+
+#[test]
+fn shared_answer_is_waiting_until_executor_receipt_and_transport_does_not_clear_it() {
+    let team = Team::new();
+    let c = Connection::open(team.dir.path().join("relay.sqlite3")).unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    project(&c, &proposal(&id, true));
+    project(
+        &c,
+        &message(&id, "b", "progress", 1, json!({"team_scope":"whitelist"})),
+    );
+    project(
+        &c,
+        &message(
+            &id,
+            "b",
+            "question",
+            2,
+            json!({"body":"external action needed"}),
+        ),
+    );
+    project(&c, &message(&id, "a", "answer", 2, json!({"body":"done"})));
+    project(
+        &c,
+        &message(
+            &id,
+            "b",
+            "progress",
+            3,
+            json!({"stage":"attachment","transfer_state":"received"}),
+        ),
+    );
+    let page = activity::changes(&c, "c", 0).unwrap();
+    let last = page["events"].as_array().unwrap().last().unwrap();
+    assert_eq!(last["state"], "waiting");
+    assert!(last["body"].as_str().unwrap().contains("等待执行成员接收"));
+    project(
+        &c,
+        &message(&id, "b", "progress", 4, json!({"stage":"answer_received"})),
+    );
+    assert_eq!(
+        activity::changes(&c, "c", 0).unwrap()["events"]
+            .as_array()
+            .unwrap()
+            .last()
+            .unwrap()["state"],
+        "processing"
+    );
+}
 #[tokio::test]
 async fn offline_proposal_waits_online_retry_is_once_and_observer_cannot_mutate() {
     let team = Team::new();
@@ -335,7 +384,7 @@ fn migration_does_not_publish_history_and_shared_read_revocation_survives_full_a
             .unwrap()
             .pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
             .unwrap(),
-        11
+        i64::from(xxassxx::store::SCHEMA_VERSION)
     );
 }
 

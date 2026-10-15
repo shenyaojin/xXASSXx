@@ -56,7 +56,7 @@ fn bound_tools(store: &Store, binding: &Binding) -> Result<Value> {
     if crate::workflow::for_task(&store.conn, &binding.task)?.is_none() {
         let mut list = tools();
         if crate::task_coordinator::check_execution(&store.conn, &binding.task)?.is_some() {
-            list["tools"].as_array_mut().unwrap().push(json!({"name":"submit_task_question","description":"Finish only this execution turn with a structured necessary clarification. The business task remains open. Local agents try known facts before asking the user.","inputSchema":{"type":"object","properties":{"task_id":{"type":"string"},"run_id":{"type":"string"},"idempotency_key":{"type":"string"},"body":{"type":"string"},"reason":{"type":"string"},"known":{"type":"string"}},"required":["task_id","run_id","idempotency_key","body","reason","known"],"additionalProperties":false}}));
+            list["tools"].as_array_mut().unwrap().push(json!({"name":"submit_task_question","description":"Finish only this execution turn with a structured necessary clarification. The business task remains open. Local agents try known facts before asking the user. For an approved execute task, optional deliveries sends requested intermediate artifacts before waiting for an external action; never include private keys.","inputSchema":{"type":"object","properties":{"task_id":{"type":"string"},"run_id":{"type":"string"},"idempotency_key":{"type":"string"},"body":{"type":"string"},"reason":{"type":"string"},"known":{"type":"string"},"deliveries":{"type":"array","maxItems":40,"items":{"type":"object","properties":{"root":{"type":"integer","minimum":0},"path":{"type":"string"},"reason":{"type":"string"}},"required":["root","path","reason"],"additionalProperties":false}}},"required":["task_id","run_id","idempotency_key","body","reason","known"],"additionalProperties":false}}));
         }
         return Ok(list);
     }
@@ -84,14 +84,15 @@ fn call(store: &mut Store, binding: &Binding, params: &Value) -> Result<Value> {
                 body: String,
                 reason: String,
                 known: String,
+                #[serde(default)]
+                deliveries: Vec<Value>,
             }
             let q: Question = serde_json::from_value(params["arguments"].clone())?;
             ensure!(
                 q.task_id == binding.task && q.run_id == binding.run,
                 "task/run identity mismatch"
             );
-            let value =
-                json!({"outcome":"question","body":q.body,"reason":q.reason,"known":q.known});
+            let value = json!({"outcome":"question","body":q.body,"reason":q.reason,"known":q.known,"deliveries":q.deliveries});
             crate::task_coordinator::validate_question(&store.conn, &binding.task, &value)?;
             store.submit_result(
                 &q.task_id,
