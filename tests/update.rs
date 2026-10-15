@@ -265,6 +265,10 @@ async fn failed_new_service_restores_old_binary_without_rewinding_data() -> Resu
     config.secrets_file = Some(secrets);
     store.configure_member(&config)?;
     drop(store);
+    // Establish the relay's display name before comparing update snapshots.
+    // Otherwise the live service may synchronize "a" -> "Alice" between the
+    // two reads, which is normal directory sync rather than lost update data.
+    team.sync("a");
     let mut command = std::process::Command::new(&exe);
     common::Team::credentials(&mut command);
     let started = command
