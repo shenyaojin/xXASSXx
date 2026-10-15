@@ -1,6 +1,14 @@
 # 项目理念与接续摘要
 
-更新日期：2026-10-14（America/Denver）。`0.8.0-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl，包含白名单读取与 Codex 能力交接。此次仅发布及隔离验收，日常客户端未替换：Lakota `test` 与 Trader `trader` 此前已升级到 0.7.2，Trader 保持用户选择的 Full access，Lakota 保持 Ask for approval；Trader 独立信箱仍为 0.7.0。个人库 schema 10、信箱 schema 2。本轮执行电脑实际是 MacBook Air M3、成员 `mba`，日常安装仍为 0.5.0；Mac mini／`owner` 与师兄的 Mac 未直接升级。需要新能力的执行端也须升级。
+更新日期：2026-10-14（America/Denver）。`0.8.0-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl，包含白名单读取与 Codex 能力交接。本轮执行电脑是 MacBook Air M3、成员 `mba`，已从 GitHub 发布包手动升级到 0.8.0 并将个人库从 schema 9 迁到 10，保持 Ask for approval。Lakota `test` 与 Trader `trader` 日常端仍为此前部署的 0.7.2，Trader 保持 Full access，Lakota 保持 Ask；Trader 独立信箱仍为 0.7.0、schema 2。Mac mini／`owner` 与师兄的 Mac 未直接升级，需要新能力的执行端也须升级。
+
+## MBA 日常客户端升级（2026-10-14）
+
+用户要求使用 GitHub 发布版升级本机。实际旧安装为 `~/.local/xxassxx/bin/xxassxx` 0.5.0-alpha，内置候选公钥与正式签名不匹配，个人库实际为 schema 9；此前笼统的“个人库 schema 10”不适用于该旧本机安装。重新从 GitHub 下载并核对 0.8.0-alpha ARM 包、安装器、校验文件及签名清单；无在途任务、无旧界面占用时正常停服，在持有原安装独占锁的情况下备份、验证副本迁移并更换程序及安装记录。
+
+完整可恢复副本位于 `~/.local/share/xxassxx/backups/mba-release-080-20261014-220052/`，含旧程序、数据库、配置与文件存储。迁移仅新增六张收件箱表：54 → 60 张，全部旧表内容不变，完整性与外键检查通过。后台恢复及真实终端查看后，身份配置、白名单、4 项任务、54 条对话消息、4 个会话、25 条团队消息、1 条附件记录和 0 次本地执行仍与备份一致；一条白名单与 Ask for approval 保留。
+
+已亲自打开日常安装的真实 PTY，原 Trader 项目进展总结完整可见，`/access` 显示原模式，`/status` 显示 0.8.0-alpha、信箱已连接、后台运行中。doctor 通过，收件箱同步成功，`update --check --source github` 正常识别当前最新版本。未重跑模型任务或科研计算；验证终端已退出，日常后台继续运行。精简部署证据附于 [0.8.0 发布记录](releases/v0.8.0-alpha-evidence.json)，私有备份与原始画面不入库。
 
 ## 0.8.0-alpha 公开发布（2026-10-14）
 

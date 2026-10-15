@@ -130,9 +130,47 @@
     "identical": true
   },
   "business_model_tasks_rerun_on_release_packages": false,
-  "daily_clients_and_mailbox_modified": false,
   "new_local_rust_target_created": false,
   "local_artifacts": "dist/v0.8.0-alpha/",
   "isolated_processes_stopped": true,
-  "upgraded_binary_hashes_match_signed_assets": true
+  "upgraded_binary_hashes_match_signed_assets": true,
+  "subsequent_deployments": {
+    "mba": {
+      "old_version": "0.5.0-alpha",
+      "new_version": "0.8.0-alpha",
+      "source": "GitHub Release v0.8.0-alpha",
+      "status": "passed",
+      "schema_before": 9,
+      "schema_after": 10,
+      "old_table_count": 54,
+      "new_table_count": 60,
+      "all_existing_tables_unchanged": true,
+      "configuration_files_unchanged": true,
+      "binary_sha256": "f13bac260d1e3453c870c24b5bb2d4feb583bf7564a76e7dd21e6440ed6a3cfa",
+      "counts": {
+        "app_tasks": 4,
+        "app_messages": 54,
+        "app_sessions": 4,
+        "messages": 25,
+        "file_roots": 1,
+        "file_transfers": 1,
+        "runs": 0
+      },
+      "service_running": true,
+      "service_version": "0.8.0-alpha",
+      "final_status_checked": true,
+      "doctor_ready": true,
+      "update_signature_check_passed": true,
+      "original_conversation_visible": true,
+      "real_terminal_verified": true,
+      "access_mode": "ask_for_approval",
+      "inbox_sync_supported": true,
+      "post_start_business_tables_unchanged": true,
+      "model_inference_rerun": false,
+      "backup": "~/.local/share/xxassxx/backups/mba-release-080-20261014-220052/",
+      "date": "2026-10-14",
+      "pty_helper_shutdown_note": "The helper emitted a reader-thread shutdown warning while closing the PTY and exited 0; the UI had closed, and subsequent data/service checks passed."
+    }
+  },
+  "daily_clients_and_mailbox_modified_during_release_verification": false
 }
