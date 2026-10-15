@@ -1,0 +1,145 @@
+{
+  "date": "2026-10-14",
+  "timezone": "America/Denver",
+  "source_commit": "6a04baec7e08d69a139faa6845bf204d4d881e82",
+  "linux_test_binary_sha256": "fa5b7fc0f8cc1444a7e591a24f24650887875e9513c3aa9568dd8cf4af9200cd",
+  "published_version": "0.7.2-alpha (does not contain these changes)",
+  "daily_clients_replaced": false,
+  "input_files_identical": 111,
+  "linux_validation": {
+    "passed": 186,
+    "failed": 0,
+    "ignored": 3,
+    "fmt": true,
+    "clippy": true,
+    "release_build": true,
+    "existing_warning": "deprecated libc::time_t"
+  },
+  "ci": {
+    "run": {
+      "id": 38674076394,
+      "head_sha": "6a04baec7e08d69a139faa6845bf204d4d881e82",
+      "html_url": "https://github.com/shenyaojin/xXASSXx/actions/runs/38674076394",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "jobs": [
+      {
+        "id": 116223568075,
+        "name": "build (ubuntu-22.04, x86_64-unknown-linux-musl)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 116223568266,
+        "name": "build (macos-15, aarch64-apple-darwin)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 116225265747,
+        "name": "release",
+        "status": "completed",
+        "conclusion": "skipped"
+      }
+    ]
+  },
+  "terminal_method": "Actual interactive PTYs on isolated Lakota a and Trader b; real DeepSeek deepseek-flash, Codex CLI where recorded; loopback mailbox through SSH tunnels. No daily project task replay.",
+  "cases": [
+    {
+      "task_id": "61414c4c-8dfb-5d33-8945-de232068d7ed",
+      "revision": 1,
+      "executor": "a",
+      "kind": "owner local reads -> Codex ZIP inspection -> onward send",
+      "task_state": "completed",
+      "approval_inputs_after_request": 0,
+      "run": {
+        "id": "b2cba19c-eb2e-41e8-88b7-091d20ae5cb0",
+        "state": "succeeded",
+        "codex_version": "codex-cli 0.162.1",
+        "mcp_initialized": 1,
+        "reads": 1,
+        "submissions": 1,
+        "exit_code": 0
+      },
+      "transfer_id": "92966a30-889e-555f-95b4-0af46eb2c50d",
+      "a_transfer_state": "delivered",
+      "b_transfer_state": "received",
+      "bytes": 322,
+      "source_and_both_copies_sha256": "5120a14d12527e194da7b3c5e1871a58f4ef485490113b643bfc37ab0963b600",
+      "final_answer": "1 个文件已送达 @b。\nlyra-final.zip\n\n发送的 lyra-final.zip 是 LYRA-71 最终获批交付的原始压缩包（依据发布说明和发布目录索引，草稿版本已被排除），包内 metrics.csv 为本次统计对象。压缩包为 322 字节，含 3 条数据记录、value 列总和 83。\n\n按 CtrlF 查看文件。"
+    },
+    {
+      "task_id": "db59ce14-0df7-5a40-a378-461c2333da84",
+      "revision": 1,
+      "executor": "b",
+      "kind": "peer local agent reads and submits without Codex",
+      "task_state": "completed",
+      "approval_inputs_after_request": 0,
+      "run": {
+        "id": "bc03559a-52a0-47b3-8691-3184baba2d84",
+        "state": "succeeded",
+        "codex_version": null,
+        "mcp_initialized": 0,
+        "reads": 1,
+        "submissions": 1,
+        "exit_code": null
+      },
+      "transfer_id": "ddf369f3-41b7-5311-b6ac-88feac3ad727",
+      "a_transfer_state": "received",
+      "b_transfer_state": "delivered",
+      "bytes": 322,
+      "source_and_both_copies_sha256": "337a030277996ddfb42956c201d3f876feea156d759711dee13989388a9dceaa",
+      "final_answer": "1 个文件已送达 @a。\nlyra-final.zip\n\nlyra-final.zip 是 LYRA-71 最终采用的交付包：发布说明（release.txt）与工作目录索引（INDEX.md）一致标注它为被批准版本，而同目录的 lyra-draft.zip 被明确拒绝。交付件即该原始压缩包本身（322 字节），未解压或解析其内容。\n\n按 CtrlF 查看文件。"
+    }
+  ],
+  "owner_handoff_observations_received_by_codex": 8,
+  "zip_statistics_independently_checked": {
+    "data_records": 3,
+    "value_sum": 83
+  },
+  "source_files_unchanged_on_both_machines": true,
+  "earlier_direct_send": {
+    "binary_sha256": "b4476e38f4650cb083541fb8e4b39d0d880b16995c4438bfdb1d36a437bfb673",
+    "transfer_id": "c006b63b-675f-535c-b107-30f7be1babf2",
+    "codex_runs": 0,
+    "owner_model_calls": 5,
+    "read_tools": 7,
+    "approval_mode": "Ask for approval",
+    "send_approved_in_real_tui": true,
+    "source_and_copies_sha256": "5120a14d12527e194da7b3c5e1871a58f4ef485490113b643bfc37ab0963b600"
+  },
+  "failures_preserved": [
+    {
+      "task_id": "7870a88c-25fb-5715-a446-da0eef86db0c",
+      "reason": "Redundant model completion failed after accepted handoff; fixed terminal return, original task stopped through TUI."
+    },
+    {
+      "task_id": "59fa8b59-8e59-52fa-9ad2-b7ab57904232",
+      "reason": "Model used display name for deliver_to; fixed ID enum and validation retry, original task stopped through TUI."
+    },
+    {
+      "task_id": "ba0c2f1b-2ee9-5caa-8456-db77c14ed72a",
+      "reason": "Conditional request lacked acceptance criteria; asked business clarification, not permission; stopped and archived through TUI."
+    },
+    {
+      "reason": "Two explicit-statistics requests failed with provider HTTP 503 before task creation; same request later succeeded after tool probe. No duplicate transfers."
+    }
+  ],
+  "live_routing_matrix": {
+    "completed_cases": 10,
+    "passed": 10,
+    "planned_cases": 24,
+    "complete": false,
+    "blocked_by": "HTTP 503",
+    "earlier_fixture_limitations": "Initial harness required first action to be a mutation; next fixture omitted some supplied paths. Corrected without treating earlier failures as passes."
+  },
+  "limits": [
+    "No new daily-client deployment or release.",
+    "General analysis still uses the existing discover/freeze/analyze workflow; files mode supports binary delivery and Codex inspection.",
+    "Historical outgoing-upload progress can still say this computer will receive; final receipt identifies the actual recipient.",
+    "The peer final summary used same-directory wording for a rejected draft from a different root; selection and bytes were correct, wording precision is not fully solved.",
+    "Does not guarantee unattended recovery from provider outages, login failure or genuine missing business decisions."
+  ],
+  "cleanup": "Both isolated clients, relay, PTYs and SSH tunnels stopped after completion; evidence retained."
+}
