@@ -23,7 +23,10 @@ import uuid
 
 
 def read(db, sql, args=()):
-    with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as conn:
+    # A read-only URI can fail to open a WAL database without its sidecars on
+    # macOS. Allow SQLite to manage them, while keeping all queries read-only.
+    with sqlite3.connect(db.resolve().as_uri() + "?mode=rw", uri=True) as conn:
+        conn.execute("PRAGMA query_only=ON")
         conn.row_factory = sqlite3.Row
         return [dict(r) for r in conn.execute(sql, args)]
 
@@ -134,13 +137,14 @@ def main():
         report["old_version"] = run("--version").strip()
         report["session"] = session
         before_identity = read(db, "SELECT * FROM identity")
-        before_roots = run("client", "--directory", client, "roots", "list")
+        before_roots = read(db, "SELECT * FROM file_roots ORDER BY path")
+        before_directories = json.loads(run("client", "--directory", client, "roots", "list"))["directories"]
         master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 42, 155, 0, 0))
         original_modes = termios.tcgetattr(slave)
         terminal = subprocess.Popen([str(binary), "open", str(work), "--directory", str(client), "--resume-session", session], stdin=slave, stdout=slave, stderr=slave, env=env, start_new_session=True)
         wait(lambda: "发现新版" in visible(), "update notice visible")
-        text("/identity")
+        text("whoami")
         wait(lambda: bool(read(db, "SELECT id FROM app_commands WHERE state='done'")), "pre-update conversation exists")
         if not args.automatic:
             text("/update")
@@ -148,11 +152,15 @@ def main():
         report["new_version"] = run("--version").strip()
         assert report["new_version"] != report["old_version"]
         assert read(db, "SELECT * FROM identity") == before_identity
-        assert run("client", "--directory", client, "roots", "list") == before_roots
-        text("/identity")
+        assert read(db, "SELECT * FROM file_roots ORDER BY path") == before_roots
+        assert json.loads(run("client", "--directory", client, "roots", "list"))["directories"] == before_directories
+        text("whoami")
         wait(lambda: len(read(db, "SELECT id FROM app_commands WHERE state='done'")) >= 2, "new UI responds in preserved conversation")
         assert {r["session_id"] for r in read(db, "SELECT session_id FROM app_commands")} == {session}
         report["identity_config_roots_history_session_preserved"] = True
+        wait(lambda: read(db, "SELECT state FROM app_network WHERE singleton=1")[0]["state"] == "connected", "relay connection restored")
+        drain(1.5)  # Let the terminal refresh its status before the final capture.
+        report["relay_connection_restored"] = True
         if args.live_client:
             text("请创建并完成一个只读任务：读取当前工作目录的 update-check.txt，告诉我 marker 和 sample_count 的准确值，并说明来源。只在对话里报告这两个值及文件来源，不生成或发送附件。只读这个测试文件，不修改任何文件，不运行项目程序。")
             wait(lambda: bool(read(db, "SELECT id FROM app_tasks WHERE state='draft'")), "real task confirmation shown", 120)
@@ -178,6 +186,7 @@ def main():
             assert "UPDATER-8247" in visible()
             assert hashlib.sha256(source.read_bytes()).hexdigest() == source_hash
             print(json.dumps({"task": task, "answer": answer, "result": result}, ensure_ascii=False), flush=True)
+        (root / "before-exit.ansi").write_bytes(data)
         keys(b"\x11")
         terminal.wait(timeout=10)
         assert terminal.returncode == 0

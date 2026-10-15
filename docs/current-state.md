@@ -1,18 +1,22 @@
 # 项目理念与接续摘要
 
-更新日期：2026-10-14（America/Denver）。`0.7.2-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl。Lakota `test` 与 Trader `trader` 均已通过签名更新器升级并恢复后台；Trader 保持用户选择的 Full access，Lakota 保持 Ask for approval。Trader 独立信箱仍为 `0.7.0-alpha`，未重启；个人库 schema 10、信箱 schema 2。本轮执行电脑实际是 MacBook Air M3、成员 `mba`，日常安装仍为 `0.5.0-alpha`；Mac mini／`owner` 与师兄的 Mac 未直接升级，发送端也需更新才能修复本机文件路由。
+更新日期：2026-10-14（America/Denver）。`0.8.0-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl，包含白名单读取与 Codex 能力交接。此次仅发布及隔离验收，日常客户端未替换：Lakota `test` 与 Trader `trader` 此前已升级到 0.7.2，Trader 保持用户选择的 Full access，Lakota 保持 Ask for approval；Trader 独立信箱仍为 0.7.0。个人库 schema 10、信箱 schema 2。本轮执行电脑实际是 MacBook Air M3、成员 `mba`，日常安装仍为 0.5.0；Mac mini／`owner` 与师兄的 Mac 未直接升级。需要新能力的执行端也须升级。
 
-## 0.8.0-alpha 发布准备（2026-10-14）
+## 0.8.0-alpha 公开发布（2026-10-14）
 
-用户已要求打包并提交源码与安装包。版本升为 `0.8.0-alpha`，仅调整版本及发布文档，业务实现沿用 `6a04bae` 的真实验证；准备通过精确标签 CI 构建 ARM Mac 和 Linux musl、签名、核对安装包后公开。发布完成前 `/update` 仍只能取得此前公开版本。日常客户端不在本次打包操作中替换。
+发布提交 `479e66d216a302b15a200aa197e37a38cce66d4f` 及标签 `v0.8.0-alpha` 已推送，[Release](https://github.com/shenyaojin/xXASSXx/releases/tag/v0.8.0-alpha) 于 2026-10-15T03:39:41Z 公开，prerelease、非 draft。[精确标签 CI](https://github.com/shenyaojin/xXASSXx/actions/runs/38676682307) 中 ARM Mac 185 项、Linux musl 186 项通过，均 0 失败、3 忽略，优化构建与安装检查通过。六项产物的签名、架构、哈希与公开匿名下载均核对；签名公钥和个人库 schema 10 不变，Mac 与 Lakota 的正式包独立安装通过。
 
-## 白名单读取与能力交接（2026-10-14，已提交，未发布部署）
+Mac 与 Lakota 均在隔离安装中通过真实 PTY，从 GitHub 执行 `/update`：0.7.2 → 0.8.0，自动返回同一会话，身份配置、白名单记录和历史保留，升级前后身份问答可见，最终终端显示已连接，退出恢复终端模式。未调用真实模型重跑业务。测试脚本修正了 Mac SQLite 只读连接问题、已改为面板入口的 `/identity`、把说明文字当作白名单变更的比较，并等待重连及界面刷新；失败记录保留，修正后的脚本作为发布后验收提交，不改变已发布二进制。
+
+本次发布的 `src`、`tests`、`skills`、`build.rs` 与实现提交 `6a04bae` 相同，真实模型业务验证沿用下节，不把发布包安装检查描述成业务重跑。本机没有新建 Rust target；正式包保留在 `dist/v0.8.0-alpha/`，隔离测试后台与信箱均已停止。详见 [0.8.0 发布证据](releases/v0.8.0-alpha-evidence.json)。
+
+## 白名单读取与能力交接（2026-10-14，随 0.8.0 发布）
 
 用户要求 local agent 先跨多个白名单定位文件，工具不足时携带原始意图、实际观察和剩余工作交给 Codex。实现提交 `6a04bae` 已推送：增加受限目录列举、文件名／小文本检索、分段读取与本机证据交接；简单只读执行可直接完成，权限由 Rust 按当前本机设置检查。也补齐本机 Codex 处理后向指定联系人发送的接续，等待实际收据后完成。成功业务动作不再额外调用模型收尾；收件人 ID 错误在副作用前有界纠正。
 
 Lakota 最终自动回归 186 通过、0 失败、3 忽略，格式、Clippy、优化构建通过，111 份输入一致。[精确提交 CI](https://github.com/shenyaojin/xXASSXx/actions/runs/38674076394) 的 ARM Mac 和 Linux 测试、构建、安装检查通过，未触发发布。真实双 PTY、DeepSeek／官方 Codex 验证：跨白名单定位后交给 Codex 统计 ZIP 内 3 条数据、总和 83，再自动送达 Trader；另一项由 Trader local agent 自行读取说明、选包回传，未启动 Codex。两项 Full access 明确请求在开始后都无批准按键；最终答复和两端收据已亲自检查，原始文件未改，三批附件源文件与两端副本哈希匹配。
 
-测试过程保留模型 HTTP 503、早期交接／收件人格式错误，以及“核对通过”缺少判据时的澄清停顿。最后一轮真实模型路由矩阵仅 10/24 项完成，随后 503，不能写成全通过。历史上传提示的接收电脑措辞、模型对草稿所在目录的表述仍有小问题；最终接收人、文件和数值正确。已发布的 0.7.2 不包含新架构，日常客户端没有被替换；隔离测试后台、信箱及隧道已关闭。详见[架构与验收说明](local-agent-handoff.md)和[精简证据](local-agent-handoff-evidence.json)。
+测试过程保留模型 HTTP 503、早期交接／收件人格式错误，以及“核对通过”缺少判据时的澄清停顿。最后一轮真实模型路由矩阵仅 10/24 项完成，随后 503，不能写成全通过。历史上传提示的接收电脑措辞、模型对草稿所在目录的表述仍有小问题；最终接收人、文件和数值正确。新架构已随 0.8.0 发布，日常 0.7.2 客户端仍需升级；隔离测试后台、信箱及隧道已关闭。详见[架构与验收说明](local-agent-handoff.md)和[精简证据](local-agent-handoff-evidence.json)。
 
 ## 0.7.2-alpha 发布与部署（2026-10-14）
 

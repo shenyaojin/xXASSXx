@@ -1,0 +1,138 @@
+{
+  "date": "2026-10-14",
+  "timezone": "America/Denver",
+  "version": "0.8.0-alpha",
+  "commit": "479e66d216a302b15a200aa197e37a38cce66d4f",
+  "tag": "v0.8.0-alpha",
+  "release": {
+    "html_url": "https://github.com/shenyaojin/xXASSXx/releases/tag/v0.8.0-alpha",
+    "draft": false,
+    "prerelease": true,
+    "published_at": "2026-10-15T03:39:41Z"
+  },
+  "ci": {
+    "id": 38676682307,
+    "head_sha": "479e66d216a302b15a200aa197e37a38cce66d4f",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/shenyaojin/xXASSXx/actions/runs/38676682307"
+  },
+  "tests": {
+    "mac": {
+      "passed": 185,
+      "failed": 0,
+      "ignored": 3
+    },
+    "linux": {
+      "passed": 186,
+      "failed": 0,
+      "ignored": 3
+    }
+  },
+  "verification": {
+    "version": "0.8.0-alpha",
+    "schema": 10,
+    "signature_verified": true,
+    "public_key": "ee06eef54d768e3445f2c3cf167dc7445c33c4fe67d22ccb06896738c772cbd1",
+    "assets": {
+      "SHA256SUMS": {
+        "size": 209,
+        "sha256": "1d4b39a30fdbe224122e860b3fab2c84766123edc84df1543c761f918b02cb38"
+      },
+      "install.sh": {
+        "size": 3612,
+        "sha256": "8f63a694adc788ebfa57bd0a1b9d0b206644961eb3b3f366a9dcc3bd7ab4ec6c"
+      },
+      "update.json": {
+        "size": 2831,
+        "sha256": "163d8377149956eb17ef151f2635b9a304c875a9e3f308fd08ee90eb417a1fbc"
+      },
+      "update.json.sig": {
+        "size": 129,
+        "sha256": "ad3d0419dcf1012c265dd6ecbf591e8546ab78dfc22b8f71ab00c7841b750028"
+      },
+      "xxassxx-aarch64-apple-darwin.tar.gz": {
+        "size": 7595928,
+        "sha256": "5bad90ee4a7014936df5eaab7c0b1188b05fa54e6263204573d8be5be7a9a633"
+      },
+      "xxassxx-x86_64-unknown-linux-musl.tar.gz": {
+        "size": 8787018,
+        "sha256": "e258d97ac6318d683bac8103c1ad53fc950edc6c1653f51e67b5b9e781a5f1c2"
+      }
+    },
+    "binaries": {
+      "aarch64-apple-darwin": {
+        "size": 21217136,
+        "sha256": "f13bac260d1e3453c870c24b5bb2d4feb583bf7564a76e7dd21e6440ed6a3cfa"
+      },
+      "x86_64-unknown-linux-musl": {
+        "size": 24956464,
+        "sha256": "c79347bbef1826bb0bddb1988af7779b05680d4123629dd606c1cff12d27ab3b"
+      }
+    }
+  },
+  "anonymous_downloads_verified": 6,
+  "isolated_fresh_installs": {
+    "mac": {
+      "version": "0.8.0-alpha",
+      "sha256": "f13bac260d1e3453c870c24b5bb2d4feb583bf7564a76e7dd21e6440ed6a3cfa"
+    },
+    "lakota": {
+      "version": "0.8.0-alpha",
+      "sha256": "c79347bbef1826bb0bddb1988af7779b05680d4123629dd606c1cff12d27ab3b"
+    }
+  },
+  "real_pty_update_from_github": {
+    "mac": {
+      "status": "passed",
+      "automatic": false,
+      "source": "github",
+      "old_version": "xxassxx 0.7.2-alpha",
+      "session": "33db425a-ff7c-43b7-8004-9dbcd8e6b8a2",
+      "new_version": "xxassxx 0.8.0-alpha",
+      "identity_config_roots_history_session_preserved": true,
+      "termios_restored": true,
+      "final_screen_personally_inspected": true,
+      "final_screen_connected": true,
+      "identity_replies_visible_before_and_after": true
+    },
+    "linux": {
+      "status": "passed",
+      "automatic": false,
+      "source": "github",
+      "old_version": "xxassxx 0.7.2-alpha",
+      "session": "c32b6b7f-0e37-4d72-86ec-feaa524bda84",
+      "new_version": "xxassxx 0.8.0-alpha",
+      "identity_config_roots_history_session_preserved": true,
+      "relay_connection_restored": true,
+      "termios_restored": true,
+      "final_screen_personally_inspected": true,
+      "final_screen_connected": true,
+      "identity_replies_visible_before_and_after": true
+    }
+  },
+  "harness_corrections": [
+    "Mac SQLite read-only URI failed before UI startup; use query_only connections so SQLite can manage WAL sidecars.",
+    "/identity now opens a panel; use whoami to verify persisted chat replies.",
+    "Compare actual file_roots records and directory entries, excluding version-dependent explanatory scope text.",
+    "An initial Linux final frame preceded the connection-status refresh; wait for relay connection and terminal redraw. A further complete upgrade passed with connected visible."
+  ],
+  "failed_attempts_retained": true,
+  "functional_evidence": "../local-agent-handoff-evidence.json",
+  "functional_source_matches_implementation_commit": {
+    "commit": "6a04baec7e08d69a139faa6845bf204d4d881e82",
+    "paths": [
+      "src",
+      "tests",
+      "skills",
+      "build.rs"
+    ],
+    "identical": true
+  },
+  "business_model_tasks_rerun_on_release_packages": false,
+  "daily_clients_and_mailbox_modified": false,
+  "new_local_rust_target_created": false,
+  "local_artifacts": "dist/v0.8.0-alpha/",
+  "isolated_processes_stopped": true,
+  "upgraded_binary_hashes_match_signed_assets": true
+}
