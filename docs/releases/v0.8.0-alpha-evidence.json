@@ -170,6 +170,62 @@
       "backup": "~/.local/share/xxassxx/backups/mba-release-080-20261014-220052/",
       "date": "2026-10-14",
       "pty_helper_shutdown_note": "The helper emitted a reader-thread shutdown warning while closing the PTY and exited 0; the UI had closed, and subsequent data/service checks passed."
+    },
+    "owner": {
+      "date": "2026-10-14",
+      "old_version": "0.7.0-alpha (unpublished local candidate)",
+      "new_version": "0.8.0-alpha",
+      "source": "GitHub Release v0.8.0-alpha",
+      "status": "passed",
+      "install_prefix": "~/.local",
+      "binary_sha256": "f13bac260d1e3453c870c24b5bb2d4feb583bf7564a76e7dd21e6440ed6a3cfa",
+      "old_binary_sha256": "7d43879a317d6d67a5be826912225f31d44f79cd8b11bdde6f641cdea3c41a86",
+      "old_signing_key_mismatch_confirmed": true,
+      "release_signature_verified": true,
+      "installation_method": "Stopped background service, held installation update/runtime locks, made complete backup, atomically replaced verified binary and installation receipt; not installed by /update.",
+      "schema_before": 10,
+      "schema_after": 10,
+      "database_migration_required": false,
+      "all_tables_unchanged_during_replacement": true,
+      "configuration_and_attachment_files_unchanged": true,
+      "checked_payload_file_count": 27,
+      "all_business_tables_unchanged_after_terminal_validation": true,
+      "runtime_table_updates_after_restart": {
+        "app_network": [
+          "last_success"
+        ],
+        "app_presence": [
+          "fetched_at",
+          "server_age"
+        ],
+        "member_inbox_sync": [
+          "synced_at"
+        ]
+      },
+      "counts": {
+        "identity": 1,
+        "app_tasks": 20,
+        "app_messages": 404,
+        "app_sessions": 27,
+        "messages": 190,
+        "file_roots": 1,
+        "file_transfers": 10,
+        "runs": 16
+      },
+      "database_integrity": "ok",
+      "foreign_key_violations": 0,
+      "service_running": true,
+      "service_version": "0.8.0-alpha",
+      "doctor_ready": true,
+      "signed_online_metadata_check_passed": true,
+      "github_update_check_passed": true,
+      "real_pty_update_check_returned_to_same_session": true,
+      "original_conversation_visible": true,
+      "access_mode": "ask_for_approval",
+      "backup": "~/.local/share/xxassxx/backups/owner-release-080-20261014/",
+      "model_inference_rerun": false,
+      "other_machines_changed": false,
+      "raw_evidence": "smoke-output/owner-upgrade-080-20261014/"
     }
   },
   "daily_clients_and_mailbox_modified_during_release_verification": false

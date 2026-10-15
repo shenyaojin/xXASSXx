@@ -1,6 +1,14 @@
 # 项目理念与接续摘要
 
-更新日期：2026-10-14（America/Denver）。`0.8.0-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl，包含白名单读取与 Codex 能力交接。本轮执行电脑是 MacBook Air M3、成员 `mba`，已从 GitHub 发布包手动升级到 0.8.0 并将个人库从 schema 9 迁到 10，保持 Ask for approval。Lakota `test` 与 Trader `trader` 日常端仍为此前部署的 0.7.2，Trader 保持 Full access，Lakota 保持 Ask；Trader 独立信箱仍为 0.7.0、schema 2。Mac mini／`owner` 与师兄的 Mac 未直接升级，需要新能力的执行端也须升级。
+更新日期：2026-10-14（America/Denver）。`0.8.0-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl，包含白名单读取与 Codex 能力交接。`owner` 与 `mba` 两台 Mac 均已从 GitHub 发布包手动升级到 0.8.0，保留各自数据、配置与 Ask for approval；owner 原库已是 schema 10，MBA 此前由 schema 9 迁到 10。其他机器本轮未修改：据此前部署记录，Lakota `test` 与 Trader `trader` 日常端为 0.7.2，Trader 为 Full access、Lakota 为 Ask；Trader 独立信箱为 0.7.0、schema 2。
+
+## owner Mac 日常客户端升级（2026-10-14）
+
+用户报告 `/update` 签名无效并要求使用 GitHub 安装包升级、保留现有数据与配置。实际旧安装为 `~/.local/bin/xxassxx` 的 0.7.0 本地候选包，SHA-256 `7d43879a317d6d67a5be826912225f31d44f79cd8b11bdde6f641cdea3c41a86`，仍内置旧候选公钥；用 0.8.0 的真实清单重现签名拒绝。重新从 GitHub 下载 ARM 包、安装器、校验文件及签名元数据，与发布记录和正式公钥核对通过，未关闭签名验证。
+
+用户退出原窗口后，确认无在途任务，正常停服，并在持有更新锁与运行独占锁时备份、原位更换程序及安装记录。完整备份在 `~/.local/share/xxassxx/backups/owner-release-080-20261014/`，包括旧程序、安装及更新设置、数据库、配置与附件。原库和新版均为 schema 10，无需迁移。停机替换前后所有数据库表、配置及 27 份相关文件哈希一致；启动和实际终端检查后全部业务表仍一致，只有连接／在线／同步时间随运行刷新。20 项任务、404 条对话消息、27 个会话、190 条团队消息、10 条附件记录、16 次执行及 1 条白名单保持；完整性与外键检查通过，原权限仍为 Ask for approval。
+
+实际 PTY 打开原会话，历史答复可见，`/status` 显示 0.8.0-alpha、信箱已连接、后台运行中。直接在线验签与 GitHub 更新检查均通过；在真实界面执行 `/update` 后正常返回同一会话并显示“更新检查完成”，没有签名错误。此次安装本身为手动迁移正式公钥，后续 `/update` 检查已恢复。未重跑模型或科研任务，验证界面已退出，后台继续运行，未操作其他机器。精简记录已附于 [0.8.0 发布证据](releases/v0.8.0-alpha-evidence.json)。
 
 ## MBA 日常客户端升级（2026-10-14）
 
