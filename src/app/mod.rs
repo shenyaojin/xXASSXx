@@ -233,6 +233,28 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
             None
         };
     let tx = store.conn.unchecked_transaction()?;
+    if input.action == "chat" {
+        if let Some(task) = &input.task_id {
+            if crate::task_coordinator::is_task(&tx, task)? {
+                let t = crate::task_coordinator::get(store, task)?;
+                let questions: Vec<_> = t["questions"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|q| q["revision"] == t["revision"] && q["state"] == "user")
+                    .map(|q| q["id"].clone())
+                    .collect();
+                event(
+                    &tx,
+                    &stable_id(&input.request_id, "chat-questions"),
+                    &input.session_id,
+                    Some(task),
+                    "task_chat_questions",
+                    json!({"revision":t["revision"],"question_ids":questions}),
+                )?;
+            }
+        }
+    }
     if let Some(revision) = confirmation {
         event(
             &tx,

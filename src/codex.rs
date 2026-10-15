@@ -107,8 +107,7 @@ impl Drop for Group {
     }
 }
 
-pub(crate) fn command(executable: &Path, cwd: &Path) -> Command {
-    let mut c = Command::new(executable);
+pub(crate) fn runtime_path(c: &mut Command, executable: &Path) {
     if executable.is_absolute() {
         if let Some(parent) = executable.parent() {
             let paths = std::iter::once(parent.to_path_buf())
@@ -121,6 +120,11 @@ pub(crate) fn command(executable: &Path, cwd: &Path) -> Command {
             }
         }
     }
+}
+
+pub(crate) fn command(executable: &Path, cwd: &Path) -> Command {
+    let mut c = Command::new(executable);
+    runtime_path(&mut c, executable);
     c.current_dir(cwd)
         .kill_on_drop(true)
         .stdin(Stdio::null())
@@ -350,7 +354,7 @@ fn build_command(store: &Store, lease: &Lease, options: &Options) -> Result<Comm
     let access = crate::task_workspace::for_execution(&store.conn, &lease.task_id)
         .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
     let full_access = native.is_some()
-        && crate::access_mode::full(&store.conn)
+        && crate::task_workspace::execution_full(&store.conn, &lease.task_id)
             .map_err(|e| Failure::new("authorization_changed", e.to_string()))?;
     let executable = if native.is_some() && !full_access {
         sandbox_executable(store, &options.codex)

@@ -6,6 +6,14 @@ pub(super) struct Command {
 
 pub(super) const COMMANDS: &[Command] = &[
     Command {
+        name: "/codex",
+        description: "进入 Codex · 先选白名单目录，退出后返回",
+    },
+    Command {
+        name: "/activity",
+        description: "团队动态 · 查看共享进展和结果",
+    },
+    Command {
         name: "/inbox",
         description: "收件箱 · 查看和回复留言",
     },

@@ -26,7 +26,7 @@ pub fn check_binding(c: &Connection, task: &str, rev: i64) -> Result<(PathBuf, V
     let roots: Vec<PathBuf> = serde_json::from_str(&raw)?;
     for root in &roots {
         ensure!(
-            (crate::access_mode::full(c)?
+            ((crate::access_mode::full(c)? && !crate::team_activity::scoped(c, task, rev)?)
                 || c.query_row(
                     "SELECT EXISTS(SELECT 1 FROM file_roots WHERE path=?1)",
                     [root.to_str()],
@@ -54,11 +54,35 @@ pub fn bind(store: &Store, t: &Value) -> Result<()> {
         )?;
         return Ok(());
     }
-    let cwd = PathBuf::from(t["project"].as_str().unwrap());
+    let mut cwd = PathBuf::from(t["project"].as_str().unwrap());
     let canonical = crate::file_roots::directory(&cwd)
         .context("所绑定工作目录已删除或不可用；请选择目录后重试")?;
     ensure!(canonical == cwd, "工作目录路径已改变");
-    let roots = crate::native_tasks::available_roots(store)?;
+    let mut roots = crate::native_tasks::available_roots(store)?;
+    let white = {
+        let mut q = store
+            .conn
+            .prepare("SELECT path FROM file_roots ORDER BY path")?;
+        q.query_map([], |r| r.get::<_, String>(0))?
+            .map(|p| Ok(PathBuf::from(p?)))
+            .collect::<Result<Vec<_>>>()?
+    };
+    let shared = t["team_activity"] == true
+        && !white.is_empty()
+        && (t["draft"]["mode"] != "execute" || white.iter().any(|r| cwd.starts_with(r)));
+    if shared {
+        for root in &white {
+            ensure!(
+                crate::file_roots::directory(root).is_ok_and(|p| p == *root),
+                "白名单目录不可用"
+            );
+        }
+        if !white.iter().any(|r| cwd.starts_with(r)) {
+            cwd = white[0].clone();
+        }
+        roots = white;
+    }
+
     ensure!(
         roots.iter().any(|r| cwd.starts_with(r)),
         "所选工作目录尚未加入可访问目录；请在 CtrlR 添加，或重开任务选择其他目录"
@@ -67,7 +91,13 @@ pub fn bind(store: &Store, t: &Value) -> Result<()> {
         "INSERT OR IGNORE INTO task_bindings VALUES(?1,?2,?3,?4)",
         params![id, rev, cwd.to_str(), serde_json::to_string(&roots)?],
     )?;
-    check_binding(&store.conn, id, rev)?;
+    let (_, bound_roots) = check_binding(&store.conn, id, rev)?;
+    if shared && bound_roots == roots {
+        store.conn.execute(
+            "INSERT OR IGNORE INTO task_activity_scope VALUES(?1,?2)",
+            params![id, rev],
+        )?;
+    }
     Ok(())
 }
 fn signature(m: &fs::Metadata) -> (u64, u64, u64, i64, i64, i64, i64) {
@@ -201,7 +231,7 @@ pub fn freeze(store: &Store, t: &Value, execution: &str, files: &Value) -> Resul
         fs::write(&dest, &bytes)?;
         OpenOptions::new().read(true).open(&dest)?.sync_all()?;
         fs::set_permissions(&dest, fs::Permissions::from_mode(0o444))?;
-        manifest.push(json!({"member":store.owner()?,"root":n,"path":path,"snapshot_path":local,"snapshot_id":snapshot,"sha256":hash,"bytes":size,"captured_at":now()}));
+        manifest.push(json!({"member":store.owner()?,"root":n,"directory_name":root.file_name().unwrap_or_default().to_string_lossy(),"path":path,"snapshot_path":local,"snapshot_id":snapshot,"sha256":hash,"bytes":size,"captured_at":now()}));
     }
     let directory = base.join(&snapshot);
     ensure!(!directory.exists(), "存在未提交的材料目录，请检查恢复证据");

@@ -760,6 +760,14 @@ async fn sync_inner(store: &mut Store) -> Result<Value> {
     }
     for (id, raw) in local_facts {
         let event: Value = serde_json::from_str(&raw)?;
+        let shared: bool = store.conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM app_tasks WHERE id=?1 AND team_activity=1)",
+            [event["task_id"].as_str()],
+            |r| r.get(0),
+        )?;
+        if shared && identity["team_activity_protocol"] != 1 {
+            continue;
+        }
         let response = client
             .post(format!("{base}/v2/task-facts"))
             .bearer_auth(&credential)
@@ -777,10 +785,50 @@ async fn sync_inner(store: &mut Store) -> Result<Value> {
         .iter()
         .filter(|r| r.direction == "out" && r.state == "pending")
     {
+        if store.message(&record.message.message_id)?.state != "pending" {
+            continue;
+        }
         if record.message.operation == "task_v2" {
             let wire = crate::task_coordinator::Wire::parse(&record.message)?;
+            if wire.event == "proposal"
+                && wire.data["team_activity"] == true
+                && identity["team_activity_protocol"] == 1
+            {
+                let obsolete:bool=store.conn.query_row("SELECT EXISTS(SELECT 1 FROM app_tasks WHERE id=?1 AND (revision!=?2 OR state='cancelled'))",rusqlite::params![wire.task_id,wire.revision],|r|r.get(0))?;
+                if obsolete {
+                    let response = client
+                        .post(format!("{base}/v2/task-withdraw"))
+                        .bearer_auth(&credential)
+                        .json(&record.message)
+                        .send()
+                        .await?;
+                    let value = response_json(response).await?;
+                    if value["persisted"] == false {
+                        store.conn.execute("UPDATE messages SET state='withdrawn',error=NULL WHERE direction='out' AND state='pending' AND json_extract(payload,'$.recipient')=?1 AND json_extract(json_extract(payload,'$.body'),'$.task_id')=?2 AND json_extract(json_extract(payload,'$.body'),'$.revision')=?3",rusqlite::params![record.message.recipient,wire.task_id,wire.revision])?;
+                    } else {
+                        store.conn.execute(
+                            "UPDATE messages SET state='sent',error=NULL WHERE id=?1",
+                            [&record.message.message_id],
+                        )?;
+                    }
+                    continue;
+                }
+            }
+
+            if wire.event == "proposal"
+                && wire.data["team_activity"] == true
+                && identity["team_activity_protocol"] != 1
+            {
+                let reason = "信箱需要升级才能提供团队共享记录；任务尚未派发";
+                store.conn.execute(
+                    "UPDATE messages SET error=?2 WHERE id=?1",
+                    rusqlite::params![record.message.message_id, reason],
+                )?;
+                store.conn.execute("UPDATE app_tasks SET state='waiting',waiting_reason=?2,next_owner=initiator WHERE id=?1 AND revision=?3 AND state IN ('queued','waiting')",rusqlite::params![wire.task_id,reason,wire.revision])?;
+                continue;
+            }
             let files: bool = store.conn.query_row("SELECT EXISTS(SELECT 1 FROM app_tasks WHERE id=?1 AND (json_extract(draft,'$.mode')='files' OR json_extract(draft,'$.deliver_files')=1))",[&wire.task_id],|r|r.get(0))?;
-            if files {
+            if files && !matches!(wire.event.as_str(), "cancel" | "suspend") {
                 if attachment_peers.is_none() {
                     attachment_peers = Some(if identity["file_transfer_protocol"] == 1 {
                         response_json(
@@ -818,6 +866,22 @@ async fn sync_inner(store: &mut Store) -> Result<Value> {
             .send()
             .await
             .map_err(|_| anyhow::anyhow!("mailbox_unavailable; outbox retained"))?;
+        if record.message.operation == "task_v2"
+            && response.status() == reqwest::StatusCode::CONFLICT
+        {
+            let value: Value = response.json().await?;
+            if value["error"] == "task_peer_offline" {
+                let wire = crate::task_coordinator::Wire::parse(&record.message)?;
+                let reason = "等待执行成员上线并启用支持团队动态的新版客户端；尚未开始执行";
+                store.conn.execute(
+                    "UPDATE messages SET error=?2 WHERE id=?1",
+                    rusqlite::params![record.message.message_id, reason],
+                )?;
+                store.conn.execute("UPDATE app_tasks SET state='waiting',waiting_reason=?2,next_owner=?3 WHERE id=?1 AND revision=?4 AND state IN ('queued','waiting')",rusqlite::params![wire.task_id,reason,record.message.recipient,wire.revision])?;
+                continue;
+            }
+            anyhow::bail!("task transport conflict: {}", value["error"]);
+        }
         response_json(response).await?;
         store.conn.execute(
             "UPDATE messages SET state='sent',error=NULL WHERE id=?1 AND state='pending'",
@@ -923,5 +987,17 @@ async fn sync_inner(store: &mut Store) -> Result<Value> {
     .await
     .err()
     .map(|e| e.to_string());
-    Ok(json!({"sent":sent,"received":received,"member_inbox_error":inbox_error}))
+    let activity_error = crate::team_activity::sync(
+        store,
+        &client,
+        base,
+        &credential,
+        identity["team_activity_protocol"] == 1,
+    )
+    .await
+    .err()
+    .map(|e| e.to_string());
+    Ok(
+        json!({"sent":sent,"received":received,"member_inbox_error":inbox_error,"team_activity_error":activity_error}),
+    )
 }

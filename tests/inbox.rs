@@ -290,15 +290,15 @@ fn migration_keeps_transport_and_historical_baseline_and_rejects_future_schema()
     assert_eq!(
         c.pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        2
+        3
     );
     inbox::migrate(&mut c).unwrap();
-    c.pragma_update(None, "user_version", 3).unwrap();
+    c.pragma_update(None, "user_version", 4).unwrap();
     assert!(inbox::migrate(&mut c).is_err());
     assert_eq!(
         c.pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        3
+        4
     );
 }
 

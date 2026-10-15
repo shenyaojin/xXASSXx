@@ -42,10 +42,14 @@ pub async fn heartbeat(store: &mut Store) -> Result<()> {
         .build()?;
     let busy:bool=store.conn.query_row("SELECT EXISTS(SELECT 1 FROM workflows WHERE state='running') OR EXISTS(SELECT 1 FROM app_commands WHERE state='processing')",[],|r|r.get(0))?;
     let url = format!("{}/v1/presence", cfg.mailbox_url.trim_end_matches('/'));
+    let mut heartbeat = json!({"activity":if busy{"busy"}else{"idle"}});
+    if crate::team_activity::status(store)?["supported"] == true {
+        heartbeat["team_activity_protocol"] = json!(1);
+    }
     let response = client
         .post(&url)
         .bearer_auth(&key)
-        .json(&json!({"activity":if busy{"busy"}else{"idle"}}))
+        .json(&heartbeat)
         .send()
         .await
         .map_err(|_| anyhow::anyhow!("presence_unavailable"))?;

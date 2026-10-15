@@ -125,6 +125,8 @@ xxassxx update --check  # 检查新版
 xxassxx update          # 下载、验证并安装
 ```
 
+开发版新增 `/activity` 查看团队共享的白名单任务进展与结果；`/codex` 可选择白名单目录进入交互式 Codex，退出后回到原会话。在线派发、可见性、跨 schema 升级与手动入口边界见 [团队动态](docs/team-activity.md)。
+
 成员收件箱可用 `/inbox` 查看全部、未读和需要我处理的协作记录，支持普通留言、回复及离线恢复。从旧版升级涉及数据库迁移；操作见 [成员收件箱](docs/inbox.md)，dot 的真实连接状态见 [接入说明](docs/dot-connection.md)。
 
 命令联想和任务归档：输入 `/` 看中文菜单，方向键选择，Tab 补全，Enter 打开；`/tasks` 按进行中、已结束、已归档分类。已结束任务按 `a` 归档，在已归档页按 `a` 恢复。记录和结果保留，正在进行的任务可按 CtrlX 手动停止、填写原因并归档。详见 [界面与归档](docs/ui-experience.md)。

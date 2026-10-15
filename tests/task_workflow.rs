@@ -54,6 +54,232 @@ fn count(s: &Store, sql: &str) -> i64 {
         .query_row(sql, [], |r| r.get(0))
         .unwrap()
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn one_approval_covers_staged_delivery_chat_answer_and_resumed_output() {
+    use xxassxx::task_workspace::{self, Command};
+    let team = Team::new();
+    files(&team, "b");
+    let (url, server) = model_server().await;
+    for member in ["a", "b"] {
+        let mut s = team.store(member);
+        let mut cfg = s.member_config().unwrap();
+        cfg.model = json!({"provider":"compatible","base_url":url,"model":"simulation","api_key_env":"","allow_insecure_http":true,"thinking":false});
+        s.configure_member(&cfg).unwrap();
+    }
+    let (i, id) = draft(
+        &team,
+        "@b 阶段交付回归：先发阶段文件，等我选择模式，再生成并发送最终文件",
+    );
+    let mut a = team.store("a");
+    let mut b = team.store("b");
+    tasks::prepare(&a,&id,json!({"goal":"按阶段生成并交付文件","mode":"execute","deliver_files":true,"deliverables":["阶段文件","最终文件"],"questions":[]})).unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    transfer(&a, &mut b);
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    assert_eq!(count(&b, "SELECT count(*) FROM runs"), 0);
+    task_workspace::execute(
+        &b,
+        Command::Allow {
+            task: id.clone(),
+            revision: 1,
+            parent: team.dir.path().join("b/work"),
+            read_dirs: vec![],
+            timeout_secs: 20,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        xxassxx::access_mode::get(&rusqlite::Connection::open(&b.path).unwrap()).unwrap(),
+        xxassxx::access_mode::Mode::AskForApproval
+    );
+    for _ in 0..10 {
+        tasks::tick(&b, Path::new(BIN)).await.unwrap();
+        transfer(&b, &mut a);
+        tasks::tick(&a, Path::new(BIN)).await.unwrap();
+        transfer(&a, &mut b);
+        if count(&a, "SELECT count(*) FROM task_questions WHERE state='user'") == 1 {
+            break;
+        }
+    }
+    assert_eq!(
+        count(&a, "SELECT count(*) FROM task_questions WHERE state='user'"),
+        1
+    );
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM file_transfers WHERE authorized=1 AND state='queued'"
+        ),
+        1,
+        "intermediate file must not need export approval"
+    );
+    let history = app::history(&a, &i.session_id).unwrap();
+    assert!(history.iter().any(|m| {
+        m["body"]
+            .as_str()
+            .is_some_and(|s| s.contains("请选择最终结果模式"))
+    }));
+    assert!(
+        !history.iter().any(|m| m["body"]
+            .as_str()
+            .is_some_and(|s| s.contains("再次批准第二阶段"))),
+        "a resolver must not invent extra approval questions"
+    );
+    let q = tasks::get(&a, &id).unwrap()["questions"][0]["id"].clone();
+    let chat = action(&i, &id, "chat", 1, "精确结果");
+    submit(&mut a, &chat);
+    tasks::task_chat(&a, &chat).await.unwrap();
+    let current = tasks::get(&a, &id).unwrap();
+    assert_eq!(
+        current["questions"][0]["answer"], "精确结果",
+        "record the user's original words, not model paraphrase"
+    );
+    assert_eq!(current["state"], "waiting");
+    assert_eq!(current["waiting_for"], "答案已提交，等待执行方接收");
+    assert_eq!(current["next_owner"], "b");
+    assert_eq!(
+        count(&b, "SELECT count(*) FROM runs"),
+        1,
+        "no resume before message delivery"
+    );
+    transfer(&a, &mut b);
+    transfer(&b, &mut a);
+    assert_eq!(
+        tasks::get(&a, &id).unwrap()["waiting_for"],
+        "执行方已接收回答，正在准备续接"
+    );
+    assert_eq!(tasks::get(&b, &id).unwrap()["questions"][0]["id"], q);
+    assert_eq!(tasks::get(&b, &id).unwrap()["next_owner"], "b");
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    assert_eq!(
+        count(&b, "SELECT count(*) FROM runs WHERE state='succeeded'"),
+        2
+    );
+    assert_eq!(count(&b, "SELECT count(*) FROM task_workspaces"), 1);
+    assert_eq!(
+        count(&b, "SELECT count(*) FROM file_transfers WHERE authorized=1"),
+        2
+    );
+    assert_eq!(
+        std::fs::read_to_string(team.dir.path().join("b/work/final.txt")).unwrap(),
+        "83\n"
+    );
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM task_questions WHERE state IN ('user','coordinating','investigating')"
+        ),
+        0
+    );
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM runs WHERE sandbox='task-full-access'"
+        ),
+        2
+    );
+    server.abort();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn chat_status_cannot_invent_resume_and_answers_do_not_clear_other_questions() {
+    let team = Team::new();
+    let (i, id) = draft(&team, "@b 核对两项选择");
+    let mut a = team.store("a");
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    let (url, server) = model_server().await;
+    let mut cfg = a.member_config().unwrap();
+    cfg.model = json!({"provider":"compatible","base_url":url,"model":"simulation","api_key_env":"","allow_insecure_http":true,"thinking":false});
+    a.configure_member(&cfg).unwrap();
+    let c = rusqlite::Connection::open(&a.path).unwrap();
+    for body in ["选择结果模式", "选择报告语言"] {
+        c.execute("INSERT INTO task_questions(id,task_id,revision,asker,body,reason,known,state,created_at) VALUES(?1,?2,1,'b',?3,'需要选择','','user',1)",rusqlite::params![uuid::Uuid::new_v4().to_string(),id,body]).unwrap();
+    }
+    c.execute("UPDATE app_tasks SET state='waiting',next_owner='a',waiting_reason='等待用户回答' WHERE id=?1",[&id]).unwrap();
+    let status = action(&i, &id, "chat", 1, "我还需要回答吗");
+    submit(&mut a, &status);
+    tasks::task_chat(&a, &status).await.unwrap();
+    let history = app::history(&a, &i.session_id).unwrap();
+    let last = history.last().unwrap()["body"].as_str().unwrap();
+    assert!(last.contains("仍在等待"), "{last}");
+    assert!(
+        !last.contains("任务已继续"),
+        "model's false success must not be displayed"
+    );
+    assert_eq!(
+        count(&a, "SELECT count(*) FROM task_questions WHERE state='user'"),
+        2
+    );
+    let answer = action(&i, &id, "chat", 1, "精确结果");
+    submit(&mut a, &answer);
+    tasks::task_chat(&a, &answer).await.unwrap();
+    assert_eq!(
+        count(&a, "SELECT count(*) FROM task_questions WHERE state='user'"),
+        1
+    );
+    assert_eq!(tasks::get(&a, &id).unwrap()["waiting_for"], "等待用户回答");
+    let stale = action(&i, &id, "chat", 1, "精确结果");
+    submit(&mut a, &stale);
+    c.execute(
+        "UPDATE task_questions SET state='superseded' WHERE state='user'",
+        [],
+    )
+    .unwrap();
+    assert!(
+        tasks::task_chat(&a, &stale).await.is_err(),
+        "a queued answer cannot bind to a replacement question"
+    );
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM task_questions WHERE state='answered'"
+        ),
+        1
+    );
+    server.abort();
+}
+
+#[test]
+fn schema_eleven_isolated_approval_is_not_silently_expanded() {
+    use xxassxx::task_workspace::{self, Command};
+    let team = Team::new();
+    files(&team, "b");
+    let (i, id) = draft(&team, "@b 修改指定文件");
+    let a = team.store("a");
+    let mut b = team.store("b");
+    tasks::prepare(
+        &a,
+        &id,
+        json!({"goal":"修改文件","mode":"execute","deliver_files":false,"deliverables":["结果"]}),
+    )
+    .unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    transfer(&a, &mut b);
+    let approve = || Command::Allow {
+        task: id.clone(),
+        revision: 1,
+        parent: team.dir.path().join("b/work"),
+        read_dirs: vec![],
+        timeout_secs: 20,
+    };
+    task_workspace::execute(&b, approve()).unwrap();
+    let path = b.path.clone();
+    drop(b);
+    let c = rusqlite::Connection::open(&path).unwrap();
+    c.execute_batch("ALTER TABLE task_workspaces DROP COLUMN full_access; PRAGMA user_version=11;")
+        .unwrap();
+    drop(c);
+    let b = Store::open(&path).unwrap();
+    let c = rusqlite::Connection::open(&path).unwrap();
+    assert!(!task_workspace::binding(&c, &id, 1).unwrap().full_access);
+    assert!(
+        task_workspace::view(&b, &tasks::get(&b, &id).unwrap()).unwrap()["legacy_approval"] == true
+    );
+    task_workspace::execute(&b, approve()).unwrap();
+    assert!(task_workspace::binding(&c, &id, 1).unwrap().full_access);
+    assert!(!task_workspace::has_grant(&c, &id, 2).unwrap());
+}
 fn transfer(from: &Store, to: &mut Store) {
     let owner = to.owner().unwrap();
     for r in from.messages(None).unwrap().into_iter().filter(|r| {
@@ -269,6 +495,8 @@ fn bounded_snapshot_survives_live_edits_and_respects_revocation() {
     let refs = json!([{"root":0,"path":"fast.py"}]);
     let ex = uuid::Uuid::new_v4().to_string();
     let snapshot = task_materials::freeze(&s, &task, &ex, &refs).unwrap();
+    let (_, source_manifest) = task_materials::verify(&s, &snapshot).unwrap();
+    assert_eq!(source_manifest[0]["directory_name"], "work");
     std::fs::write(t.dir.path().join("a/work/fast.py"), "changed live source").unwrap();
     let (dir, manifest) = task_materials::verify(&s, &snapshot).unwrap();
     assert_eq!(
@@ -362,8 +590,9 @@ async fn model_server_with_invalid_reviews(
             },
             "resolve" if body=="本地成员是谁？"=>json!({"action":"answer","body":"b"}),
             "resolve" if body=="实验模式标签是什么？"&&ctx["local_member"]=="a"=>json!({"action":"answer","body":"实验模式 MARINER"}),
-            "resolve"=>json!({"action":"escalate","body":body}),
-            "followup" => json!({"action":"reply","body":"这个问题是想知道你更看重速度还是准确。按 CtrlB 选问题后告诉我即可。"}),
+            "resolve"=>json!({"action":"escalate","body":format!("{body} 另外请再次批准第二阶段。")}),
+            "followup" if ctx["extra"]["owner_message"] == "精确结果" => json!({"action":"answer","question_id":ctx["extra"]["answerable_questions"][0]["id"],"body":"模型改写的答案不可入库"}),
+            "followup" => json!({"action":"reply","body":"不用回答了，任务已继续。"}),
             "review" if ctx["task"]["original"].as_str().unwrap().contains("跨端调查回归") && !ctx["task"]["history"].as_array().unwrap().iter().any(|h| h["kind"]=="agent_review") => json!({"action":"investigate","body":"请再次核对两种脚本的参数"}),
             "review" if ctx["extra"]["candidates"][0]["result"]["body"].as_str().unwrap().contains("缺参数")=>json!({"action":"continue","body":"补充 precise.py 的 iterations 参数及 fast.py 的差异"}),
             "review"=>json!({"action":"complete","body":"选择 precise.py；iterations=100。fast.py 为10。依据两份固定快照，已补齐所有交付项。"}),
@@ -1051,6 +1280,32 @@ async fn missing_analysis_materials_start_new_discovery_preserving_old_snapshot(
         .query_row("SELECT id FROM task_snapshots", [], |r| r.get(0))
         .unwrap();
     let (old_dir, _) = task_materials::verify(&b, &original).unwrap();
+    c.execute(
+        "INSERT INTO task_candidates VALUES(?1,0,'b',?2)",
+        rusqlite::params![id, json!({"body":"obsolete absence claim"}).to_string()],
+    )
+    .unwrap();
+    let analysis: String = c
+        .query_row(
+            "SELECT id FROM task_executions WHERE phase='analyze'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    let fresh = tasks::execution_context(&c, &analysis).unwrap().unwrap();
+    assert_eq!(fresh["candidate_deliveries"], json!([]));
+    assert_eq!(fresh["previous_task_findings"], json!([]));
+    assert!(
+        !fresh["previous_execution"].is_null(),
+        "keep current discovery evidence"
+    );
+    assert_eq!(
+        count(&b, "SELECT count(*) FROM task_candidates WHERE revision=0"),
+        1,
+        "model context filtering must preserve the historical record"
+    );
+    c.execute("DELETE FROM task_candidates WHERE revision=0", [])
+        .unwrap();
     std::fs::write(
         t.dir.path().join("b/work/fast.py"),
         "iterations=20 # new source",
@@ -1610,7 +1865,7 @@ async fn write_run_requires_local_revision_grant_and_returns_real_artifacts() {
     assert!(app::history(&a, &i.session_id).unwrap().iter().any(|m| {
         m["body"]
             .as_str()
-            .is_some_and(|text| text.contains("已开始在独立任务目录"))
+            .is_some_and(|text| text.contains("已批准本次任务"))
     }));
     let a_conn = rusqlite::Connection::open(&a.path).unwrap();
     let raw: String = a_conn
@@ -1624,7 +1879,7 @@ async fn write_run_requires_local_revision_grant_and_returns_real_artifacts() {
     assert_eq!(candidate["sources"].as_array().unwrap().len(), 3);
     assert_eq!(candidate["sources"][1]["bytes"], 3);
     let execution = bt["executions"][0]["id"].as_str().unwrap();
-    assert_eq!(b.runs(execution).unwrap()[0].sandbox, "task-workspace");
+    assert_eq!(b.runs(execution).unwrap()[0].sandbox, "task-full-access");
     // Result paths cannot escape through a symlink, and revoked grants are live fences.
     std::os::unix::fs::symlink(
         t.dir.path().join("b/work/fast.py"),

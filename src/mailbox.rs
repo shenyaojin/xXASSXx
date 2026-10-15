@@ -3,7 +3,7 @@ use crate::{store::now, team::Message};
 use anyhow::{Context, Result, ensure};
 use axum::{
     Json, Router,
-    extract::{DefaultBodyLimit, Path, State},
+    extract::{DefaultBodyLimit, Path, Query, State},
     http::{HeaderMap, StatusCode},
     routing::{get, post},
 };
@@ -44,6 +44,9 @@ struct Relay {
 pub(crate) type ApiError = (StatusCode, Json<Value>);
 pub(crate) fn problem(status: StatusCode, text: &str) -> ApiError {
     (status, Json(json!({"error":text})))
+}
+fn request_error_from_sql(error: rusqlite::Error) -> ApiError {
+    request_error(error.into())
 }
 fn request_error(error: anyhow::Error) -> ApiError {
     if error.downcast_ref::<rusqlite::Error>().is_some() {
@@ -156,6 +159,8 @@ pub fn router(db: &FsPath, cfg: &RelayConfig) -> Result<Router> {
         .route("/v2/events/{id}/ack", post(system_ack))
         .route("/v2/meeting-report", post(meeting_report))
         .route("/v2/task-facts", post(local_task_facts))
+        .route("/v2/team-activity", get(team_activity))
+        .route("/v2/task-withdraw", post(task_withdraw))
         .route("/v1/presence", get(presence_get).post(presence_post))
         .route("/v1/messages", post(send))
         .route("/v1/inbox", get(inbox))
@@ -209,7 +214,21 @@ async fn send(
             return Err(problem(StatusCode::CONFLICT, "message_id conflict"));
         }
     } else {
+        if tx
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM relay_withdrawn_proposals WHERE id=?1 AND sender=?2)",
+                params![msg.message_id, sender],
+                |r| r.get::<_, bool>(0),
+            )
+            .map_err(request_error_from_sql)?
+        {
+            return Err(problem(StatusCode::GONE, "task_proposal_withdrawn"));
+        }
+        if !crate::team_activity::require_online(&tx, &msg, now()).map_err(request_error)? {
+            return Err(problem(StatusCode::CONFLICT, "task_peer_offline"));
+        }
         crate::task_schedule::accept(&tx, &msg, now()).map_err(request_error)?;
+        crate::team_activity::project(&tx, &msg, now()).map_err(request_error)?;
         tx.execute("INSERT INTO relay_messages(id,sender,recipient,payload,created_at) VALUES(?1,?2,?3,?4,?5)",params![msg.message_id,sender,msg.recipient,payload,now()]).map_err(|_|problem(StatusCode::INTERNAL_SERVER_ERROR,"storage unavailable"))?;
         crate::inbox::project(&tx, &msg, false).map_err(crate::inbox::http::error)?;
     }
@@ -300,7 +319,7 @@ async fn whoami(
         )
     })?;
     Ok(Json(
-        json!({"team_id":relay.team,"member_id":me,"task_protocol":2,"file_transfer_protocol":1,"member_inbox_protocol":1,
+        json!({"team_id":relay.team,"member_id":me,"task_protocol":2,"file_transfer_protocol":1,"member_inbox_protocol":1,"team_activity_protocol":1,
             "member_directory":{"protocol":1,"members":members}}),
     ))
 }
@@ -309,6 +328,8 @@ async fn whoami(
 #[serde(deny_unknown_fields)]
 struct PresenceInput {
     activity: String,
+    #[serde(default)]
+    team_activity_protocol: u32,
 }
 async fn presence_post(
     State(relay): State<Arc<Relay>>,
@@ -322,6 +343,15 @@ async fn presence_post(
         return Err(problem(StatusCode::BAD_REQUEST, "invalid activity"));
     }
     c.execute("INSERT INTO relay_presence(member_id,busy,seen_at) VALUES(?1,?2,?3) ON CONFLICT(member_id) DO UPDATE SET busy=excluded.busy,seen_at=excluded.seen_at",params![me,input.activity=="busy",now()]).map_err(|_|problem(StatusCode::INTERNAL_SERVER_ERROR,"storage unavailable"))?;
+    if input.team_activity_protocol == 1 {
+        c.execute("INSERT INTO relay_activity_capabilities VALUES(?1,?2) ON CONFLICT(member_id) DO UPDATE SET seen_at=excluded.seen_at",params![me,now()]).map_err(request_error_from_sql)?;
+    } else {
+        c.execute(
+            "DELETE FROM relay_activity_capabilities WHERE member_id=?1",
+            [me],
+        )
+        .map_err(request_error_from_sql)?;
+    }
     Ok(Json(json!({"accepted":true,"ttl_secs":30})))
 }
 async fn presence_get(
@@ -434,6 +464,7 @@ async fn local_task_facts(
             workflow: None,
         };
         crate::task_schedule::accept(&tx, &m, now())?;
+        crate::team_activity::project(&tx, &m, now())?;
         tx.execute(
             "INSERT INTO relay_local_facts VALUES(?1,?2,?3)",
             params![id, me, raw],
@@ -444,4 +475,37 @@ async fn local_task_facts(
     let mut apply = apply;
     apply().map_err(request_error)?;
     Ok(Json(json!({"persisted":true})))
+}
+
+#[derive(Deserialize, Default)]
+#[serde(default, deny_unknown_fields)]
+struct ActivityPage {
+    after: i64,
+}
+async fn team_activity(
+    State(relay): State<Arc<Relay>>,
+    headers: HeaderMap,
+    Query(page): Query<ActivityPage>,
+) -> std::result::Result<Json<Value>, ApiError> {
+    let c = connection(&relay.db).map_err(request_error)?;
+    let me = auth(&c, &headers)?;
+    crate::team_activity::changes(&c, &me, page.after)
+        .map(Json)
+        .map_err(request_error)
+}
+
+async fn task_withdraw(
+    State(relay): State<Arc<Relay>>,
+    headers: HeaderMap,
+    Json(message): Json<Message>,
+) -> std::result::Result<Json<Value>, ApiError> {
+    let mut c = connection(&relay.db).map_err(request_error)?;
+    let member = auth(&c, &headers)?;
+    let tx = c
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(request_error_from_sql)?;
+    let persisted =
+        crate::team_activity::withdraw(&tx, &member, &message).map_err(request_error)?;
+    tx.commit().map_err(request_error_from_sql)?;
+    Ok(Json(json!({"persisted":persisted})))
 }

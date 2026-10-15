@@ -93,13 +93,23 @@ pub fn context(conn: &Connection, task: &str) -> Result<Option<Value>> {
             "files are supporting references; deliveries alone are prepared as attachments, including binary files. For execute, deliveries must be outputs inside this task workspace. Sender approval of fixed files is separate; Rust handles transport and receipts. Follow the supplied file-selection skill; do not transfer bytes yourself."
         );
     }
+    if context["business_task"]["phase"] == "analyze" {
+        context["material_origin_rule"] = json!(
+            "The physical snapshot uses generated root-N prefixes, not original directory names. Resolve a document's references to named source directories using business_task.source_directory_map and material_sources before claiming a file is missing or different. A copied file's source root/path and SHA256 identify its original; no second copy is required merely because a named source directory is not nested inside the snapshot. These mappings grant no access to the original directories. Counting snapshot files establishes selected-file coverage only, not a full source inventory; use prior discovery evidence for any broader claim. If a needed source truly has no mapping/evidence, submit a question for fresh discovery rather than treating snapshot absence as source absence."
+        );
+    }
     context["access_mode"] = json!(crate::access_mode::get(conn)?);
-    if crate::access_mode::full(conn)? {
+    if shared_read(conn, task)? {
+        context["team_visibility"] = json!(
+            "This whitelist task publishes its goal, progress, final result and bounded source references to all current team members. Only read authorized_roots; do not include unrelated private context or raw tool logs in the result."
+        );
+    }
+    if crate::task_workspace::execution_full(conn, task)? {
         context["execution_policy"] = json!(
-            "The local device owner selected Full access: native tools can read/write local files, run programs and use the network without per-action approval. This is local standing permission, not permission on another member's machine. Fulfill only the requested task: read-only requests and attachment analysis stay read-only; modify original files only when the intent calls for it, and preserve existing unrelated work. For execution, use execution_access.directory as the starting directory, not a writable boundary; other requested local paths and network access are permitted. Inspect existing output before retries and reuse completed work. Keep resource limits and synchronous execution. Never change xXASSXx state or credentials to manufacture success, and never send files outside the product transport. Follow the supplied skills for evidence, result format and handoff; this current policy controls over their default isolated-workspace restrictions."
+            "The local device owner approved the operations needed by this task, either once for this task or through Full access. Native tools may read/write requested local files, run programs, use the network, install necessary dependencies, and generate/use task credentials without another approval. This authorizes this task only, not unrelated work or another member's machine. Honor explicit read-only, path and sequencing requirements; preserve unrelated work. Use execution_access.directory as the starting directory and a default place for logs, not a writable boundary. Credentials stay local: never submit private keys or secret values as evidence or deliveries; a requested public key is deliverable. Inspect and reuse completed outputs before retries. Wait for genuinely missing business facts or external actions using submit_task_question; do not ask for permissions already supplied here. Keep resource limits and synchronous execution. Never modify xXASSXx state or credentials to manufacture success, and transfer files only through the product. This current policy controls over historical isolated-workspace instructions."
         );
         context["attachment_policy"] = json!(
-            "Full access on this sender permits automatic sending of requested files. Submit deliveries separately from supporting files; Rust prepares fixed copies, transports them and verifies receipt. Execute outputs may be anywhere on this local machine, not only working_directory. Do not claim receipt before actual transport facts, and do not request a redundant sending approval."
+            "This sender's task approval includes sending the requested deliverables to the agreed recipient. Submit deliveries separately from supporting files; Rust prepares fixed copies, transports them and verifies receipt. Execute outputs may be in any task-requested local location. Never send private keys or unrelated credentials. For staged work, submit_task_question may include deliveries (for example a public key) before waiting for an external action, then resume the same task after the answer. Do not claim receipt from preparation alone or request another sending approval."
         );
     }
     if context["business_task"]["confirmed_intent"]["mode"] == "files" {
@@ -368,4 +378,10 @@ pub async fn run_local(store: &mut Store, exe: &Path) -> Result<()> {
         tx.commit()?;
     }
     Ok(())
+}
+
+/// Shared read tasks keep the declared whitelist boundary even in Full access.
+/// Explicit execution still uses the owner's separately chosen execution mode.
+pub fn shared_read(c: &Connection, execution: &str) -> Result<bool> {
+    Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM task_executions e JOIN task_activity_scope s ON s.task_id=e.task_id AND s.revision=e.revision WHERE e.id=?1 AND e.phase!='execute')",[execution],|r|r.get(0))?)
 }

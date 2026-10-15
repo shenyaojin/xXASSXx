@@ -327,7 +327,9 @@ pub fn prepare(store: &Store, p: Prepare, explicit_selection: bool) -> Result<Va
                 .task
                 .as_ref()
                 .and_then(|t| crate::task_workspace::binding(&store.conn, &t.id, t.revision).ok());
-            if !task_directory.is_some_and(|scope| path.starts_with(scope.directory)) {
+            if !task_directory
+                .is_some_and(|scope| scope.full_access || path.starts_with(scope.directory))
+            {
                 store.allowed_source(&path)?;
             }
         }
@@ -701,7 +703,8 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
         false,
     )?;
     let automatic:bool=store.conn.query_row("SELECT EXISTS(SELECT 1 FROM transfer_grants WHERE kind='task_outputs' AND task_id=?1 AND revision=?2 AND recipient=?3 AND revoked=0)",params![task,rev,recipient],|r|r.get(0))?;
-    if automatic && !delivering_files && result["state"] == "draft" {
+    let task_approved = access.as_ref().is_some_and(|a| a.full_access);
+    if (automatic || task_approved) && !delivering_files && result["state"] == "draft" {
         allow(store, &id)?;
     }
     let current = get(store, &id)?;
