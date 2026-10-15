@@ -1501,12 +1501,13 @@ pub fn execution_context(c: &Connection, id: &str) -> Result<Option<Value>> {
         [v["task_id"].as_str()],
         |r| Ok((r.get(0)?, r.get(1)?)),
     )?;
-    let (cwd, _) = crate::task_materials::check_binding(
+    let (cwd, source_roots) = crate::task_materials::check_binding(
         c,
         string(&v, "task_id")?,
         v["revision"].as_i64().unwrap(),
     )?;
     v["logical_working_directory"] = json!(cwd);
+    v["source_directory_map"] = json!(source_roots.iter().enumerate().map(|(index,path)|json!({"source_root":index,"directory_name":path.file_name().unwrap_or_default().to_string_lossy(),"snapshot_prefix":format!("root-{index}"),"authority":"Origin metadata only; use authorized_roots for actual reads."})).collect::<Vec<_>>());
     v["material_budget"] = c.query_row("SELECT max_files,max_bytes FROM task_settings WHERE singleton=1", [], |r| Ok(json!({"max_files":r.get::<_,i64>(0)?,"max_total_bytes":r.get::<_,i64>(1)?,"types":"UTF-8 text only; no binary or symlink materials","selection":"Discover candidate names and file sizes first. Select only necessary evidence within both limits; prefer small scripts, inputs and documentation over generated results or large notebooks. State coverage limits. Submission errors are corrective feedback; adjust candidates and resubmit in this run."})))?;
     v["recovery_reason"] = json!(c.query_row(
         "SELECT recovery_reason FROM task_executions WHERE id=?1",

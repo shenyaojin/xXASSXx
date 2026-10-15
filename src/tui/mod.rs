@@ -2031,10 +2031,9 @@ impl Ui {
             lines.push(Line::styled("暂无待处理任务", theme::muted()));
         }
         lines.push(Line::from(""));
-        lines.push(Line::styled(
-            "/inbox 收件箱 · /activity 团队动态",
-            theme::accent(),
-        ));
+        lines.push(Line::styled("/inbox 收件箱", theme::accent()));
+        lines.push(Line::styled("/activity 团队动态", theme::accent()));
+        lines.push(Line::styled("/codex 进入 Codex", theme::accent()));
         lines.push(Line::styled("/archived 已归档", theme::muted()));
         lines.push(Line::styled("Tab 查看成员", theme::muted()));
         f.render_widget(Paragraph::new(lines), inner);

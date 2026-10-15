@@ -269,6 +269,8 @@ fn bounded_snapshot_survives_live_edits_and_respects_revocation() {
     let refs = json!([{"root":0,"path":"fast.py"}]);
     let ex = uuid::Uuid::new_v4().to_string();
     let snapshot = task_materials::freeze(&s, &task, &ex, &refs).unwrap();
+    let (_, source_manifest) = task_materials::verify(&s, &snapshot).unwrap();
+    assert_eq!(source_manifest[0]["directory_name"], "work");
     std::fs::write(t.dir.path().join("a/work/fast.py"), "changed live source").unwrap();
     let (dir, manifest) = task_materials::verify(&s, &snapshot).unwrap();
     assert_eq!(

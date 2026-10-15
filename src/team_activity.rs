@@ -70,6 +70,7 @@ fn evidence(data: &Value) -> Vec<Value> {
             for key in [
                 "member",
                 "root",
+                "directory_name",
                 "path",
                 "sha256",
                 "bytes",

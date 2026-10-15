@@ -231,7 +231,7 @@ pub fn freeze(store: &Store, t: &Value, execution: &str, files: &Value) -> Resul
         fs::write(&dest, &bytes)?;
         OpenOptions::new().read(true).open(&dest)?.sync_all()?;
         fs::set_permissions(&dest, fs::Permissions::from_mode(0o444))?;
-        manifest.push(json!({"member":store.owner()?,"root":n,"path":path,"snapshot_path":local,"snapshot_id":snapshot,"sha256":hash,"bytes":size,"captured_at":now()}));
+        manifest.push(json!({"member":store.owner()?,"root":n,"directory_name":root.file_name().unwrap_or_default().to_string_lossy(),"path":path,"snapshot_path":local,"snapshot_id":snapshot,"sha256":hash,"bytes":size,"captured_at":now()}));
     }
     let directory = base.join(&snapshot);
     ensure!(!directory.exists(), "存在未提交的材料目录，请检查恢复证据");

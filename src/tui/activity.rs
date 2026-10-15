@@ -182,9 +182,12 @@ impl ActivityUi {
                 for source in event["sources"].as_array().into_iter().flatten() {
                     if let Some(path) = source["path"].as_str() {
                         content.push(format!(
-                            "依据：@{} / root-{} / {}{}",
+                            "依据：@{} / {} / {}{}",
                             source["member"].as_str().unwrap_or(""),
-                            source["root"],
+                            source["directory_name"]
+                                .as_str()
+                                .map(str::to_owned)
+                                .unwrap_or_else(|| source["root"].to_string()),
                             path,
                             source["sha256"]
                                 .as_str()

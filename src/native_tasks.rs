@@ -93,6 +93,11 @@ pub fn context(conn: &Connection, task: &str) -> Result<Option<Value>> {
             "files are supporting references; deliveries alone are prepared as attachments, including binary files. For execute, deliveries must be outputs inside this task workspace. Sender approval of fixed files is separate; Rust handles transport and receipts. Follow the supplied file-selection skill; do not transfer bytes yourself."
         );
     }
+    if context["business_task"]["phase"] == "analyze" {
+        context["material_origin_rule"] = json!(
+            "The physical snapshot uses generated root-N prefixes, not original directory names. Resolve a document's references to named source directories using business_task.source_directory_map and material_sources before claiming a file is missing or different. A copied file's source root/path and SHA256 identify its original; no second copy is required merely because a named source directory is not nested inside the snapshot. These mappings grant no access to the original directories. Counting snapshot files establishes selected-file coverage only, not a full source inventory; use prior discovery evidence for any broader claim. If a needed source truly has no mapping/evidence, submit a question for fresh discovery rather than treating snapshot absence as source absence."
+        );
+    }
     context["access_mode"] = json!(crate::access_mode::get(conn)?);
     if shared_read(conn, task)? {
         context["team_visibility"] = json!(
