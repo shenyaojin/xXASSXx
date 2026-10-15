@@ -1053,6 +1053,30 @@ async fn missing_analysis_materials_start_new_discovery_preserving_old_snapshot(
         .query_row("SELECT id FROM task_snapshots", [], |r| r.get(0))
         .unwrap();
     let (old_dir, _) = task_materials::verify(&b, &original).unwrap();
+    c.execute(
+        "INSERT INTO task_candidates VALUES(?1,0,'b',?2)",
+        rusqlite::params![id, json!({"body":"obsolete absence claim"}).to_string()],
+    )
+    .unwrap();
+    let analysis: String = c
+        .query_row(
+            "SELECT id FROM task_executions WHERE phase='analyze'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    let fresh = tasks::execution_context(&c, &analysis).unwrap().unwrap();
+    assert_eq!(fresh["candidate_deliveries"], json!([]));
+    assert_eq!(fresh["previous_task_findings"], json!([]));
+    assert!(
+        !fresh["previous_execution"].is_null(),
+        "keep current discovery evidence"
+    );
+    assert_eq!(
+        count(&b, "SELECT count(*) FROM task_candidates WHERE revision=0"),
+        1,
+        "model context filtering must preserve the historical record"
+    );
     std::fs::write(
         t.dir.path().join("b/work/fast.py"),
         "iterations=20 # new source",

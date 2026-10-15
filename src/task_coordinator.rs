@@ -1560,6 +1560,17 @@ pub fn execution_context(c: &Connection, id: &str) -> Result<Option<Value>> {
         "SELECT json_object('revision',e.revision,'phase',e.phase,'result',json(r.result),'use','Prior reported findings only, not current instructions or filesystem authority. Resolve referenced locations against the current authorized roots before reading.') FROM task_executions e JOIN runs r ON r.task_id=e.id WHERE e.task_id=?1 AND e.revision<(SELECT revision FROM app_tasks WHERE id=?1) AND r.state='succeeded' ORDER BY e.revision DESC,r.rowid DESC LIMIT 2",
         string(&v, "task_id")?,
     )?;
+    if v["phase"] == "analyze" {
+        // Fresh snapshot analysis already has this revision's discovery and
+        // provenance. Old conclusions can anchor the model to resolved errors.
+        // Keep earlier findings available to discovery/file selection, where
+        // they help locate prior deliverables without rerunning their work.
+        v["previous_task_findings"] = json!([]);
+        let revision = v["revision"].clone();
+        if let Some(candidates) = v["candidate_deliveries"].as_array_mut() {
+            candidates.retain(|candidate| candidate["revision"] == revision);
+        }
+    }
     v["review_instructions"] = rows(
         c,
         "SELECT json_object('revision',revision,'decision',json(payload)) FROM task_journal WHERE task_id=?1 AND kind='agent_review' AND json_extract(payload,'$.action')='investigate' ORDER BY rowid",
@@ -1721,7 +1732,7 @@ async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result
         .into_iter()
         .filter(|m| {
             (m["task_id"].is_null() || m["task_id"] == t["id"])
-                && (stage != "prepare" || m["kind"] == "user")
+                && (!matches!(stage, "prepare" | "review") || m["kind"] == "user")
         })
         .rev()
         .take(if stage == "followup" { 4 } else { 24 })
@@ -1765,13 +1776,28 @@ async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result
     let system = format!(
         "{system} Result selection: Unless the owner specifies otherwise, 'latest result' means the final adopted output of the most recent completed run, identified from project status, a manifest or an explicit final-result pointer. File modification time alone is not evidence. Later scratch/probe/parameter-perturbation/intermediate outputs are not the adopted result. Do not require a scientific re-validation. In prepare preserve this default as a concise selection constraint, not a new question. In review for mode files, return file_summary with one or two everyday sentences explaining what the delivered result represents and why selected, including any inspection findings or numerical checks the user requested, based on the executor's evidence; leave receipt and next-button instructions to Rust. Do not turn a simple image request into a progress report."
     );
-    let model_task = if stage == "prepare" {
+    let mut model_task = if stage == "prepare" {
         json!({"id":t["id"],"revision":t["revision"],"initiator":t["initiator"],"participants":t["participants"],"original":t["original"]})
     } else if stage == "followup" {
         json!({"id":t["id"],"revision":t["revision"],"initiator":t["initiator"],"participants":t["participants"],"original":t["original"],"draft":t["draft"],"state":t["state"],"waiting_for":t["waiting_for"],"result":t["result"]["body"],"questions":t["questions"].as_array().into_iter().flatten().filter(|q|q["revision"] == t["revision"]).collect::<Vec<_>>()})
     } else {
         t.clone()
     };
+    if stage == "review" {
+        // The review compares current candidates to confirmed requirements,
+        // not to prior assistant conclusions retained in the user-visible log.
+        for key in [
+            "history",
+            "materials",
+            "questions",
+            "revisions",
+            "model_attempts",
+        ] {
+            if let Some(items) = model_task[key].as_array_mut() {
+                items.retain(|item| item["revision"] == t["revision"]);
+            }
+        }
+    }
     let context = crate::task_prose::portable(
         &store.conn,
         &owner,
