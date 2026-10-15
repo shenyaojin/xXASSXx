@@ -1,0 +1,273 @@
+{
+  "date": "2026-10-15",
+  "status": "candidate_accepted",
+  "version": "0.9.0-alpha",
+  "source_commit": "f29876622581af9eb094d08188fecb4bca165982",
+  "branch": "codex/team-activity-and-codex-entry",
+  "public_release_created": false,
+  "daily_installations_replaced": false,
+  "schema": {
+    "member": 11,
+    "relay": 3
+  },
+  "automation": {
+    "linux_targeted": {
+      "passed": 64,
+      "failed": 0,
+      "ignored": 0
+    },
+    "linux_fmt": "passed",
+    "linux_clippy": "passed with existing libc::time_t deprecation warning",
+    "linux_optimized_build": "passed",
+    "source_inputs_checked": 118,
+    "source_input_mismatches": 0,
+    "linux_binary_sha256": "537ca9823be99ee2ae70758a48e9bf51bef9fab88ff696e4c64fc4856e4e3b87",
+    "ci": {
+      "run": {
+        "id": 38807962951,
+        "head_sha": "f29876622581af9eb094d08188fecb4bca165982",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/shenyaojin/xXASSXx/actions/runs/38807962951"
+      },
+      "jobs": [
+        {
+          "id": 116673640064,
+          "name": "build (ubuntu-22.04, x86_64-unknown-linux-musl)",
+          "status": "completed",
+          "conclusion": "success",
+          "tests": {
+            "passed": 193,
+            "failed": 0,
+            "ignored": 3
+          }
+        },
+        {
+          "id": 116673640501,
+          "name": "build (macos-15, aarch64-apple-darwin)",
+          "status": "completed",
+          "conclusion": "success",
+          "tests": {
+            "passed": 192,
+            "failed": 0,
+            "ignored": 3
+          }
+        },
+        {
+          "id": 116676560027,
+          "name": "release",
+          "status": "completed",
+          "conclusion": "skipped"
+        }
+      ],
+      "artifacts": [
+        {
+          "id": 12008450241,
+          "name": "x86_64-unknown-linux-musl",
+          "size_in_bytes": 8819378,
+          "expired": false
+        },
+        {
+          "id": 12006739953,
+          "name": "aarch64-apple-darwin",
+          "size_in_bytes": 7657019,
+          "expired": false
+        }
+      ]
+    },
+    "verified_ci_packages": [
+      {
+        "platform": "aarch64-apple-darwin",
+        "archive_sha256": "5b1b552e42bc5e4048694829fa15d1984a0609f99b96185cc4ad15261d97c06c",
+        "binary_sha256": "bb714eb6813c602a3c6f8f4708a98b17f044c00b6d0c637c85742a40217d6d4a"
+      },
+      {
+        "platform": "x86_64-unknown-linux-musl",
+        "archive_sha256": "b0da0d332d64d9824ccf133d71ca657d131f0bac0cfbc72b3d034d08a28e9ce9",
+        "binary_sha256": "b58c0161c97fc7681f4f7ecc0dcc6320f3ad1bfcbf8c6397c98831534833807c"
+      }
+    ]
+  },
+  "cross_machine": {
+    "initiator": "Lakota a",
+    "executor": "Trader b",
+    "observer": "Lakota c (not a participant)",
+    "relay": "isolated Trader local disk, SSH tunnels",
+    "task_id": "66edc447-abe5-5660-bbc5-3304fdf37a22",
+    "revision": 4,
+    "all_three_actual_pty_final_views_checked": true,
+    "same_final_body_on_a_b_and_c": true,
+    "final_result_sha256": "67918e6b86a986d11c5d16b620084be6cfa9773b8936e3036c6295110aac55b0",
+    "result": {
+      "samples": 3,
+      "value_sum": 83,
+      "completed": "three synthetic samples collected and format checked",
+      "pending": "error estimation by b, independent review by a",
+      "limits": "synthetic inputs; progress statements from STATUS.md; no scientific validation or project program execution"
+    },
+    "sources": [
+      {
+        "bytes": 28,
+        "captured_at": 1792098804,
+        "directory_name": "reports",
+        "member": "b",
+        "path": "metrics.csv",
+        "root": 0,
+        "sha256": "53ec178422b972d51c513868e587a013179c0f5e8b7e4571543e3797a4b538ba"
+      },
+      {
+        "bytes": 113,
+        "captured_at": 1792098804,
+        "directory_name": "reports",
+        "member": "b",
+        "path": "README.md",
+        "root": 0,
+        "sha256": "a29c9304d83801fb306ab6271af79d3785d9c26f2d77c088d50f8fe82fabfb37"
+      },
+      {
+        "bytes": 430,
+        "captured_at": 1792098804,
+        "directory_name": "work",
+        "member": "b",
+        "path": "STATUS.md",
+        "root": 1,
+        "sha256": "011e8d6209e1443e5e0a86430546ba8d86a89e7c034288fb69c8b28ca2d77925"
+      }
+    ],
+    "all_original_source_hashes_unchanged": true,
+    "observer_app_tasks": 0,
+    "observer_execution_runs": 0,
+    "observer_private_inbox_entries": 0,
+    "initiator_execution_runs": 0,
+    "executor_final_runs": [
+      {
+        "revision": 4,
+        "phase": "discover",
+        "id": "bfe7db5c-e0cd-4899-a0f3-83f999e6897f",
+        "state": "succeeded",
+        "codex_version": null,
+        "reads": 1,
+        "submissions": 1,
+        "exit_code": null,
+        "error_code": null
+      },
+      {
+        "revision": 4,
+        "phase": "analyze",
+        "id": "b2199ece-780f-4ee2-a880-549085bede30",
+        "state": "succeeded",
+        "codex_version": null,
+        "reads": 1,
+        "submissions": 1,
+        "exit_code": null,
+        "error_code": null
+      }
+    ],
+    "model": "real DeepSeek deepseek-flash; final revision discovery and analysis completed by local agent",
+    "first_revision_codex": "real codex-cli 0.162.1 used for first discovery; not counted as final revision Codex execution",
+    "initiator_final_model_attempts": [
+      {
+        "revision": 4,
+        "stage": "prepare",
+        "state": "succeeded",
+        "error": null
+      },
+      {
+        "revision": 4,
+        "stage": "review",
+        "state": "succeeded",
+        "error": null
+      }
+    ],
+    "final_shared_state_sequence": [
+      {
+        "state": "processing",
+        "next_owner": "b"
+      },
+      {
+        "state": "processing",
+        "next_owner": "b"
+      },
+      {
+        "state": "processing",
+        "next_owner": "b"
+      },
+      {
+        "state": "processing",
+        "next_owner": "b"
+      },
+      {
+        "state": "reviewing",
+        "next_owner": "a"
+      },
+      {
+        "state": "completed",
+        "next_owner": null
+      }
+    ],
+    "database_integrity": {
+      "a": {
+        "integrity": "ok",
+        "foreign_keys": []
+      },
+      "b": {
+        "integrity": "ok",
+        "foreign_keys": []
+      },
+      "c": {
+        "integrity": "ok",
+        "foreign_keys": []
+      }
+    },
+    "permissions": "b selected Full access in real TUI; a remained Ask for approval; shared reads still bound explicit whitelist",
+    "screen_sha256": {
+      "a-final.txt": "b12c1b31dbc763b16a6341e480cd183eeb1b44378839ea1d3b7ca7bec70129f5",
+      "b-final.txt": "e7dbe747d78099ea31b9bab3f30c818feebe52f17381c16fe36402d132b56f3b",
+      "c-final.txt": "5cefc297be2a82f092a821adbbb4270799cbba9a6fb1435cf94c70fbe43454e0"
+    }
+  },
+  "manual_codex": {
+    "linux": {
+      "source_commit": "cdacb021d6cfe83069b97a42118b43aea172a90e",
+      "binary_sha256": "943da5f5fad45e4690608e5969bf17eab808aad88623ae6712694f9d00945f45",
+      "native_codex": "0.162.1",
+      "model": "GPT-6.1-Sol ultra (existing settings)",
+      "selected_directory": "isolated a/work whitelist",
+      "actual_read_answer_correct": true,
+      "exit_returns_same_xxassxx_session": true,
+      "background_task_continued": true
+    },
+    "apple_silicon": {
+      "ci_source": "3a164a2a9830a5ce4ba791b14938f6d074a12936",
+      "binary_sha256": "dc7d4843d991599a86ffb0ca323ad88db12270ec90246149088051b8c7bd0801",
+      "native_codex": "0.162.0",
+      "model": "GPT-6-Astra xhigh",
+      "directory_selected": true,
+      "read_result": "ORBIT-93；误差估计由 b 负责，独立复核由 a 负责",
+      "returned_to_original_session": true,
+      "tasks": 0,
+      "activity_entries": 0,
+      "source_unchanged": true
+    },
+    "launcher_source_unchanged_since_manual_test": true
+  },
+  "preserved_failures_and_limits": [
+    "First final answer misidentified snapshot aliases as original directories; source mapping added.",
+    "Revisions 2 and 3 retained old identity doubts. Current analysis/review context now separates superseded conclusions; revision 4 final answer is correct. Raw candidate still contains excessive identity caution.",
+    "Late accepted-progress echo could regress reviewing to processing; guarded and covered by deterministic out-of-order regression.",
+    "Linux manual Codex initially used old system Node for configured NVM executable; configured executable directory is now prepended to PATH.",
+    "Initial Lakota home-filesystem relay stalled; backed up and moved to Trader local disk. NFS support/root cause not claimed fixed.",
+    "CI 38806836863 Linux failed existing update rollback assertion; exact final CI recorded separately.",
+    "One newly added regression fixture initially left a fake old candidate behind; fixture cleanup fixed; failed run retained.",
+    "Manual Mac harness emitted a reader-thread shutdown traceback after successful app exit; native interaction and return were checked before shutdown.",
+    "No new MCP team-activity endpoint; existing pairwise inbox remains private."
+  ],
+  "cleanup": {
+    "isolated_clients_stopped": true,
+    "isolated_relay_stopped": true,
+    "test_tunnels_stopped": true,
+    "temporary_local_debug_binary_removed_bytes": 236706400,
+    "full_local_rust_build_performed": false
+  },
+  "private_evidence": "smoke-output/team-activity-20261015/; remote ~/xxassxx-tests/team-activity-20261015/ (ignored; credentials not committed)"
+}

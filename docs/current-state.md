@@ -1,14 +1,16 @@
 # 项目理念与接续摘要
 
-更新日期：2026-10-15（America/Denver；0.9.0 开发验收中，日常部署记录沿用 10 月 14 日验收）。`0.8.0-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl，包含白名单读取与 Codex 能力交接。`owner` 与 `mba` 两台 Mac 均已从 GitHub 发布包手动升级到 0.8.0，保留各自数据、配置与 Ask for approval；owner 原库已是 schema 10，MBA 此前由 schema 9 迁到 10。其他机器本轮未修改：据此前部署记录，Lakota `test` 与 Trader `trader` 日常端为 0.7.2，Trader 为 Full access、Lakota 为 Ask；Trader 独立信箱为 0.7.0、schema 2。
+更新日期：2026-10-15（America/Denver；0.9.0 候选真实交互已验收，日常部署记录沿用 10 月 14 日验收）。`0.8.0-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl，包含白名单读取与 Codex 能力交接。`owner` 与 `mba` 两台 Mac 均已从 GitHub 发布包手动升级到 0.8.0，保留各自数据、配置与 Ask for approval；owner 原库已是 schema 10，MBA 此前由 schema 9 迁到 10。其他机器本轮未修改：据此前部署记录，Lakota `test` 与 Trader `trader` 日常端为 0.7.2，Trader 为 Full access、Lakota 为 Ask；Trader 独立信箱为 0.7.0、schema 2。
 
-## 团队动态与手动 Codex（2026-10-15，开发验收中）
+## 团队动态与手动 Codex（2026-10-15，候选版已通过真实交互验收）
 
 0.9.0-alpha 候选源码新增 `/activity`：新的白名单任务在执行端绑定实际范围后，对团队成员公开目标、处理阶段、最终答复、来源与下一步责任。旧任务和私人收件箱不追溯公开。新的共享只读任务使用显式白名单；Full access 的系统根目录不会自动加入共享读取范围。白名单内起始的写入/运行任务可共享结果，实际写入权限仍由执行端本机模式决定。
 
 新派发要求执行端 30 秒内的心跳及新版能力，离线时显示等待，尚未派发就停止的请求可撤回，防止上线后启动。已经接收的任务及结果保留断线恢复和去重。个人 schema 11、信箱 schema 3，均为增量迁移，现有日常安装本轮尚未替换；跨 schema 升级需要备份和手动安装。
 
-按用户追加要求新增 `/codex`：手动选择白名单目录或其中的子目录后，进入原生交互式 Codex，退出后返回原 xxassxx 会话。Codex 使用自身交互权限和设置，不自动发布手动对话；后台交接沿用任务绑定，不弹出人工目录选择。第一轮共享记录 Linux 完整回归已通过；包含手动入口与撤回边界的最终源码正在验证，真实跨机器及原生终端证据未完成前不宣称验收。详见 [使用与边界](team-activity.md)。
+按用户追加要求新增 `/codex`：手动选择白名单目录或其中的子目录后，进入原生交互式 Codex，退出后返回原 xxassxx 会话。Codex 使用自身交互权限和设置，不自动发布手动对话；后台交接沿用任务绑定，不弹出人工目录选择。
+
+分支 `codex/team-activity-and-codex-entry` 的实现已提交推送，当前候选源码为 `f298766`。Lakota 发起、Trader 执行、第三成员旁观的真实 PTY／DeepSeek 验收已完成：跨两个白名单核对 3 个样本、总和 83，三端最终答复一致、来源哈希一致，旁观端没有私人任务或执行运行。新快照保留源目录映射，分析与审核隔离过时模型结论；错误首轮及修复过程保留。Mac 与 Lakota 均实测 `/codex` 选目录、原生读取、退出返回；使用既有 Codex 设置。Linux 最终针对性回归 64 项、格式、Clippy 和优化构建通过，118 份构建输入一致；[精确提交 CI](https://github.com/shenyaojin/xXASSXx/actions/runs/38807962951) 的 ARM Mac 192 项、Linux 193 项通过，均 0 失败、3 忽略，构建、打包、安装及产物哈希核对通过，未触发发布。详见 [验收证据](team-activity-evidence.json)。隔离后台、信箱和隧道已关闭，日常安装与公共发布没有改变。详见 [使用与边界](team-activity.md)。
 
 ## owner Mac 日常客户端升级（2026-10-14）
 
