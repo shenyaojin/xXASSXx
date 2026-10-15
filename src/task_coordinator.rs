@@ -61,6 +61,11 @@ pub fn is_task(conn: &Connection, id: &str) -> Result<bool> {
 }
 pub fn get(store: &Store, id: &str) -> Result<Value> {
     let mut v = store.conn.query_row("SELECT id,session_id,project_id,title,goal,state,revision,initiator,participants,original,draft,confirmed,updated_at,next_owner,waiting_reason,archived,result,error,seq FROM app_tasks WHERE id=?1 AND protocol=2", [id], |r| Ok(json!({"id":r.get::<_,String>(0)?,"session_id":r.get::<_,String>(1)?,"project_id":r.get::<_,String>(2)?,"title":r.get::<_,String>(3)?,"goal":r.get::<_,String>(4)?,"state":r.get::<_,String>(5)?,"revision":r.get::<_,i64>(6)?,"initiator":r.get::<_,String>(7)?,"participants":r.get::<_,String>(8)?,"original":r.get::<_,String>(9)?,"draft":r.get::<_,String>(10)?,"confirmed":r.get::<_,Option<i64>>(11)?,"updated_at":r.get::<_,i64>(12)?,"next_owner":r.get::<_,Option<String>>(13)?,"waiting_for":r.get::<_,Option<String>>(14)?,"archived":r.get::<_,bool>(15)?,"result":r.get::<_,Option<String>>(16)?,"error":r.get::<_,Option<String>>(17)?,"seq":r.get::<_,i64>(18)?,"protocol":2})))?;
+    v["team_activity"] = json!(store.conn.query_row(
+        "SELECT team_activity FROM app_tasks WHERE id=?1",
+        [id],
+        |r| r.get::<_, bool>(0)
+    )?);
     for k in ["participants", "draft", "result"] {
         if let Some(s) = v[k].as_str() {
             v[k] = serde_json::from_str(s)?;
@@ -300,6 +305,10 @@ fn emit(
         t["confirmed"] == t["revision"] || matches!(event, "cancel" | "suspend"),
         "任务意图尚未确认"
     );
+    let mut data = data;
+    if crate::team_activity::scoped(c, string(t, "id")?, revision(t))? {
+        data["team_scope"] = json!("whitelist");
+    }
     let sequence = journal(c, t, sender, key, event, &data)?;
     let w = Wire {
         version: 2,
@@ -512,6 +521,10 @@ pub fn create(c: &Connection, i: &Instruction, owner: &str, peer: Option<&str>) 
         people.push(p.into());
     }
     c.execute("INSERT OR IGNORE INTO app_tasks(id,session_id,project_id,title,goal,peer,state,created_at,protocol,revision,initiator,participants,original,updated_at,next_owner,waiting_reason) VALUES(?1,?2,?3,?4,?5,?6,'draft',?7,2,1,?8,?9,?5,?7,?8,'正在整理要求，等待确认')",params![id,i.session_id,project,i.body.chars().take(40).collect::<String>(),i.body,peer,now(),owner,serde_json::to_string(&people)?])?;
+    c.execute(
+        "UPDATE app_tasks SET team_activity=1 WHERE id=?1 AND confirmed IS NULL",
+        [&id],
+    )?;
     c.execute("INSERT OR IGNORE INTO task_revisions(task_id,revision,original,draft,participants,created_at) VALUES(?1,1,?2,'{}',?3,?4)",params![id,i.body,serde_json::to_string(&people)?,now()])?;
     c.execute(
         "UPDATE app_commands SET task_id=?2 WHERE id=?1",
@@ -610,6 +623,11 @@ pub fn prepare(store: &Store, id: &str, draft: Value) -> Result<()> {
             .as_str()
             .unwrap_or("只读检查，不修改文件")
     );
+    if t["team_activity"] == true {
+        body.push_str(
+            "\n白名单任务的目标、进展和结果会出现在团队动态；新任务等待执行成员在线后派发。",
+        );
+    }
     if draft["mode"] == "execute" {
         body.push_str("\n本任务需要写文件或运行程序，按执行方本机的访问模式处理。");
     }
@@ -686,7 +704,7 @@ fn direct_file_request(store: &Store, t: &Value, draft: &Value) -> Result<Option
     Ok(None)
 }
 fn public_task(t: &Value) -> Value {
-    json!({"initiator":t["initiator"],"participants":t["participants"],"original":t["original"],"draft":t["draft"],"title":t["title"],"confirmed":t["confirmed"],"state":t["state"],"next_owner":t["next_owner"],"waiting_for":t["waiting_for"],"updated_at":t["updated_at"]})
+    json!({"team_activity":t["team_activity"],"initiator":t["initiator"],"participants":t["participants"],"original":t["original"],"draft":t["draft"],"title":t["title"],"confirmed":t["confirmed"],"state":t["state"],"next_owner":t["next_owner"],"waiting_for":t["waiting_for"],"updated_at":t["updated_at"]})
 }
 pub fn confirm(store: &Store, i: &Instruction) -> Result<()> {
     let tx = store.conn.unchecked_transaction()?;
@@ -747,9 +765,9 @@ fn confirm_inner(store: &Store, i: &Instruction, from_request: bool) -> Result<(
         if from_request {
             "正在查找你要的文件。准备好后，由发送方检查清单并允许发送。"
         } else if members(&t)?.len() == 1 {
-            "已确认，正在本机处理这项任务。"
+            "已确认，正在本机处理；白名单任务的进展和结果会显示在团队动态。"
         } else {
-            "已确认，正在发送给执行方。收到后会在这里告诉你进展。"
+            "已确认，等待执行成员在线后派发；白名单任务的进展和结果会显示在团队动态。"
         },
     )?;
     Ok(())
@@ -941,6 +959,12 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
         let session_id = stable_id(&w.task_id, &format!("local-session:{}", store.owner()?));
         store.conn.execute("INSERT OR IGNORE INTO app_sessions(id,project_id,recipient,title,created_at) VALUES(?1,?2,?3,?4,?5)",params![session_id,project_id,store.owner()?,format!("任务 T-{}",&w.task_id[..8]),now()])?;
         store.conn.execute("INSERT OR IGNORE INTO app_tasks(id,session_id,project_id,title,goal,peer,state,created_at,protocol,revision,initiator,participants,original,draft,confirmed,updated_at) VALUES(?1,?2,?3,?4,?5,?6,'queued',?7,2,?8,?6,?9,?10,?11,?8,?7)",params![w.task_id,session_id,project_id,w.data["title"].as_str().unwrap_or("团队任务"),w.data["draft"]["goal"].as_str().context("missing goal")?,m.sender,now(),w.revision,w.data["participants"].to_string(),string(&w.data,"original")?,w.data["draft"].to_string()])?;
+    }
+    if w.event == "proposal" && w.data["team_activity"] == true {
+        tx.execute(
+            "UPDATE app_tasks SET team_activity=1 WHERE id=?1 AND initiator=?2 AND revision<=?3",
+            params![w.task_id, m.sender, w.revision],
+        )?;
     }
     let mut t = get(store, &w.task_id)?;
     ensure!(
@@ -1923,6 +1947,17 @@ fn create_execution(
         phase != "execute" || snapshot.is_none(),
         "执行任务不能使用只读材料快照"
     );
+    if crate::team_activity::scoped(&store.conn, string(t, "id")?, revision(t))? {
+        emit(
+            &store.conn,
+            t,
+            &store.owner()?,
+            &stable_id(key, "team-start"),
+            "progress",
+            json!({"stage":"locating","body":"正在白名单内定位材料，任务进展和结果对团队可见。"}),
+            &members(t)?,
+        )?;
+    }
     let id = stable_id(key, phase);
     let (logical, roots) =
         crate::task_materials::check_binding(&store.conn, string(t, "id")?, revision(t))?;

@@ -9,7 +9,7 @@ use std::{
 };
 use uuid::Uuid;
 
-pub const SCHEMA_VERSION: u32 = 10;
+pub const SCHEMA_VERSION: u32 = 11;
 
 pub fn now() -> i64 {
     SystemTime::now()
@@ -132,6 +132,9 @@ impl Store {
         }
         if version < 10 {
             conn.execute_batch(include_str!("schema_v10.sql"))?;
+        }
+        if version < 11 {
+            conn.execute_batch(include_str!("schema_v11.sql"))?;
         }
         Ok(())
     }

@@ -53,6 +53,21 @@ impl Team {
                 })
                 .unwrap();
         }
+        // Coordinator integration fixtures represent connected clients. Tests of
+        // offline admission explicitly remove or expire these server leases.
+        let c = rusqlite::Connection::open(t.dir.path().join("relay.sqlite3")).unwrap();
+        for member in ["a", "b", "c"] {
+            c.execute(
+                "INSERT INTO relay_presence VALUES(?1,0,?2)",
+                rusqlite::params![member, xxassxx::store::now()],
+            )
+            .unwrap();
+        }
+        c.execute(
+            "INSERT INTO relay_activity_capabilities SELECT member_id,seen_at FROM relay_presence",
+            [],
+        )
+        .unwrap();
         t
     }
     fn start(root: &Path) -> (Child, String) {

@@ -10,7 +10,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-pub const RELAY_SCHEMA: u32 = 2;
+pub const RELAY_SCHEMA: u32 = 3;
 const MAX_BODY: usize = 16_384;
 const MAX_PAGE_BYTES: usize = 2 * 1024 * 1024;
 
@@ -94,6 +94,13 @@ pub fn migrate(c: &mut Connection) -> Result<()> {
     if version == RELAY_SCHEMA {
         return Ok(());
     }
+    if version == 2 {
+        let tx = c.transaction()?;
+        tx.execute_batch(crate::team_activity::RELAY_SCHEMA)?;
+        tx.pragma_update(None, "user_version", RELAY_SCHEMA)?;
+        tx.commit()?;
+        return Ok(());
+    }
     let tx = c.transaction()?;
     tx.execute_batch(include_str!("schema.sql"))?;
     let messages = {
@@ -120,6 +127,7 @@ pub fn migrate(c: &mut Connection) -> Result<()> {
             project_transfer(&tx, &serde_json::from_str(&raw)?, &state, true)?;
         }
     }
+    tx.execute_batch(crate::team_activity::RELAY_SCHEMA)?;
     tx.pragma_update(None, "user_version", RELAY_SCHEMA)?;
     tx.commit()?;
     Ok(())

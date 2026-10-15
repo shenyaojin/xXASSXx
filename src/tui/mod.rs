@@ -1,5 +1,7 @@
 //! xXASSXx owns this terminal. Models, delivery and execution live in the daemon.
+mod activity;
 mod attachments;
+mod codex_entry;
 mod commands;
 pub mod editor;
 mod inbox;
@@ -141,6 +143,8 @@ pub struct Ui {
     transfer_file: Option<String>,
     update: update::UpdateUi,
     inbox: inbox::InboxUi,
+    activity: activity::ActivityUi,
+    codex: codex_entry::CodexEntry,
 }
 impl Ui {
     pub fn new(store: &Store, project: Value) -> Result<Self> {
@@ -177,6 +181,8 @@ impl Ui {
             transfer_file: None,
             update: update::UpdateUi::default(),
             inbox: inbox::InboxUi::default(),
+            activity: activity::ActivityUi::default(),
+            codex: codex_entry::CodexEntry::default(),
         })
     }
     pub fn recipient(&self, store: &Store) -> Result<String> {
@@ -283,6 +289,11 @@ impl Ui {
         self.scroll = 0;
         match name {
             "/inbox" => self.inbox.open(store)?,
+            "/activity" => self.activity.open(store)?,
+            "/codex" => self.codex.open(
+                store,
+                Path::new(self.project["path"].as_str().context("工作目录不可用")?),
+            )?,
             "/tasks" => self.open_tasks(0),
             "/stop" => self.open_stop()?,
             "/archived" => self.open_tasks(2),
@@ -371,6 +382,9 @@ impl Ui {
     }
     pub fn refresh(&mut self, store: &Store) -> Result<()> {
         self.inbox.refresh(store)?;
+        if self.activity.active {
+            self.activity.refresh(store)?;
+        }
         let selected_row = if self.panel == Panel::Tasks {
             self.task_rows()
                 .get(self.index)
@@ -832,6 +846,14 @@ impl Ui {
         }
         if self.panel == Panel::Stop {
             return self.stop_key(store, key);
+        }
+        if self.codex.active {
+            self.codex.key(store, key)?;
+            return Ok(false);
+        }
+        if self.activity.active {
+            self.activity.key(key);
+            return Ok(false);
         }
         if self.inbox.active {
             if let Some(id) = self.inbox.key(store, key)? {
@@ -1492,6 +1514,14 @@ impl Ui {
         Ok(false)
     }
     pub fn render(&self, f: &mut ratatui::Frame, store: &Store) {
+        if self.codex.active {
+            self.codex.render(f);
+            return;
+        }
+        if self.activity.active {
+            self.activity.render(f);
+            return;
+        }
         if self.inbox.active {
             self.inbox.render(f, &self.owner);
             return;
@@ -2001,7 +2031,10 @@ impl Ui {
             lines.push(Line::styled("暂无待处理任务", theme::muted()));
         }
         lines.push(Line::from(""));
-        lines.push(Line::styled("/inbox 收件箱", theme::accent()));
+        lines.push(Line::styled(
+            "/inbox 收件箱 · /activity 团队动态",
+            theme::accent(),
+        ));
         lines.push(Line::styled("/archived 已归档", theme::muted()));
         lines.push(Line::styled("Tab 查看成员", theme::muted()));
         f.render_widget(Paragraph::new(lines), inner);
@@ -2807,7 +2840,7 @@ fn draw_lines(
         .collect::<Vec<_>>();
     draw_rich(f, area, title, &lines, scroll, bottom);
 }
-const HELP: &str = "输入 / 查看命令；↑↓ 选择，Enter 打开，Tab 补全。\n\n对话：Enter 发送 · CtrlJ / AltEnter 换行 · @成员 选择参与人\n任务：CtrlT 查看 · Tab 分类 · a 归档或恢复 · A 归档已结束任务\n收件箱：/inbox · n 留言 · r 回复 · m 标为已查看\n附件：CtrlF · n 发送 · Enter 查看\n历史对话：CtrlO · n 新对话\n工作目录：CtrlP · 可读取目录：CtrlR / /roots\n访问模式：/access · 手动重连：/reconnect\n\n任务确认：CtrlS · 修改：CtrlE · 回答问题：CtrlB\n执行授权：CtrlG · 详情和记录：CtrlD\n停止任务：CtrlX / /stop · 重试：CtrlY\n\n停止：填写原因，选择停止并归档或仅停止。\n归档只整理本机列表，保留历史，不会重新启动任务。\nAsk for approval 下，写入运行须执行方批准；Full access 按本机预授权自动执行。\n退出：CtrlQ（后台继续工作）";
+const HELP: &str = "输入 / 查看命令；↑↓ 选择，Enter 打开，Tab 补全。\n\n对话：Enter 发送 · CtrlJ / AltEnter 换行 · @成员 选择参与人\n任务：CtrlT 查看 · Tab 分类 · a 归档或恢复 · A 归档已结束任务\n团队动态：/activity · 查看全员共享的任务进展和结果\n收件箱：/inbox · n 留言 · r 回复 · m 标为已查看\n附件：CtrlF · n 发送 · Enter 查看\n历史对话：CtrlO · n 新对话\n手动 Codex：/codex · 选目录进入，退出后回到本会话\n工作目录：CtrlP · 可读取目录：CtrlR / /roots\n访问模式：/access · 手动重连：/reconnect\n\n任务确认：CtrlS · 修改：CtrlE · 回答问题：CtrlB\n执行授权：CtrlG · 详情和记录：CtrlD\n停止任务：CtrlX / /stop · 重试：CtrlY\n\n停止：填写原因，选择停止并归档或仅停止。\n归档只整理本机列表，保留历史，不会重新启动任务。\nAsk for approval 下，写入运行须执行方批准；Full access 按本机预授权自动执行。\n退出：CtrlQ（后台继续工作）";
 
 pub async fn open(args: OpenArgs) -> Result<()> {
     let default_directory = args.directory.is_none();
@@ -2881,13 +2914,49 @@ pub async fn open(args: OpenArgs) -> Result<()> {
         );
         old_hook(info);
     }));
-    let _guard = TerminalGuard::enter()?;
+    let mut guard = Some(TerminalGuard::enter()?);
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
     terminal.clear()?;
     let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
     let mut interrupt = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
     let mut refresh = Instant::now() - Duration::from_secs(1);
     loop {
+        if let Some(directory) = ui.codex.requested.take() {
+            let mut command = match crate::codex_launcher::command(&store, &directory) {
+                Ok(command) => command,
+                Err(error) => {
+                    ui.notice = format!("无法启动 Codex：{error}");
+                    continue;
+                }
+            };
+            drop(guard.take());
+            let mut stopping = false;
+            let result: Result<std::process::ExitStatus> = async {
+                let mut child=command.spawn().context("无法启动 Codex；请检查 client doctor 和 Codex 安装路径")?;
+                loop {tokio::select! {
+                    result=child.wait()=>return Ok(result?),
+                    _=interrupt.recv()=>{}, // The foreground child receives the same terminal signal.
+                    _=terminate.recv()=>{stopping=true;child.kill().await?;return Ok(child.wait().await?);}
+                }}
+            }.await;
+            while tokio::time::timeout(Duration::from_millis(1), interrupt.recv())
+                .await
+                .is_ok()
+            {}
+            guard = Some(TerminalGuard::enter()?);
+            terminal.clear()?;
+            ui.notice = match result {
+                Ok(status) if status.success() => "已退出 Codex，回到原来的 xxassxx 会话。".into(),
+                Ok(status) => format!("Codex 已退出（{status}），已返回原会话。"),
+                Err(error) => error.to_string(),
+            };
+            ui.refresh(&store)?;
+            refresh = Instant::now();
+            if stopping {
+                break;
+            }
+            continue;
+        }
         if ui.reconnect_requested {
             ui.reconnect_requested = false;
             if let Err(e) = service::reconnect(&store).await {
@@ -2900,7 +2969,11 @@ pub async fn open(args: OpenArgs) -> Result<()> {
                 .update
                 .poll(
                     &db,
-                    ui.panel == Panel::Chat && ui.input.text.is_empty() && !ui.inbox.active,
+                    ui.panel == Panel::Chat
+                        && ui.input.text.is_empty()
+                        && !ui.inbox.active
+                        && !ui.activity.active
+                        && !ui.codex.active,
                 )
                 .await
             {
@@ -2931,7 +3004,12 @@ pub async fn open(args: OpenArgs) -> Result<()> {
             refresh = Instant::now();
         }
         terminal.draw(|f| ui.render(f, &store))?;
-        if ui.scroll == 0 && ui.panel == Panel::Chat && !ui.inbox.active {
+        if ui.scroll == 0
+            && ui.panel == Panel::Chat
+            && !ui.inbox.active
+            && !ui.activity.active
+            && !ui.codex.active
+        {
             let seq = store.conn.query_row(
                 "SELECT COALESCE(MAX(seq),0) FROM app_events WHERE session_id=?1",
                 [&ui.session],
@@ -2951,7 +3029,13 @@ pub async fn open(args: OpenArgs) -> Result<()> {
                     }
                 },
                 Event::Paste(text) => {
-                    if ui.inbox.active {
+                    if ui.codex.active {
+                        ui.codex.paste(&text);
+                        continue;
+                    }
+                    if ui.activity.active {
+                        continue; // Read-only shared record view.
+                    } else if ui.inbox.active {
                         ui.inbox.paste(&text);
                         continue;
                     }
@@ -2988,7 +3072,7 @@ pub async fn open(args: OpenArgs) -> Result<()> {
     }
     terminal.show_cursor()?;
     drop(terminal);
-    drop(_guard);
+    drop(guard);
     if ui.update.requested {
         let project = PathBuf::from(
             ui.project["path"]

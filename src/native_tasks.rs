@@ -94,7 +94,12 @@ pub fn context(conn: &Connection, task: &str) -> Result<Option<Value>> {
         );
     }
     context["access_mode"] = json!(crate::access_mode::get(conn)?);
-    if crate::access_mode::full(conn)? {
+    if shared_read(conn, task)? {
+        context["team_visibility"] = json!(
+            "This whitelist task publishes its goal, progress, final result and bounded source references to all current team members. Only read authorized_roots; do not include unrelated private context or raw tool logs in the result."
+        );
+    }
+    if crate::access_mode::full(conn)? && !shared_read(conn, task)? {
         context["execution_policy"] = json!(
             "The local device owner selected Full access: native tools can read/write local files, run programs and use the network without per-action approval. This is local standing permission, not permission on another member's machine. Fulfill only the requested task: read-only requests and attachment analysis stay read-only; modify original files only when the intent calls for it, and preserve existing unrelated work. For execution, use execution_access.directory as the starting directory, not a writable boundary; other requested local paths and network access are permitted. Inspect existing output before retries and reuse completed work. Keep resource limits and synchronous execution. Never change xXASSXx state or credentials to manufacture success, and never send files outside the product transport. Follow the supplied skills for evidence, result format and handoff; this current policy controls over their default isolated-workspace restrictions."
         );
@@ -368,4 +373,10 @@ pub async fn run_local(store: &mut Store, exe: &Path) -> Result<()> {
         tx.commit()?;
     }
     Ok(())
+}
+
+/// Shared read tasks keep the declared whitelist boundary even in Full access.
+/// Explicit execution still uses the owner's separately chosen execution mode.
+pub fn shared_read(c: &Connection, execution: &str) -> Result<bool> {
+    Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM task_executions e JOIN task_activity_scope s ON s.task_id=e.task_id AND s.revision=e.revision WHERE e.id=?1 AND e.phase!='execute')",[execution],|r|r.get(0))?)
 }

@@ -507,3 +507,33 @@ fn stop_uses_highlighted_task_and_rejects_a_stale_open_form() {
     assert_eq!(app::tasks::get(&s, &first).unwrap()["state"], "draft");
     assert!(ui.input.text.contains("旧版本"));
 }
+
+#[test]
+fn codex_directory_picker_can_cancel_or_reject_outside_path_without_changing_chat() {
+    let (team, mut s, mut ui) = fixture();
+    let original_session = ui.session.clone();
+    slash(&mut ui, &mut s, "/codex");
+    assert!(screen(&ui, &s, 140, 32).contains("白名单为空"));
+    key(&mut ui, &mut s, KeyCode::Esc);
+    s.allow_directory(&team.dir.path().join("a/work")).unwrap();
+    slash(&mut ui, &mut s, "/codex");
+    assert!(screen(&ui, &s, 140, 32).contains("在哪个目录启动 Codex"));
+    key(&mut ui, &mut s, KeyCode::Char('p'));
+    key(&mut ui, &mut s, KeyCode::End);
+    for _ in 0..300 {
+        key(&mut ui, &mut s, KeyCode::Backspace);
+    }
+    key(&mut ui, &mut s, KeyCode::Char('/'));
+    key(&mut ui, &mut s, KeyCode::Enter);
+    assert!(screen(&ui, &s, 140, 32).contains("必须在当前白名单内"));
+    key(&mut ui, &mut s, KeyCode::Esc);
+    key(&mut ui, &mut s, KeyCode::Esc);
+    assert_eq!(ui.session, original_session);
+    let conn = rusqlite::Connection::open(&s.path).unwrap();
+    assert_eq!(
+        conn.query_row("SELECT count(*) FROM app_commands", [], |r| r
+            .get::<_, i64>(0))
+            .unwrap(),
+        0
+    );
+}
