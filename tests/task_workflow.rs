@@ -1077,6 +1077,8 @@ async fn missing_analysis_materials_start_new_discovery_preserving_old_snapshot(
         1,
         "model context filtering must preserve the historical record"
     );
+    c.execute("DELETE FROM task_candidates WHERE revision=0", [])
+        .unwrap();
     std::fs::write(
         t.dir.path().join("b/work/fast.py"),
         "iterations=20 # new source",
