@@ -9,6 +9,8 @@ pub mod file_roots;
 pub mod inbox;
 pub mod interactive;
 pub mod knowledge;
+pub mod local_agent;
+pub mod local_files;
 pub mod mailbox;
 pub mod mcp;
 pub mod member_auth;

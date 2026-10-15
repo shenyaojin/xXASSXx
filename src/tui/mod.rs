@@ -2218,7 +2218,7 @@ impl Ui {
                 lines.push("是否将启动文件夹加入本机文件白名单？".into());
                 lines.push(self.project["path"].as_str().unwrap().into());
                 lines.push(String::new());
-                lines.push("加入后，Codex 可只读查找和查看此目录及子目录。".into());
+                lines.push("加入后，本地 agent 和 Codex 可只读查找和查看此目录及子目录。".into());
                 lines.push("本地或团队请求可返回答案与文件清单；不会自动上传全部文件。".into());
                 lines.push(String::new());
                 for (n, label) in ["加入白名单", "不加入，继续聊天"].iter().enumerate()
@@ -2319,7 +2319,8 @@ impl Ui {
             }
             Panel::Roots => {
                 lines.push(
-                    "n 添加 · Delete 移除 · Esc 返回；添加后允许 Codex 按请求只读查询".into(),
+                    "n 添加 · Delete 移除 · Esc 返回；添加后允许本地 agent 和 Codex 按请求只读查询"
+                        .into(),
                 );
                 for (n, p) in self.data["roots"]
                     .as_array()

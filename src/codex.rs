@@ -825,6 +825,27 @@ async fn watch_authorization(store: &Store, task: &str) -> Failure {
     }
 }
 
+enum Executed {
+    LocalAgent,
+    Codex(Option<i32>),
+}
+async fn adaptive_execute(
+    store: &mut Store,
+    lease: &Lease,
+    options: &Options,
+    deadline: Instant,
+) -> std::result::Result<Executed, Failure> {
+    if crate::local_agent::attempt(store, lease)
+        .await
+        .map_err(|e| Failure::new("local_agent", e.to_string()))?
+    {
+        return Ok(Executed::LocalAgent);
+    }
+    execute(store, lease, options, deadline)
+        .await
+        .map(Executed::Codex)
+}
+
 /// Run inside the internal worker, whose stdin is the invoking CLI's liveness pipe.
 pub async fn run(store: &mut Store, task: &str, mut options: Options) -> Result<()> {
     ensure!(
@@ -876,10 +897,11 @@ pub async fn run(store: &mut Store, task: &str, mut options: Options) -> Result<
         _=parent_closed=>Err(Failure::new("interrupted","runner disconnected; stopping execution")),
         _=tokio::signal::ctrl_c()=>Err(Failure::new("interrupted","runner interrupted")),
         failure=watch_authorization(&watcher,task)=>Err(failure),
-        result=execute(store,&lease,&options,deadline)=>result,
+        result=timeout_at(deadline,adaptive_execute(store,&lease,&options,deadline))=>result.unwrap_or_else(|_|Err(Failure::new("timeout","execution deadline expired"))),
     };
     match result {
-        Ok(exit) => store.finish(&lease, exit, None),
+        Ok(Executed::LocalAgent) => store.finish_local_agent(&lease),
+        Ok(Executed::Codex(exit)) => store.finish(&lease, exit, None),
         Err(failure) => store.finish(
             &lease,
             failure.exit_code,

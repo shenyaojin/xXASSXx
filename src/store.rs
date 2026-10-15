@@ -326,10 +326,7 @@ impl Store {
             [run],
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
         )?;
-        ensure!(
-            reads > 0,
-            "must read this task through MCP before submitting"
-        );
+        ensure!(reads > 0, "must read this task before submitting");
         let duplicate = old.is_some();
         if let Some(old) = old {
             ensure!(
@@ -395,7 +392,7 @@ impl Store {
                 params![lease.run_id, session],
             )?;
         }
-        if event["type"] == "turn.completed" {
+        if event["type"] == "turn.completed" || event["type"] == "xxassxx.local_agent.completed" {
             tx.execute(
                 "UPDATE runs SET turn_completed=1 WHERE id=?1",
                 [&lease.run_id],
@@ -410,6 +407,27 @@ impl Store {
         lease: &Lease,
         exit: Option<i32>,
         failure: Option<(&str, &str)>,
+    ) -> Result<()> {
+        self.finish_execution(lease, exit, failure, false)
+    }
+    pub(crate) fn finish_local_agent(&mut self, lease: &Lease) -> Result<()> {
+        Self::authorize(
+            &self.conn,
+            &lease.task_id,
+            &lease.run_id,
+            &lease.token,
+            false,
+        )?;
+        crate::task_coordinator::check_execution(&self.conn, &lease.task_id)?
+            .context("local agent needs a bound business task")?;
+        self.finish_execution(lease, None, None, true)
+    }
+    fn finish_execution(
+        &mut self,
+        lease: &Lease,
+        exit: Option<i32>,
+        failure: Option<(&str, &str)>,
+        local_agent: bool,
     ) -> Result<()> {
         let tx = self
             .conn
@@ -443,19 +461,16 @@ impl Store {
         let failure = failure.or_else(|| {
             if deadline <= now() {
                 Some(("timeout", "execution deadline expired"))
-            } else if exit != Some(0) {
+            } else if !local_agent && exit != Some(0) {
                 Some(("process_failed", "Codex process did not exit successfully"))
-            } else if !initialized {
+            } else if !local_agent && !initialized {
                 Some((
                     "mcp_initialization_failed",
                     "xXASSXx MCP did not complete initialization",
                 ))
             } else if reads == 0 || result.is_none() {
-                Some((
-                    "missing_result",
-                    "no MCP task read and valid result submission",
-                ))
-            } else if !completed || session.is_none() {
+                Some(("missing_result", "no task read and valid result submission"))
+            } else if !completed || (!local_agent && session.is_none()) {
                 Some((
                     "incomplete_execution",
                     "missing turn.completed or thread.started event",

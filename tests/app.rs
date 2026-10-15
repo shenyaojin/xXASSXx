@@ -413,7 +413,11 @@ async fn persistent_owner_model_followup_and_tool_failure_cannot_claim_success()
         .is_err()
     );
     assert!(s.messages(None).unwrap().is_empty());
-    assert_eq!(requests.lock().unwrap().len(), 5);
+    assert_eq!(
+        requests.lock().unwrap().len(),
+        3,
+        "accepted replies must not trigger another completion request"
+    );
     server.abort();
 }
 #[test]

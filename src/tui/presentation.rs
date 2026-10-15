@@ -395,7 +395,11 @@ pub(super) fn activity(
             .flatten()
             .any(|r| r["revision"] == t["revision"] && r["state"] == "running")
         {
-            if t["active_tool"].is_string() {
+            if t["active_executor"] == "local_agent" {
+                "本机 local agent 正在查找和读取已授权的资料".into()
+            } else if t["active_executor"] == "starting" {
+                "本机正在准备执行已授权的任务".into()
+            } else if t["active_tool"].is_string() {
                 "本机 Codex 正在处理工具调用".into()
             } else {
                 "本机 Codex 正在处理已授权的任务".into()

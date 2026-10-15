@@ -30,9 +30,9 @@ impl Default for ModelConfig {
             api_key_env: "DEEPSEEK_API_KEY".into(),
             secrets_file: None,
             timeout_secs: 30,
-            max_model_calls: 4,
-            max_tool_rounds: 3,
-            max_tool_calls: 12,
+            max_model_calls: 8,
+            max_tool_rounds: 7,
+            max_tool_calls: 24,
             max_tokens: 2048,
             thinking: false,
             allow_insecure_http: false,
@@ -221,6 +221,9 @@ impl HttpModel {
             })
         })?;
         let status = response.status().as_u16();
+        if !(200..300).contains(&status) && !matches!(status, 401 | 402 | 403 | 429) {
+            anyhow::bail!("model_http_failed (HTTP {status})");
+        }
         ensure!(
             (200..300).contains(&status),
             "{}",

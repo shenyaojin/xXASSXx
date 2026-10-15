@@ -238,7 +238,8 @@ async fn live_owner_file_routing_matrix() {
                 json!({"role":"user","content":body}),
             ];
             let mut decision = Value::Null;
-            for _ in 0..3 {
+            let mut reads = Vec::new();
+            for _ in 0..8 {
                 let response = model
                     .complete_with_requirement(&messages, &app::model::tools(), true)
                     .await
@@ -247,6 +248,36 @@ async fn live_owner_file_routing_matrix() {
                 for call in response["tool_calls"].as_array().unwrap() {
                     if call["function"]["name"] == "context" {
                         messages.push(json!({"role":"tool","tool_call_id":call["id"],"content":json!({"ok":true,"value":context}).to_string()}));
+                    } else if xxassxx::local_files::is_tool(
+                        call["function"]["name"].as_str().unwrap_or(""),
+                    ) {
+                        // Live-model routing evaluation with a synthetic tool
+                        // fixture. Filesystem enforcement is tested separately.
+                        let args: Value =
+                            serde_json::from_str(call["function"]["arguments"].as_str().unwrap())
+                                .unwrap();
+                        let path = args["path"].as_str().unwrap_or("");
+                        let directory = path.replace("~/", "/Users/alice/");
+                        let query = args["query"].as_str().unwrap_or("");
+                        let entries = [
+                            "/Users/alice/project/结果.csv",
+                            "/Users/alice/Library/CloudStorage/资料/研究 结果.zip",
+                            "/Users/alice/Downloads/report.zip",
+                            "/tmp/study notes.txt",
+                            "/tmp/a.txt",
+                            "/tmp/b.txt",
+                            "/home/alice/output.zip",
+                        ]
+                        .into_iter()
+                        .filter(|p| {
+                            p.starts_with(&format!("{}/", directory.trim_end_matches('/')))
+                                && p.contains(query)
+                        })
+                        .map(|p| json!({"path":p,"kind":"file","bytes":19}))
+                        .collect::<Vec<_>>();
+                        let value = json!({"ok":true,"value":{"directory":directory,"entries":entries,"truncated":false,"skipped_entries":0}});
+                        reads.push(call.clone());
+                        messages.push(json!({"role":"tool","tool_call_id":call["id"],"content":value.to_string()}));
                     } else {
                         decision = call.clone();
                     }
@@ -256,7 +287,7 @@ async fn live_owner_file_routing_matrix() {
                 }
             }
             let passed = decision["function"]["name"] == expected;
-            records.push(json!({"mode":mode,"request":body,"expected":expected,"decision":decision,"passed":passed}));
+            records.push(json!({"mode":mode,"request":body,"expected":expected,"preliminary_reads":reads,"decision":decision,"passed":passed}));
             if let Ok(path) = std::env::var("XXASSXX_ROUTING_EVIDENCE") {
                 std::fs::write(path, serde_json::to_vec_pretty(&records).unwrap()).unwrap();
             }

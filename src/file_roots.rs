@@ -1,4 +1,4 @@
-//! Owner-managed directories for Codex read-only intents and local imports.
+//! Owner-managed directories for local agent and Codex read-only intents and local imports.
 use crate::store::Store;
 use anyhow::{Context, Result, ensure};
 use clap::Subcommand;
@@ -9,7 +9,7 @@ use std::path::{Component, Path, PathBuf};
 pub enum Command {
     /// List allowed source directories; does not scan their contents.
     List,
-    /// Allow Codex read-only tasks and imports beneath this directory. Does not upload files.
+    /// Allow local agent and Codex read-only tasks and imports beneath this directory. Does not upload files.
     Add { path: PathBuf },
     /// Stop future native tasks/imports from this root. Existing snapshots/grants remain.
     Remove { path: PathBuf },
@@ -112,5 +112,5 @@ pub fn execute(store: &Store, command: Command) -> Result<Value> {
         })
         .collect::<Vec<_>>();
     Ok(json!({"directories":roots,"change":change,
-        "scope":"Codex may search/read these directories for local or team requests and return answers and file references. No automatic upload, edits, or project execution. Removing a root blocks new native runs/results; existing snapshots and grants remain."}))
+        "scope":"Local agent and Codex may search/read these directories for local or team requests and return answers and file references. No automatic upload, edits, or project execution. Removing a root blocks new native runs/results; existing snapshots and grants remain."}))
 }

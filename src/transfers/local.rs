@@ -94,6 +94,12 @@ pub fn private_dir(path: &Path) -> Result<()> {
 }
 /// Walk every component through directory handles: changing a parent to a link cannot escape.
 pub(crate) fn plain_open(path: &Path) -> Result<File> {
+    let file = plain_handle(path)?;
+    ensure!(file.metadata()?.is_file(), "只支持普通文件");
+    Ok(file)
+}
+/// Open an ordinary file or directory without following any path-component link.
+pub(crate) fn plain_handle(path: &Path) -> Result<File> {
     use std::os::{
         fd::{AsRawFd, FromRawFd, OwnedFd},
         unix::ffi::OsStrExt,
@@ -104,7 +110,6 @@ pub(crate) fn plain_open(path: &Path) -> Result<File> {
         .components()
         .filter(|c| *c != Component::RootDir)
         .collect::<Vec<_>>();
-    ensure!(!components.is_empty(), "expected file");
     for (i, component) in components.iter().enumerate() {
         let Component::Normal(name) = component else {
             bail!("invalid file path");
@@ -126,7 +131,10 @@ pub(crate) fn plain_open(path: &Path) -> Result<File> {
         dir = unsafe { OwnedFd::from_raw_fd(fd) };
     }
     let file = File::from(dir);
-    ensure!(file.metadata()?.is_file(), "只支持普通文件");
+    ensure!(
+        file.metadata()?.is_file() || file.metadata()?.is_dir(),
+        "只支持普通文件或目录"
+    );
     Ok(file)
 }
 pub fn protected(store: &Store, path: &Path) -> Result<()> {
@@ -552,7 +560,7 @@ pub fn allow_task(store: &Store, id: &str, rev: i64) -> Result<Value> {
     );
     crate::task_workspace::binding(&store.conn, id, rev)?;
     let key = stable_id(id, &format!("deliver:{rev}"));
-    store.conn.execute("INSERT INTO transfer_grants(id,kind,task_id,revision,recipient,evidence,created_at) VALUES(?1,'task_outputs',?2,?3,?4,'执行方允许交付本任务目录内提交的结果附件',?5) ON CONFLICT(id) DO UPDATE SET revoked=0",params![key,id,rev,t["initiator"].as_str(),now()])?;
+    store.conn.execute("INSERT INTO transfer_grants(id,kind,task_id,revision,recipient,evidence,created_at) VALUES(?1,'task_outputs',?2,?3,?4,'执行方允许交付本任务目录内提交的结果附件',?5) ON CONFLICT(id) DO UPDATE SET revoked=0",params![key,id,rev,task_recipient(&t)?,now()])?;
     Ok(json!({"allowed":true,"task_id":id,"revision":rev}))
 }
 pub async fn execute(store: &Store, cmd: Command) -> Result<Value> {
@@ -621,8 +629,24 @@ pub(crate) fn read_chunk(path: &Path, offset: u64, length: u64) -> Result<Vec<u8
 }
 
 /// Only explicitly submitted delivery references are exported; evidence citations remain local.
+pub fn task_recipient(t: &Value) -> Result<&str> {
+    let initiator = t["initiator"].as_str().context("missing initiator")?;
+    if let Some(to) = t["draft"]["deliver_to"].as_str() {
+        ensure!(
+            to != initiator
+                && t["participants"]
+                    .as_array()
+                    .is_some_and(|p| !p.is_empty() && p.iter().all(|m| m == initiator)),
+            "onward delivery requires an initiator-local task"
+        );
+        return Ok(to);
+    }
+    Ok(initiator)
+}
+
 pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Result<Option<Value>> {
-    if t["initiator"] == store.owner()? {
+    let recipient = task_recipient(t)?;
+    if recipient == store.owner()? {
         return Ok(None);
     }
     let delivering_files = t["draft"]["mode"] == "files";
@@ -662,7 +686,7 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
         store,
         Prepare {
             id: id.clone(),
-            recipient: t["initiator"].as_str().unwrap().into(),
+            recipient: recipient.into(),
             // The task result keeps the explanation. The attachment note is
             // transport context, never the executor's discovery transcript.
             note: format!("任务附件 · {} 个文件", paths.len()),
@@ -676,7 +700,7 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
         },
         false,
     )?;
-    let automatic:bool=store.conn.query_row("SELECT EXISTS(SELECT 1 FROM transfer_grants WHERE kind='task_outputs' AND task_id=?1 AND revision=?2 AND recipient=?3 AND revoked=0)",params![task,rev,t["initiator"].as_str()],|r|r.get(0))?;
+    let automatic:bool=store.conn.query_row("SELECT EXISTS(SELECT 1 FROM transfer_grants WHERE kind='task_outputs' AND task_id=?1 AND revision=?2 AND recipient=?3 AND revoked=0)",params![task,rev,recipient],|r|r.get(0))?;
     if automatic && !delivering_files && result["state"] == "draft" {
         allow(store, &id)?;
     }
@@ -695,6 +719,7 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
 /// Receipt facts and the next responsible member, never inferred from model prose.
 pub fn delivery_status(store: &Store, t: &Value, candidates: &Value) -> Result<Value> {
     let ready = delivery_ready(store, t, candidates)?;
+    let recipient = task_recipient(t)?;
     let mut items = vec![];
     for c in candidates.as_array().context("missing candidates")? {
         let result = c.get("result").unwrap_or(c);
@@ -725,10 +750,15 @@ pub fn delivery_status(store: &Store, t: &Value, candidates: &Value) -> Result<V
             })
             .map(|e| &e["payload"]);
         let matches_candidate = local.as_ref().is_none_or(|v| {
-            v["direction"] == "in"
+            v["direction"]
+                == if sender == store.owner().unwrap_or_default() {
+                    "out"
+                } else {
+                    "in"
+                }
                 && v["manifest"] == result["attachment"]["manifest"]
                 && v["manifest"]["sender"] == sender
-                && v["manifest"]["recipient"] == t["initiator"]
+                && v["manifest"]["recipient"] == recipient
                 && v["manifest"]["task"]["id"] == t["id"]
                 && v["manifest"]["task"]["revision"] == t["revision"]
         });
@@ -749,13 +779,17 @@ pub fn delivery_status(store: &Store, t: &Value, candidates: &Value) -> Result<V
                 }
             });
         let here = local.as_ref().is_some_and(|v| v["direction"] == "in");
-        let recipient = t["initiator"].as_str().unwrap_or("");
         let (who, body) = if !matches_candidate {
             (sender, "附件与本任务的发送方、版本或清单不匹配，不能确认交付；请发送方检查，勿重跑已完成的计算。".into())
         } else if status == "received" && here {
             (
                 recipient,
                 "附件已收到并校验，已保存到本机；按 CtrlF 查看。".into(),
+            )
+        } else if status == "delivered" && local.as_ref().is_some_and(|v| v["direction"] == "out") {
+            (
+                recipient,
+                format!("附件已送达 @{recipient}，对方已保存并校验。"),
             )
         } else if let Some(error) = error {
             let who = if here { recipient } else { sender };
@@ -777,11 +811,13 @@ pub fn delivery_status(store: &Store, t: &Value, candidates: &Value) -> Result<V
                 _ => (sender, format!("尚未收到 @{sender} 的可下载附件；发送授权或上传状态尚未同步。请发送方在自己的 CtrlF 检查，接收方无需重复授权或重跑任务。")),
             }
         };
-        items.push(json!({"transfer_id":id,"sender":sender,"state":if matches_candidate {status} else {"mismatch"},"next_owner":who,"body":body,"error":error,"available_here":here && matches_candidate}));
+        let received = matches_candidate
+            && ((status == "received" && here)
+                || (status == "delivered"
+                    && local.as_ref().is_some_and(|v| v["direction"] == "out")));
+        items.push(json!({"transfer_id":id,"sender":sender,"state":if matches_candidate {status} else {"mismatch"},"received":received,"next_owner":who,"body":body,"error":error,"available_here":here && matches_candidate}));
     }
-    let pending = items
-        .iter()
-        .find(|v| v["state"] != "received" || v["available_here"] != true);
+    let pending = items.iter().find(|v| v["received"] != true);
     Ok(
         json!({"ready":ready,"next_owner":pending.map(|v| &v["next_owner"]),"body":items.iter().filter_map(|v|v["body"].as_str()).collect::<Vec<_>>().join("\n"),"items":items}),
     )
@@ -793,13 +829,16 @@ pub fn delivery_ready(store: &Store, t: &Value, candidates: &Value) -> Result<bo
     if t["initiator"] != store.owner()? {
         return Ok(false);
     }
-    if t["participants"]
-        .as_array()
-        .is_some_and(|m| m.iter().all(|v| v == &t["initiator"]))
+    if !t["draft"]["deliver_to"].is_string()
+        && t["participants"]
+            .as_array()
+            .is_some_and(|m| m.iter().all(|v| v == &t["initiator"]))
     {
         return Ok(true); // Local deliverables already reside on the requesting computer.
     }
     let mut found = false;
+    let onward = t["draft"]["deliver_to"].is_string();
+    let recipient = task_recipient(t)?;
     for c in candidates.as_array().context("missing candidates")? {
         let result = if c.get("result").is_some() {
             &c["result"]
@@ -812,9 +851,9 @@ pub fn delivery_ready(store: &Store, t: &Value, candidates: &Value) -> Result<bo
                 return Ok(false);
             };
             let m = manifest(store, id)?;
-            if v["direction"] != "in"
-                || v["state"] != "received"
-                || m.recipient != store.owner()?
+            if v["direction"] != if onward { "out" } else { "in" }
+                || v["state"] != if onward { "delivered" } else { "received" }
+                || m.recipient != recipient
                 || m.sender != c["member"].as_str().unwrap_or("")
                 || serde_json::to_value(&m)? != result["attachment"]["manifest"]
                 || m.task.as_ref().is_none_or(|r| {
