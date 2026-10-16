@@ -129,7 +129,7 @@ pub fn transition(t: &Value) -> Value {
         let previous = &change["before"]["executor"];
         let stops = t["assignment_stops"].as_array().into_iter().flatten()
             .filter(|v| &v["executor"] == previous && v["revision"].as_i64().is_some_and(|r| r < t["revision"].as_i64().unwrap_or(0)))
-            .map(|v| json!({"id":v["id"],"revision":v["revision"],"executor":v["executor"],"state":v["state"],"confirmed_at":v["confirmed_at"]}))
+            .map(|v| json!({"id":v["id"],"revision":v["revision"],"executor":v["executor"],"state":v["state"],"side_effects_checked":v["state"]=="stopped","confirmed_at":v["confirmed_at"]}))
             .collect::<Vec<_>>();
         return json!({"reason":change["body"],"previous_executor":previous,"stops":stops,"reported_by":t["initiator"]});
     }
@@ -159,7 +159,7 @@ pub fn transition_description(t: &Value) -> String {
         reason,
         v["previous_executor"].as_str().unwrap_or("?"),
         if stopped {
-            "已确认停止"
+            "已确认停止并核对副作用"
         } else {
             "停止仍待确认"
         }

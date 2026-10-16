@@ -1985,7 +1985,7 @@ pub fn execution_context(c: &Connection, id: &str) -> Result<Option<Value>> {
         params![v["task_id"].as_str(),v["revision"].as_i64()],|r|r.get::<_,Option<String>>(0)
     ).optional()?.flatten().map(|s|serde_json::from_str::<Value>(&s)).transpose()?.unwrap_or(Value::Null);
     v["role_policy"] = json!(
-        "The explicit current executor is this member. Resolve materials only within this device's current authorized roots; a result recipient has no execution role. Current roles supersede prior inferred ownership or delivery directions. Prior assistant drafts are not user facts. The kernel sends only the selected current outputs to the current recipient under this device's current permissions."
+        "The explicit current executor is this member. Resolve materials only within this device's current authorized roots; a result recipient has no execution role. Current roles supersede prior inferred ownership or delivery directions. Prior assistant drafts are not user facts. assignment_change.stops state=stopped with side_effects_checked=true is the authenticated previous executor's completed stop AND side-effect check, accepted by the kernel before dispatch. This condition is already satisfied. The previous member's private details are deliberately omitted; their absence is not a missing handoff. Do not request another confirmation or read the old member's machine. The kernel sends only the selected current outputs to the current recipient under this device's current permissions."
     );
     v["logical_working_directory"] = json!(cwd);
     v["evidence_priority"] = json!(CURRENT_EVIDENCE_RULE);
@@ -2297,6 +2297,9 @@ async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result
         "{system} {CURRENT_EVIDENCE_RULE} Role contract: task.roles is authoritative for where execution occurs and who receives results. A recipient is never an executor. Current explicit assignment overrides locations inferred in previous drafts. On followup choose plan with executor OR result_recipient for role/direction corrections. For a draft task, factual clarifications use revise with complete effective_request so the new confirmation restates them; do not use supplement before confirmation; choose supplement only for facts with the same goal and authorization. Material-location or scope changes that invalidate the execution plan use revise with effective_request; changed goals/deliverables/permission also use revise. Preserve original user wording as evidence. effective_request must contain the complete still-valid requirements and replace contradicted interpretations; do not concatenate abandoned drafts. Never treat old assistant prose as user facts. For plan do not change both fields at once; explain the second needed correction in body for review. A new member grants no local permissions. Destination wording always names the actual result recipient, including local execution with onward delivery."
     );
     let system = format!(
+        "{system} Handoff facts: assignment_stops.state=stopped and assignment_change.stops.side_effects_checked=true mean the previous executor already confirmed both stopping and its side-effect boundary. The kernel authenticated that member and gated new dispatch on it. This is completed evidence, not a pending user question or an unverified assistant claim. Earlier assistant statements that confirmation is missing are superseded by these facts. The new executor must not inspect or reconfirm the old member's private files. In review describe the substantive current results; Rust adds the authoritative assignment and handoff status. Never invent a remaining handoff limitation when these checks are complete."
+    );
+    let system = format!(
         "{system} Result selection: Unless the owner specifies otherwise, 'latest result' means the final adopted output of the most recent completed run, identified from project status, a manifest or an explicit final-result pointer. File modification time alone is not evidence. Later scratch/probe/parameter-perturbation/intermediate outputs are not the adopted result. Do not require a scientific re-validation. In prepare preserve this default as a concise selection constraint, not a new question. In review for mode files, return file_summary with one or two everyday sentences explaining what the delivered result represents and why selected, including any inspection findings or numerical checks the user requested, based on the executor's evidence; leave receipt and next-button instructions to Rust. Do not turn a simple image request into a progress report."
     );
     let mut model_task = if stage == "prepare" {
@@ -2450,7 +2453,7 @@ fn preserved_plan(t: &Value) -> Option<Value> {
         .any(|c| c["revision"] == t["revision"] && c["kind"] == "execution_plan")
     {
         if let Some(previous) = t["revisions"].as_array().into_iter().flatten().find(|r| {
-            r["revision"].as_i64() == Some(revision(&t) - 1) && r["draft"]["goal"].is_string()
+            r["revision"].as_i64() == Some(revision(t) - 1) && r["draft"]["goal"].is_string()
         }) {
             return Some(previous["draft"].clone());
         }
@@ -3276,6 +3279,21 @@ fn finish_delivery(
             final_result["file_summary"]
                 .as_str()
                 .unwrap_or("已按当前要求核对所选文件。")
+        ));
+    }
+    if let Some(change) = t
+        .get("assignment_change")
+        .cloned()
+        .filter(|v| v.is_object())
+    {
+        final_result["assignment_change"] = change;
+        let description = crate::task_roles::transition_description(t);
+        final_result["body"] = json!(format!(
+            "{}\n\n当前执行：@{}；成果接收：@{}。\n{}",
+            string(&final_result, "body")?,
+            t["roles"]["executor"].as_str().unwrap_or("执行成员"),
+            crate::transfers::task_recipient(t)?,
+            description
         ));
     }
     let body = string(&final_result, "body")?.to_string();

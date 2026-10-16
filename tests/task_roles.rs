@@ -137,6 +137,7 @@ async fn replacement_waits_for_old_member_and_tombstone_defeats_reordered_propos
     assert_eq!(transition["previous_executor"], "b");
     assert_eq!(transition["reason"], change.body);
     assert_eq!(transition["stops"][0]["state"], "stopped");
+    assert_eq!(transition["stops"][0]["side_effects_checked"], true);
     assert!(
         transition["stops"][0].get("evidence").is_none(),
         "private prior side-effect details are not forwarded"
