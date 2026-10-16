@@ -1686,7 +1686,21 @@ impl Ui {
         let overview_height = if overview.is_empty() {
             0
         } else {
-            (overview.len() as u16 + 2).min(body.height.saturating_sub(5))
+            // Role explanations and physical directories wrap independently of
+            // logical lines. Keep the stop boundary and next action visible.
+            (overview
+                .iter()
+                .map(|line| {
+                    let text = line
+                        .spans
+                        .iter()
+                        .map(|s| s.content.as_ref())
+                        .collect::<String>();
+                    wrap(&text, body.width.saturating_sub(2).max(1) as usize).len()
+                })
+                .sum::<usize>() as u16
+                + 2)
+            .min(body.height.saturating_sub(7))
         };
         let split = Layout::vertical([
             Constraint::Length(overview_height),
