@@ -45,6 +45,15 @@
 
 成果来源应关联执行成员、任务版本、运行及实际文件哈希。授权检查必须发生在执行或发送的那台设备；任务角色和模型文字都不能授予另一台设备权限。
 
+| 第三阶段应复用的接口 | 必须维持的约束 |
+| --- | --- |
+| `task_roles::{roles,executors,change}`，`roles` / `revision` / `delivery_generation` | 执行替换与接收人替换分开；NULL 旧合同保留；不从所有参与者推断新执行者 |
+| `request_stop`、`confirm_stop`、`ingest_control`、`blocked`、`fenced_for` | `stop_assignment` / `assignment_stopped` 绑定原任务、版本、发起人、旧执行者；先确认停止及副作用边界再派发 |
+| `task_coordinator::check_execution` | 运行、提交及迟到结果均校验当前版本和停止屏障；进程退出不自动证明副作用安全 |
+| `answer`、`supplement`、`recover` 与输入/回执/恢复预算表 | 原话、问题绑定、输入 ID、接收和消费记录分开；换人另建消费记录；恢复预算有界且不清零 |
+| `task_offer`、`delivery_status`、`delivery_ready` 与 `approve_delivery` | 固定成果字节、来源成员/运行/哈希；接收人变化重新核对实际发送权限；本机留存不伪造网络传输 |
+| 身份/心跳能力 `task_roles_protocol=1`、schema 14/4 | 旧端明确阻塞或走已验证的普通附件路径；接收成果不获取执行合同或私人历史 |
+
 ## 真实验收与限制
 
 实际信箱、真实 DeepSeek、官方 Codex 0.162.1、三个交互 PTY，身份为 Lakota a/c 与 Trader b。各端保持 Ask for approval；完整本机权限只绑定当次任务批准。SSH 用于搭建隔离环境、断开测试链路和只读核验；业务运行、批准、纠正与停止核对均通过产品终端完成。

@@ -871,7 +871,10 @@ fn task_text_offer(
     );
     if get(store, &id).is_err() {
         let stage = tempfile::tempdir()?;
-        let path = stage.path().join("result.txt");
+        // macOS exposes its temporary directory through /var -> /private/var.
+        // Resolve only this kernel-created directory; user attachment paths
+        // still pass the unchanged no-symlink traversal checks.
+        let path = stage.path().canonicalize()?.join("result.txt");
         fs::write(&path, body)?;
         prepare(
             store,
