@@ -345,9 +345,15 @@ async fn presence_post(
         return Err(problem(StatusCode::BAD_REQUEST, "invalid activity"));
     }
     c.execute("INSERT INTO relay_presence(member_id,busy,seen_at) VALUES(?1,?2,?3) ON CONFLICT(member_id) DO UPDATE SET busy=excluded.busy,seen_at=excluded.seen_at",params![me,input.activity=="busy",now()]).map_err(|_|problem(StatusCode::INTERNAL_SERVER_ERROR,"storage unavailable"))?;
-    if input.task_roles_protocol==1 {
+    if input.task_roles_protocol == 1 {
         c.execute("INSERT INTO relay_role_capabilities VALUES(?1,?2) ON CONFLICT(member_id) DO UPDATE SET seen_at=excluded.seen_at",params![me,now()]).map_err(request_error_from_sql)?;
-    } else {c.execute("DELETE FROM relay_role_capabilities WHERE member_id=?1",[&me]).map_err(request_error_from_sql)?;}
+    } else {
+        c.execute(
+            "DELETE FROM relay_role_capabilities WHERE member_id=?1",
+            [&me],
+        )
+        .map_err(request_error_from_sql)?;
+    }
     if input.team_activity_protocol == 1 {
         c.execute("INSERT INTO relay_activity_capabilities VALUES(?1,?2) ON CONFLICT(member_id) DO UPDATE SET seen_at=excluded.seen_at",params![me,now()]).map_err(request_error_from_sql)?;
     } else {

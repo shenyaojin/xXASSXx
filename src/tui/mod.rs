@@ -105,6 +105,8 @@ struct AccessForm {
     revision: i64,
     goal: String,
     initiator: String,
+    roles: Value,
+    change_reason: String,
     parent: PathBuf,
     roots: Vec<PathBuf>,
     timeout_secs: u64,
@@ -321,9 +323,13 @@ impl Ui {
                 self.panel = Panel::Supplement;
             }
             "/roles" | "/handoff" => {
-                ensure!(self.current_task().is_some(),"请先选择任务");
-                self.selected_question=None;
-                self.panel=if name=="/roles" {Panel::Roles}else{Panel::Handoff};
+                ensure!(self.current_task().is_some(), "请先选择任务");
+                self.selected_question = None;
+                self.panel = if name == "/roles" {
+                    Panel::Roles
+                } else {
+                    Panel::Handoff
+                };
             }
             "/recover" => self.open_recovery()?,
             "/stop" => self.open_stop()?,
@@ -719,6 +725,13 @@ impl Ui {
             revision: t["revision"].as_i64().unwrap(),
             goal: t["goal"].as_str().unwrap_or("").into(),
             initiator: t["initiator"].as_str().unwrap_or("").into(),
+            roles: t["roles"].clone(),
+            change_reason: t["role_changes"]
+                .as_array()
+                .and_then(|v| v.last())
+                .and_then(|v| v["body"].as_str())
+                .unwrap_or("")
+                .into(),
             parent: permission["parent"].as_str().unwrap_or("").into(),
             roots: serde_json::from_value(permission["read_roots"].clone())?,
             timeout_secs: 1800,
@@ -748,7 +761,7 @@ impl Ui {
                 KeyCode::Enter => match self.index {
                     0 => {
                         let form = self.access_form.as_ref().context("请重新打开授权范围")?;
-                        crate::task_workspace::execute(
+                        crate::task_workspace::execute_with_roles(
                             store,
                             crate::task_workspace::Command::Allow {
                                 task: form.task.clone(),
@@ -757,6 +770,7 @@ impl Ui {
                                 read_dirs: vec![],
                                 timeout_secs: form.timeout_secs,
                             },
+                            Some(&form.roles),
                         )?;
                         self.access_form = None;
                         self.panel = Panel::Chat;
@@ -1479,8 +1493,17 @@ impl Ui {
                     self.panel = Panel::Chat;
                 }
                 Panel::Roles | Panel::Handoff => {
-                    self.enqueue(store,if self.panel==Panel::Roles {"roles_task"} else {"confirm_stop"},text,json!({}))?;
-                    self.panel=Panel::Chat;
+                    self.enqueue(
+                        store,
+                        if self.panel == Panel::Roles {
+                            "roles_task"
+                        } else {
+                            "confirm_stop"
+                        },
+                        text,
+                        json!({}),
+                    )?;
+                    self.panel = Panel::Chat;
                 }
                 Panel::Supplement => {
                     self.enqueue(store, "supplement_task", text, json!({}))?;
@@ -2238,6 +2261,15 @@ impl Ui {
                         "本次确认内容：第 {} 版 · 只允许这一项任务",
                         form.revision
                     ));
+                    if let Some(executor) = form.roles["executor"].as_str() {
+                        lines.push(format!(
+                            "本机执行成员：@{executor} · 成果接收人：@{}",
+                            form.roles["recipients"][0].as_str().unwrap_or("")
+                        ));
+                    }
+                    if !form.change_reason.is_empty() {
+                        lines.push(format!("本次变更：{}", form.change_reason));
+                    }
                     lines.push(format!(
                         "默认产物与日志目录：{}",
                         form.parent
@@ -3105,8 +3137,8 @@ pub async fn open(args: OpenArgs) -> Result<()> {
                             | Panel::NewTask
                             | Panel::Revise
                             | Panel::Supplement
-                | Panel::Roles
-                | Panel::Handoff
+                            | Panel::Roles
+                            | Panel::Handoff
                             | Panel::AccessPath
                             | Panel::AccessTimeout
                             | Panel::AttachmentSave

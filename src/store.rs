@@ -66,6 +66,16 @@ pub struct Store {
 }
 
 impl Store {
+    /// Reserve the writer before reading a mutable contract. A deferred read
+    /// transaction cannot upgrade an old WAL snapshot after another connection
+    /// commits (SQLITE_BUSY_SNAPSHOT); busy_timeout cannot repair that upgrade.
+    pub(crate) fn write_transaction(&self) -> Result<rusqlite::Transaction<'_>> {
+        Ok(rusqlite::Transaction::new_unchecked(
+            &self.conn,
+            TransactionBehavior::Immediate,
+        )?)
+    }
+
     pub fn init(path: &Path) -> Result<Self> {
         if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
             std::fs::create_dir_all(parent)?;

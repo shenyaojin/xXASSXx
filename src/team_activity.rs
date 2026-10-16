@@ -2,7 +2,7 @@
 use crate::{
     store::{Store, now},
     task_coordinator::Wire,
-    team::Message,
+    team::{Message, stable_id},
 };
 use anyhow::{Context, Result, ensure};
 use rusqlite::{Connection, OptionalExtension, params};
@@ -99,25 +99,54 @@ pub fn project(c: &Connection, m: &Message, at: i64) -> Result<()> {
         return Ok(());
     }
     let w = Wire::parse(m)?;
-    if matches!(w.event.as_str(),"stop_assignment"|"assignment_stopped") {return Ok(());}
+    if matches!(w.event.as_str(), "stop_assignment" | "assignment_stopped") {
+        let old: Option<(i64, bool, String)> = c
+            .query_row(
+                "SELECT revision,shared,metadata FROM relay_activity_tasks WHERE task_id=?1",
+                [&w.task_id],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .optional()?;
+        if let Some((revision, true, raw)) = old.filter(|(revision, _, _)| *revision == w.revision)
+        {
+            let mut entry: Value = serde_json::from_str(&raw)?;
+            let stopped = w.event == "assignment_stopped";
+            entry["state"] = json!("waiting");
+            entry["event"] = json!(w.event);
+            entry["actor"] = json!(m.sender);
+            entry["created_at"] = json!(at);
+            entry["body"] = json!(if stopped {
+                "原执行成员已确认停止并核对，等待发起方确认后续安排。"
+            } else {
+                "正在撤销原执行分配；是否停止尚未确认，新执行等待安全交接。"
+            });
+            entry["next_owner"] = w.data[if stopped { "initiator" } else { "executor" }].clone();
+            c.execute("INSERT OR IGNORE INTO relay_activity_events(task_id,revision,member,sequence,payload) VALUES(?1,?2,?3,?4,?5)",params![w.task_id,revision,m.sender,if stopped {-2}else{-1},entry.to_string()])?;
+            c.execute(
+                "UPDATE relay_activity_tasks SET state='waiting' WHERE task_id=?1",
+                [&w.task_id],
+            )?;
+        }
+        return Ok(());
+    }
     let (current, initiator, people): (i64, String, String) = c.query_row(
         "SELECT revision,initiator,participants FROM relay_tasks WHERE id=?1",
         [&w.task_id],
         |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
     )?;
+    if current != w.revision {
+        return Ok(());
+    }
     let people: Vec<String> = serde_json::from_str(&people)?;
     ensure!(
         people.contains(&m.sender),
         "activity sender is not a participant"
     );
-    if current != w.revision {
-        return Ok(());
-    }
     if w.event == "proposal" {
         if m.sender != initiator || w.data["team_activity"] != true {
             return Ok(());
         }
-        let executors=crate::task_roles::executors(&w.data)?;
+        let executors = crate::task_roles::executors(&w.data)?;
         let metadata = json!({"task_id":w.task_id,"revision":w.revision,"title":text(&w.data,"title",160),"goal":text(&w.data["draft"],"goal",2000),"initiator":initiator,"executors":executors,"roles":w.data["roles"],"scope":"白名单任务 · 任务进展和结果对团队可见"});
         c.execute("INSERT INTO relay_activity_tasks(task_id,revision,metadata) VALUES(?1,?2,?3) ON CONFLICT(task_id) DO UPDATE SET revision=excluded.revision,metadata=excluded.metadata,shared=0,state='queued' WHERE excluded.revision>relay_activity_tasks.revision",params![w.task_id,w.revision,metadata.to_string()])?;
         return Ok(());
@@ -143,6 +172,18 @@ pub fn project(c: &Connection, m: &Message, at: i64) -> Result<()> {
         return Ok(());
     }
     let mut entry: Value = serde_json::from_str(&raw)?;
+    if w.event == "delivery_plan" {
+        let raw: String = c.query_row(
+            "SELECT roles FROM relay_task_roles WHERE task_id=?1 AND revision=?2",
+            params![w.task_id, w.revision],
+            |r| r.get(0),
+        )?;
+        entry["roles"] = serde_json::from_str(&raw)?;
+        c.execute(
+            "UPDATE relay_activity_tasks SET metadata=?2 WHERE task_id=?1",
+            params![w.task_id, entry.to_string()],
+        )?;
+    }
     let executor = entry["executors"]
         .as_array()
         .is_some_and(|xs| xs.iter().any(|p| p == &m.sender));
@@ -165,6 +206,11 @@ pub fn project(c: &Connection, m: &Message, at: i64) -> Result<()> {
         return Ok(());
     }
     let (state, body, mut next) = match w.event.as_str() {
+        "delivery_plan" => (
+            state.as_str(),
+            "成果接收人已改变；已有计算保留，发送由实际发送设备按当前授权处理。".into(),
+            Some(initiator.clone()),
+        ),
         // Attachment transport and chat supplements do not restart a waiting task.
         "progress" if w.data["stage"] == "attachment" || w.data["supplement"].is_string() => {
             return Ok(());
@@ -424,5 +470,14 @@ pub fn withdraw(c: &Connection, sender: &str, m: &Message) -> Result<bool> {
         "INSERT OR IGNORE INTO relay_withdrawn_proposals VALUES(?1,?2,?3)",
         params![m.message_id, sender, hash],
     )?;
+    if let Some(roles) = crate::task_roles::roles(&w.data)? {
+        // The withdrawal tombstone and this stop proof commit atomically. The
+        // executor never received an accepted proposal, including lost responses.
+        let id = stable_id(
+            &w.task_id,
+            &format!("stop-assignment:{}:{sender}:{}", w.revision, roles.executor),
+        );
+        c.execute("INSERT INTO relay_assignment_stops(id,task_id,revision,initiator,executor,stopped) VALUES(?1,?2,?3,?4,?5,1) ON CONFLICT(id) DO UPDATE SET stopped=1",params![id,w.task_id,w.revision,sender,roles.executor])?;
+    }
     Ok(false)
 }

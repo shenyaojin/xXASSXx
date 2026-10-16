@@ -73,7 +73,7 @@ pub fn execution_full(c: &Connection, execution: &str) -> Result<bool> {
 /// an execution directory, and remote messages can never confer permission.
 pub fn view(store: &Store, t: &Value) -> Result<Value> {
     let owner = store.owner()?;
-    let local_executor=crate::task_roles::executors(t)?.contains(&owner);
+    let local_executor = crate::task_roles::executors(t)?.contains(&owner);
     if !local_executor {
         return Ok(Value::Null);
     }
@@ -109,7 +109,7 @@ pub fn view(store: &Store, t: &Value) -> Result<Value> {
         |r| r.get(0),
     )?;
     Ok(
-        json!({"can_allow":!crate::access_mode::full(&store.conn)? && t["draft"]["mode"] == "execute" && t["confirmed"] == t["revision"] && !matches!(t["state"].as_str(),Some("draft"|"completed"|"cancelled")) && !task_full(&store.conn,id,rev)? && !running,
+        json!({"can_allow":!crate::task_roles::fenced(&store.conn,id,rev)? && !crate::access_mode::full(&store.conn)? && t["draft"]["mode"] == "execute" && t["confirmed"] == t["revision"] && !matches!(t["state"].as_str(),Some("draft"|"completed"|"cancelled")) && !task_full(&store.conn,id,rev)? && !running,
         "legacy_approval":grant.is_some() && !task_full(&store.conn,id,rev)?,"directory":grant,"parent":parent,"read_roots":roots,"timeout_secs":1800}),
     )
 }
@@ -170,6 +170,14 @@ pub fn for_execution(c: &Connection, execution: &str) -> Result<Option<Access>> 
 }
 
 pub fn execute(store: &Store, command: Command) -> Result<Value> {
+    execute_with_roles(store, command, None)
+}
+
+pub(crate) fn execute_with_roles(
+    store: &Store,
+    command: Command,
+    expected_roles: Option<&Value>,
+) -> Result<Value> {
     store.owner()?;
     match command {
         Command::Allow {
@@ -185,6 +193,10 @@ pub fn execute(store: &Store, command: Command) -> Result<Value> {
             )?;
             let t = task_coordinator::get(store, &task)?;
             ensure!(
+                expected_roles.is_none_or(|expected| *expected == t["roles"]),
+                "执行或收件安排已改变；请重新打开当前任务的授权范围"
+            );
+            ensure!(
                 t["revision"] == revision
                     && t["confirmed"] == revision
                     && t["draft"]["mode"] == "execute",
@@ -194,8 +206,14 @@ pub fn execute(store: &Store, command: Command) -> Result<Value> {
                 !["completed", "cancelled"].contains(&t["state"].as_str().unwrap_or("")),
                 "任务已结束"
             );
-            ensure!(crate::task_roles::executors(&t)?.contains(&store.owner()?),"请在任务执行成员的电脑上授权");
-            ensure!(!crate::task_roles::fenced(&store.conn,&task,revision)?,"此执行分配已撤销");
+            ensure!(
+                crate::task_roles::executors(&t)?.contains(&store.owner()?),
+                "请在任务执行成员的电脑上授权"
+            );
+            ensure!(
+                !crate::task_roles::fenced(&store.conn, &task, revision)?,
+                "此执行分配已撤销"
+            );
             ensure!(
                 (1..=86400).contains(&timeout_secs) && read_dirs.len() <= 32,
                 "执行时限或依赖目录数量不合法"

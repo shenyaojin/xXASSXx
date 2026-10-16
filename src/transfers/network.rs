@@ -135,6 +135,9 @@ fn still_authorized(store: &Store, id: &str) -> Result<bool> {
         let current = crate::task_coordinator::get(store, &t.id)?;
         if current["revision"] != t.revision
             || current["state"] == "cancelled"
+            || crate::task_roles::fenced(&store.conn, &t.id, t.revision)?
+            || (!current["roles"].is_null()
+                && task_recipient(&current)? != manifest(store, id)?.recipient)
             || (current["draft"]["mode"] == "execute"
                 && !crate::task_workspace::has_grant(&store.conn, &t.id, t.revision)?)
         {

@@ -69,9 +69,13 @@ pub fn is_task(conn: &Connection, id: &str) -> Result<bool> {
 }
 pub fn get(store: &Store, id: &str) -> Result<Value> {
     let mut v = store.conn.query_row("SELECT id,session_id,project_id,title,goal,state,revision,initiator,participants,original,draft,confirmed,updated_at,next_owner,waiting_reason,archived,result,error,seq FROM app_tasks WHERE id=?1 AND protocol=2", [id], |r| Ok(json!({"id":r.get::<_,String>(0)?,"session_id":r.get::<_,String>(1)?,"project_id":r.get::<_,String>(2)?,"title":r.get::<_,String>(3)?,"goal":r.get::<_,String>(4)?,"state":r.get::<_,String>(5)?,"revision":r.get::<_,i64>(6)?,"initiator":r.get::<_,String>(7)?,"participants":r.get::<_,String>(8)?,"original":r.get::<_,String>(9)?,"draft":r.get::<_,String>(10)?,"confirmed":r.get::<_,Option<i64>>(11)?,"updated_at":r.get::<_,i64>(12)?,"next_owner":r.get::<_,Option<String>>(13)?,"waiting_for":r.get::<_,Option<String>>(14)?,"archived":r.get::<_,bool>(15)?,"result":r.get::<_,Option<String>>(16)?,"error":r.get::<_,Option<String>>(17)?,"seq":r.get::<_,i64>(18)?,"protocol":2})))?;
-    v["roles"] = json!(crate::task_roles::load(&store.conn,id)?);
-    v["executors"] = json!(crate::task_roles::executors(&v)?);
-    v["assignment_stops"] = crate::task_roles::view(&store.conn,id)?;
+    v["roles"] = json!(crate::task_roles::load(&store.conn, id)?);
+    v["assignment_stops"] = crate::task_roles::view(&store.conn, id)?;
+    v["role_changes"] = rows(
+        &store.conn,
+        "SELECT json_object('revision',revision,'kind',kind,'body',body,'before',json(before_roles),'after',json(after_roles)) FROM task_role_changes WHERE task_id=?1 ORDER BY rowid",
+        id,
+    )?;
     v["team_activity"] = json!(store.conn.query_row(
         "SELECT team_activity FROM app_tasks WHERE id=?1",
         [id],
@@ -82,6 +86,7 @@ pub fn get(store: &Store, id: &str) -> Result<Value> {
             v[k] = serde_json::from_str(s)?;
         }
     }
+    v["executors"] = json!(crate::task_roles::executors(&v)?);
     v["meetings"] = rows(
         &store.conn,
         "SELECT json_object('id',id,'kind',kind,'payload',json(payload),'created_at',created_at) FROM task_system_events WHERE json_extract(payload,'$.task_id')=?1 ORDER BY rowid",
@@ -235,7 +240,13 @@ pub fn attachment_progress(
     }
     // A recipient of an onward attachment is not an execution participant and
     // must not receive task-protocol progress for a task they never joined.
-    let recipients=if !t["roles"].is_null() { vec![string(&t,"initiator")?.to_owned()] } else if t["draft"]["deliver_to"].is_string() {vec![]} else {vec![manifest.recipient.clone()]};
+    let recipients = if !t["roles"].is_null() {
+        vec![string(&t, "initiator")?.to_owned()]
+    } else if t["draft"]["deliver_to"].is_string() {
+        vec![]
+    } else {
+        vec![manifest.recipient.clone()]
+    };
     emit(
         &store.conn,
         &t,
@@ -388,7 +399,9 @@ pub(crate) fn emit(
 fn members(t: &Value) -> Result<Vec<String>> {
     Ok(serde_json::from_value(t["participants"].clone())?)
 }
-fn executors(t: &Value) -> Result<Vec<String>> { crate::task_roles::executors(t) }
+fn executors(t: &Value) -> Result<Vec<String>> {
+    crate::task_roles::executors(t)
+}
 
 pub(crate) const WAIT_ACCESS: &str = "等待执行方允许写入和运行";
 
@@ -442,7 +455,7 @@ fn wait_for_access(store: &Store, t: &Value, job_id: &str) -> Result<bool> {
 // never replay an uncertain physical run or unrelated model failure.
 pub(crate) fn access_granted(store: &Store, t: &Value) -> Result<()> {
     let c = &store.conn;
-    crate::task_roles::approve_delivery(c,t)?;
+    crate::task_roles::approve_delivery(c, t)?;
     let resumed = c.execute("UPDATE task_jobs SET state='pending',error=NULL WHERE task_id=?1 AND revision=?2 AND kind='start' AND state IN ('pending','awaiting_access','failed','uncertain') AND NOT EXISTS(SELECT 1 FROM task_executions WHERE task_id=?1 AND revision=?2)", params![t["id"].as_str(),revision(t)])?;
     if resumed == 0 {
         return Ok(());
@@ -568,7 +581,13 @@ pub fn create(c: &Connection, i: &Instruction, owner: &str, peer: Option<&str>) 
         "UPDATE app_tasks SET recovery_protocol=1 WHERE id=?1",
         [&id],
     )?;
-    crate::task_roles::save(c,&id,1,owner,&crate::task_roles::Roles::new(owner,peer.unwrap_or(owner)))?;
+    crate::task_roles::save(
+        c,
+        &id,
+        1,
+        owner,
+        &crate::task_roles::Roles::new(owner, peer.unwrap_or(owner)),
+    )?;
     Ok(id)
 }
 fn validate_onward_delivery(store: &Store, t: &Value, draft: &Value) -> Result<()> {
@@ -577,7 +596,8 @@ fn validate_onward_delivery(store: &Store, t: &Value, draft: &Value) -> Result<(
             .as_str()
             .context("deliver_to must be a contact member_id, not its display name")?;
         ensure!(
-            crate::task_roles::roles(t)?.is_some() || (executors(t)? == vec![store.owner()?] && recipient != store.owner()?),
+            crate::task_roles::roles(t)?.is_some()
+                || (executors(t)? == vec![store.owner()?] && recipient != store.owner()?),
             "指定附件接收人仅用于本机执行后发给另一位成员"
         );
         app::valid_recipient(store, recipient)
@@ -592,7 +612,7 @@ fn validate_onward_delivery(store: &Store, t: &Value, draft: &Value) -> Result<(
 }
 
 pub fn prepare(store: &Store, id: &str, draft: Value) -> Result<()> {
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     let draft = crate::task_prose::portable(&store.conn, &store.owner()?, id, draft)?;
     let mut t = get(store, id)?;
     ensure!(
@@ -615,10 +635,12 @@ pub fn prepare(store: &Store, id: &str, draft: Value) -> Result<()> {
         "不支持的任务操作类型"
     );
     validate_onward_delivery(store, &t, &draft)?;
-    if let Some(mut roles)=crate::task_roles::roles(&t)? {
-        if let Some(to)=draft["deliver_to"].as_str() { roles.recipients=vec![to.into()]; }
-        crate::task_roles::save(&tx,id,revision(&t),string(&t,"initiator")?,&roles)?;
-        t["roles"]=json!(roles);
+    if let Some(mut roles) = crate::task_roles::roles(&t)? {
+        if let Some(to) = draft["deliver_to"].as_str() {
+            roles.recipients = vec![to.into()];
+        }
+        crate::task_roles::save(&tx, id, revision(&t), string(&t, "initiator")?, &roles)?;
+        t["roles"] = json!(roles);
     }
     tx.execute(
         "UPDATE app_tasks SET draft=?2,goal=?3,updated_at=?4 WHERE id=?1",
@@ -655,7 +677,9 @@ pub fn prepare(store: &Store, id: &str, draft: Value) -> Result<()> {
             .as_str()
             .unwrap_or("只读检查，不修改文件")
     );
-    if let Some(r)=crate::task_roles::roles(&t)? {body.push_str(&format!("\n成果接收人：@{}",r.recipients.join("、@")));}
+    if let Some(r) = crate::task_roles::roles(&t)? {
+        body.push_str(&format!("\n成果接收人：@{}", r.recipients.join("、@")));
+    }
     if t["team_activity"] == true {
         body.push_str(
             "\n白名单任务的目标、进展和结果会出现在团队动态；新任务等待执行成员在线后派发。",
@@ -737,10 +761,17 @@ fn direct_file_request(store: &Store, t: &Value, draft: &Value) -> Result<Option
     Ok(None)
 }
 fn public_task(t: &Value) -> Value {
-    json!({"roles":t["roles"],"team_activity":t["team_activity"],"initiator":t["initiator"],"participants":t["participants"],"original":t["original"],"draft":t["draft"],"title":t["title"],"confirmed":t["confirmed"],"recovery_protocol":t["recovery_protocol"],"state":t["state"],"next_owner":t["next_owner"],"waiting_for":t["waiting_for"],"updated_at":t["updated_at"]})
+    let inputs = t["inputs"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|v| v["sender"] == t["initiator"])
+        .map(|v| json!({"id":v["id"],"body":v["body"]}))
+        .collect::<Vec<_>>();
+    json!({"inputs":inputs,"roles":t["roles"],"team_activity":t["team_activity"],"initiator":t["initiator"],"participants":t["participants"],"original":t["original"],"draft":t["draft"],"title":t["title"],"confirmed":t["confirmed"],"recovery_protocol":t["recovery_protocol"],"state":t["state"],"next_owner":t["next_owner"],"waiting_for":t["waiting_for"],"updated_at":t["updated_at"]})
 }
 pub fn confirm(store: &Store, i: &Instruction) -> Result<()> {
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     confirm_inner(store, i, false)?;
     tx.commit()?;
     Ok(())
@@ -772,7 +803,7 @@ fn confirm_inner(store: &Store, i: &Instruction, from_request: bool) -> Result<(
     tx.execute("UPDATE task_revisions SET confirmed_by=?3,confirmed_at=?4,confirmation_id=?5 WHERE task_id=?1 AND revision=?2 AND confirmed_at IS NULL",params![id,revision(&t),store.owner()?,now(),i.request_id])?;
     t["confirmed"] = t["revision"].clone();
     state(tx, &t, "queued", None, Some("等待参与方接收"))?;
-    dispatch_confirmed(store,&t)?;
+    dispatch_confirmed(store, &t)?;
     notify(
         tx,
         &t,
@@ -780,7 +811,7 @@ fn confirm_inner(store: &Store, i: &Instruction, from_request: bool) -> Result<(
         "task_progress",
         if from_request {
             "正在查找你要的文件。准备好后，由发送方检查清单并允许发送。"
-        } else if crate::task_roles::blocked(tx,id)? {
+        } else if crate::task_roles::blocked(tx, id)? {
             "新安排已确认；旧执行尚未确认停止，等待旧成员上线并核对，不会启动新执行。"
         } else if executors(&t)?.contains(&store.owner()?) {
             "已确认，正在本机处理；白名单任务的进展和结果会显示在团队动态。"
@@ -790,21 +821,55 @@ fn confirm_inner(store: &Store, i: &Instruction, from_request: bool) -> Result<(
     )?;
     Ok(())
 }
-pub(crate) fn dispatch_confirmed(store: &Store,t: &Value) -> Result<()> {
-    let id=string(t,"id")?;
-    if t["initiator"]!=store.owner()? || t["confirmed"]!=t["revision"] || terminal(t) { return Ok(()); }
-    if crate::task_roles::blocked(&store.conn,id)? {
-        state(&store.conn,t,"waiting",Some(string(t,"initiator")?),Some("旧执行状态尚未确认；等待原执行成员停止并核对副作用，新分配不会启动"))?;
+pub(crate) fn dispatch_confirmed(store: &Store, t: &Value) -> Result<()> {
+    let id = string(t, "id")?;
+    if t["initiator"] != store.owner()? || t["confirmed"] != t["revision"] || terminal(t) {
         return Ok(());
     }
-    let key=stable_id(id,&format!("confirm:{}",revision(t)));
-    let sent:bool=store.conn.query_row("SELECT EXISTS(SELECT 1 FROM task_journal WHERE id=?1)",[&key],|r|r.get(0))?;
-    if sent {return Ok(());}
-    emit(&store.conn,t,&store.owner()?,&key,"proposal",public_task(t),&members(t)?)?;
-    if executors(t)?.contains(&store.owner()?) {
-        job(&store.conn,&stable_id(id,&format!("execute:{}",revision(t))),t,"start",json!({}))?;
+    if crate::task_roles::blocked(&store.conn, id)? {
+        state(
+            &store.conn,
+            t,
+            "waiting",
+            Some(string(t, "initiator")?),
+            Some("旧执行状态尚未确认；等待原执行成员停止并核对副作用，新分配不会启动"),
+        )?;
+        return Ok(());
     }
-    state(&store.conn,t,"queued",executors(t)?.first().map(String::as_str),Some("等待当前执行成员接收并按本机权限处理"))?;
+    let key = stable_id(id, &format!("confirm:{}", revision(t)));
+    let sent: bool = store.conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM task_journal WHERE id=?1)",
+        [&key],
+        |r| r.get(0),
+    )?;
+    if sent {
+        return Ok(());
+    }
+    emit(
+        &store.conn,
+        t,
+        &store.owner()?,
+        &key,
+        "proposal",
+        public_task(t),
+        &members(t)?,
+    )?;
+    if executors(t)?.contains(&store.owner()?) {
+        job(
+            &store.conn,
+            &stable_id(id, &format!("execute:{}", revision(t))),
+            t,
+            "start",
+            json!({}),
+        )?;
+    }
+    state(
+        &store.conn,
+        t,
+        "queued",
+        executors(t)?.first().map(String::as_str),
+        Some("等待当前执行成员接收并按本机权限处理"),
+    )?;
     Ok(())
 }
 pub fn revise(store: &Store, i: &Instruction) -> Result<()> {
@@ -822,33 +887,46 @@ pub fn revise(store: &Store, i: &Instruction) -> Result<()> {
     )? {
         return Ok(());
     }
-    let mut role_plan=crate::task_roles::roles(&t)?;
-    if let Some(executor)=i.payload["executor"].as_str() {
-        app::valid_recipient(store,executor)?;
-        role_plan.as_mut().context("旧任务需明确迁移角色合同后才能变更执行者")?.executor=executor.into();
+    let mut role_plan = crate::task_roles::roles(&t)?;
+    if let Some(executor) = i.payload["executor"].as_str() {
+        app::valid_recipient(store, executor)?;
+        role_plan
+            .as_mut()
+            .context("旧任务需明确迁移角色合同后才能变更执行者")?
+            .executor = executor.into();
     }
-    let people=role_plan.as_ref().map(|r|r.members(string(&t,"initiator").unwrap())).unwrap_or(members(&t)?);
-    let body=i.payload["effective_request"].as_str().unwrap_or(&i.body);
+    let people = role_plan
+        .as_ref()
+        .map(|r| r.members(string(&t, "initiator").unwrap()))
+        .unwrap_or(members(&t)?);
+    let body = i.payload["effective_request"].as_str().unwrap_or(&i.body);
     let selected_directory = if let Some(path) = i.payload["working_directory"].as_str() {
         Some(app::project(store, Path::new(path))?)
     } else {
         None
     };
     let next = revision(&t) + 1;
-    let original = if i.payload["plan_only"]==true { string(&t,"original")?.to_owned() } else {body.to_owned()};
+    let original = if i.payload["plan_only"] == true {
+        string(&t, "original")?.to_owned()
+    } else {
+        body.to_owned()
+    };
     ensure!(original.len() <= 20000, "任务意图过长");
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     if t["confirmed"] == t["revision"] && !terminal(&t) {
-        if role_plan.is_some() { crate::task_roles::request_stop(store,&t,&i.body)?; }
-        emit(
-            &tx,
-            &t,
-            &store.owner()?,
-            &stable_id(&i.request_id, "suspend"),
-            "suspend",
-            json!({"body":"发起人正在修改任务，等待新的意图确认"}),
-            &members(&t)?,
-        )?;
+        if role_plan.is_some() {
+            crate::task_roles::request_stop(store, &t, &i.body)?;
+        } else {
+            emit(
+                &tx,
+                &t,
+                &store.owner()?,
+                &stable_id(&i.request_id, "suspend"),
+                "suspend",
+                json!({"body":"发起人正在修改任务，等待新的意图确认"}),
+                &members(&t)?,
+            )?;
+        }
     }
     tx.execute("UPDATE app_tasks SET revision=?2,original=?3,participants=?4,goal=?3,draft='{}',confirmed=NULL,state='draft',archived=0,result=NULL,error=NULL,next_owner=initiator,waiting_reason='等待新的意图确认',updated_at=?5 WHERE id=?1",params![id,next,original,serde_json::to_string(&people)?,now()])?;
     if let Some(p) = selected_directory {
@@ -858,9 +936,56 @@ pub fn revise(store: &Store, i: &Instruction) -> Result<()> {
         )?;
     }
     tx.execute("INSERT INTO task_revisions(task_id,revision,original,draft,participants,created_at) VALUES(?1,?2,?3,'{}',?4,?5)",params![id,next,original,serde_json::to_string(&people)?,now()])?;
-    if let Some(r)=role_plan {
-        crate::task_roles::save(&tx,id,next,string(&t,"initiator")?,&r)?;
-        tx.execute("INSERT OR IGNORE INTO task_role_changes VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",params![i.request_id,id,next,if i.payload["plan_only"]==true {"execution_plan"} else {"requirements"},i.body,t["roles"].to_string(),serde_json::to_string(&r)?,now()])?;
+    if let Some(r) = role_plan {
+        crate::task_roles::save(&tx, id, next, string(&t, "initiator")?, &r)?;
+        tx.execute(
+            "INSERT OR IGNORE INTO task_role_changes VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",
+            params![
+                i.request_id,
+                id,
+                next,
+                if i.payload["plan_only"] == true {
+                    "execution_plan"
+                } else {
+                    "requirements"
+                },
+                i.body,
+                t["roles"].to_string(),
+                serde_json::to_string(&r)?,
+                now()
+            ],
+        )?;
+        if i.payload["plan_only"] == true {
+            let fresh = get(store, id)?;
+            for input in t["inputs"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|v| v["sender"] == t["initiator"])
+            {
+                let carried =
+                    stable_id(string(input, "id")?, &format!("assignment-revision:{next}"));
+                crate::task_inputs::save(
+                    &tx,
+                    &fresh,
+                    &carried,
+                    string(&t, "initiator")?,
+                    "supplement",
+                    None,
+                    string(input, "body")?,
+                    std::slice::from_ref(&r.executor),
+                    false,
+                )?;
+                journal(
+                    &tx,
+                    &fresh,
+                    string(&t, "initiator")?,
+                    &carried,
+                    "input_carried",
+                    &json!({"source_input_id":input["id"],"source_revision":t["revision"],"body":input["body"]}),
+                )?;
+            }
+        }
     }
     journal(
         &tx,
@@ -880,7 +1005,7 @@ pub fn revise(store: &Store, i: &Instruction) -> Result<()> {
 /// A local member may always stop their own participation. Only the initiator
 /// sends the protocol's global cancel; a participant reports their withdrawal.
 pub fn cancel(store: &Store, i: &Instruction) -> Result<()> {
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     cancel_in_transaction(store, i)?;
     tx.commit()?;
     Ok(())
@@ -904,7 +1029,8 @@ pub(crate) fn cancel_in_transaction(store: &Store, i: &Instruction) -> Result<()
             format!("@{owner} 已停止本机参与。\n原因：{reason}\n请发起人决定后续安排。")
         };
         let data = json!({"body":body,"reason":reason,"state":"needs_attention","stage":"member_stopped","next_owner":t["initiator"]});
-        if t["confirmed"] == t["revision"] {
+        let dispatched:bool=c.query_row("SELECT EXISTS(SELECT 1 FROM task_journal WHERE task_id=?1 AND revision=?2 AND kind='proposal')",params![t["id"].as_str(),revision(&t)],|r|r.get(0))?;
+        if t["confirmed"] == t["revision"] && dispatched {
             emit(
                 c,
                 &t,
@@ -954,9 +1080,16 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
         m.recipient == store.owner()? && store.contacts()?.iter().any(|c| c.member_id == m.sender),
         "任务消息身份不匹配"
     );
-    if crate::task_roles::ingest_control(store,m,&w)? {return Ok(());}
-    if w.event=="proposal" && crate::task_roles::fenced(&store.conn,&w.task_id,w.revision)? {
-        store.conn.execute("UPDATE messages SET state='task_history' WHERE id=?1",[&m.message_id])?;
+    if crate::task_roles::ingest_control(store, m, &w)? {
+        return Ok(());
+    }
+    if w.event == "proposal"
+        && crate::task_roles::fenced_for(&store.conn, &w.task_id, w.revision, &m.sender)?
+    {
+        store.conn.execute(
+            "UPDATE messages SET state='task_history' WHERE id=?1",
+            [&m.message_id],
+        )?;
         return Ok(());
     }
     if store.conn.query_row(
@@ -966,7 +1099,7 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
     )? {
         return Ok(());
     }
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     if !is_task(&store.conn, &w.task_id)? {
         ensure!(
             w.event == "proposal"
@@ -1011,10 +1144,16 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
             params![w.task_id, w.data["recovery_protocol"].as_i64().unwrap_or(0)],
         )?;
     }
-    if w.event=="proposal" {
-        if let Some(r)=crate::task_roles::roles(&w.data)? {
-            ensure!(r.members(&m.sender)==serde_json::from_value::<Vec<String>>(w.data["participants"].clone())?,"参与关系与显式角色不一致");
-            for member in r.members(&m.sender).iter().chain(&r.recipients) {app::valid_recipient(store,member)?;}
+    if w.event == "proposal" {
+        if let Some(r) = crate::task_roles::roles(&w.data)? {
+            ensure!(
+                r.members(&m.sender)
+                    == serde_json::from_value::<Vec<String>>(w.data["participants"].clone())?,
+                "参与关系与显式角色不一致"
+            );
+            for member in r.members(&m.sender).iter().chain(&r.recipients) {
+                app::valid_recipient(store, member)?;
+            }
         }
     }
     if w.event == "proposal" && w.data["team_activity"] == true {
@@ -1025,7 +1164,7 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
     }
     let mut t = get(store, &w.task_id)?;
     ensure!(
-        members(&t)?.contains(&m.sender),
+        members(&t)?.contains(&m.sender) || (w.revision<revision(&t) && tx.query_row("SELECT EXISTS(SELECT 1 FROM task_revisions r,json_each(r.participants) p WHERE r.task_id=?1 AND r.revision=?2 AND p.value=?3)",params![w.task_id,w.revision,m.sender],|r|r.get::<_,bool>(0))?),
         "sender is not a task participant"
     );
     let old:Option<String>=tx.query_row("SELECT payload FROM task_journal WHERE task_id=?1 AND revision=?2 AND sender=?3 AND sequence=?4",params![w.task_id,w.revision,m.sender,w.sequence],|r|r.get(0)).optional()?;
@@ -1079,11 +1218,30 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
         t["participants"] = w.data["participants"].clone();
         t["draft"] = w.data["draft"].clone();
     }
-    if w.event=="proposal" {
-        if let Some(r)=crate::task_roles::roles(&w.data)? {
-            crate::task_roles::save(&tx,&w.task_id,w.revision,&m.sender,&r)?;
-            t["roles"]=json!(r);
-        } else { ensure!(t["roles"].is_null(),"不能将新角色任务降级成旧参与者推导合同"); }
+    if w.event == "proposal" {
+        if let Some(r) = crate::task_roles::roles(&w.data)? {
+            crate::task_roles::save(&tx, &w.task_id, w.revision, &m.sender, &r)?;
+            t["roles"] = json!(r);
+        } else {
+            ensure!(
+                t["roles"].is_null(),
+                "不能将新角色任务降级成旧参与者推导合同"
+            );
+        }
+        for input in w.data["inputs"].as_array().into_iter().flatten() {
+            ensure!(t["initiator"] == m.sender, "只有发起人能随提议提供有效补充");
+            crate::task_inputs::save(
+                &tx,
+                &t,
+                string(input, "id")?,
+                &m.sender,
+                "supplement",
+                None,
+                string(input, "body")?,
+                &[store.owner()?],
+                true,
+            )?;
+        }
     }
     active(&t)?;
     let newer:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM task_journal WHERE task_id=?1 AND revision=?2 AND sender=?3 AND kind=?4 AND sequence>?5)",params![w.task_id,w.revision,m.sender,w.event,w.sequence],|r|r.get(0))?;
@@ -1100,9 +1258,22 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
         tx.commit()?;
         return Ok(());
     }
-    if matches!(w.event.as_str(),"candidate"|"question"|"accepted") {ensure!(executors(&t)?.contains(&m.sender),"消息发送人不是当前执行成员");}
+    if matches!(
+        w.event.as_str(),
+        "candidate" | "question" | "accepted" | "progress"
+    ) {
+        ensure!(
+            executors(&t)?.contains(&m.sender)
+                || ((w.event == "progress"
+                    || (w.event == "accepted" && w.data["recovered"] == true))
+                    && t["initiator"] == m.sender),
+            "消息发送人不是当前执行成员"
+        );
+    }
     match w.event.as_str() {
-        "delivery_plan" => { crate::task_roles::receive_delivery_plan(store,&t,m,&w)?; }
+        "delivery_plan" => {
+            crate::task_roles::receive_delivery_plan(store, &t, m, &w)?;
+        }
         "input" => {
             ensure!(t["initiator"] == m.sender, "补充只能来自任务发起人");
             let id = string(&w.data, "input_id")?;
@@ -1168,9 +1339,16 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
                 "only initiator can propose"
             );
             tx.execute("INSERT OR IGNORE INTO task_revisions(task_id,revision,original,draft,participants,confirmed_by,confirmed_at,confirmation_id,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?7)",params![w.task_id,w.revision,w.data["original"].as_str(),w.data["draft"].to_string(),w.data["participants"].to_string(),m.sender,m.created_at,m.message_id])?;
+            if !w.data["roles"].is_null() {
+                tx.execute("UPDATE task_revisions SET roles=?3 WHERE task_id=?1 AND revision=?2 AND roles IS NULL",params![w.task_id,w.revision,w.data["roles"].to_string()])?;
+            }
             if !executors(&t)?.contains(&store.owner()?) {
-                tx.execute("UPDATE messages SET state='task_handled' WHERE id=?1",[&m.message_id])?;
-                tx.commit()?; return Ok(());
+                tx.execute(
+                    "UPDATE messages SET state='task_handled' WHERE id=?1",
+                    [&m.message_id],
+                )?;
+                tx.commit()?;
+                return Ok(());
             }
             job(
                 &tx,
@@ -1229,9 +1407,15 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
                 t["initiator"] == store.owner()?,
                 "candidate recipient must be A"
             );
-            if !t["roles"].is_null() && w.data["delivery_generation"]!=t["roles"]["delivery_generation"] {
-                tx.execute("UPDATE messages SET state='task_history' WHERE id=?1",[&m.message_id])?;
-                tx.commit()?; return Ok(());
+            if !t["roles"].is_null()
+                && w.data["delivery_generation"] != t["roles"]["delivery_generation"]
+            {
+                tx.execute(
+                    "UPDATE messages SET state='task_history' WHERE id=?1",
+                    [&m.message_id],
+                )?;
+                tx.commit()?;
+                return Ok(());
             }
             save_candidate(&tx, &t, &m.sender, &w.data)?;
             notify(
@@ -1682,7 +1866,7 @@ pub fn answer(store: &Store, i: &Instruction) -> Result<()> {
     );
     let q = string(&i.payload, "question_id")?;
     let asker:String=store.conn.query_row("SELECT asker FROM task_questions WHERE id=?1 AND task_id=?2 AND revision=?3 AND state IN ('user','answered')",params![q,t["id"].as_str(),revision(&t)],|r|r.get(0)).optional()?.context("请选择当前等待用户的问题")?;
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     let mut data = json!({"question_id":q,"body":i.body});
     crate::task_inputs::save(
         &tx,
@@ -1754,7 +1938,10 @@ pub fn check_execution(c: &Connection, execution: &str) -> Result<Option<Value>>
         return Ok(None);
     };
     let valid:bool=c.query_row("SELECT revision=?2 AND confirmed=?2 AND state NOT IN ('draft','completed','cancelled','needs_attention') AND COALESCE(waiting_reason,'') != '等待新修订' FROM app_tasks WHERE id=?1",params![id,rev],|r|r.get(0))?;
-    ensure!(valid && !crate::task_roles::fenced(c,&id,rev)?, "任务已取消、修订、暂停或等待处理");
+    ensure!(
+        valid && !crate::task_roles::fenced(c, &id, rev)?,
+        "任务已取消、修订、暂停或等待处理"
+    );
     check_executor(c, &id)?;
     crate::task_materials::check_binding(c, &id, rev)
         .map_err(|e| recovery::failure(Reason::LocalPermission, e.to_string()))?;
@@ -1780,6 +1967,10 @@ pub fn execution_context(c: &Connection, id: &str) -> Result<Option<Value>> {
         string(&v, "task_id")?,
         v["revision"].as_i64().unwrap(),
     )?;
+    v["roles"] = json!(crate::task_roles::load(c, string(&v, "task_id")?)?);
+    v["role_policy"] = json!(
+        "The explicit current executor is this member. Resolve materials only within this device's current authorized roots; a result recipient has no execution role. Current roles supersede prior inferred ownership or delivery directions. Prior assistant drafts are not user facts. The kernel sends only the selected current outputs to the current recipient under this device's current permissions."
+    );
     v["logical_working_directory"] = json!(cwd);
     v["evidence_priority"] = json!(CURRENT_EVIDENCE_RULE);
     v["source_directory_map"] = json!(source_roots.iter().enumerate().map(|(index,path)|json!({"source_root":index,"directory_name":path.file_name().unwrap_or_default().to_string_lossy(),"snapshot_prefix":format!("root-{index}"),"authority":"Origin metadata only; use authorized_roots for actual reads."})).collect::<Vec<_>>());
@@ -1940,7 +2131,7 @@ fn decision_parameters(stage: &str) -> Result<Value> {
         properties["mode"] =
             json!({"type":"string","enum":["analysis","listing","execute","files"]});
         properties["deliver_files"] = json!({"type":"boolean","description":"Required for mode execute. True when the user requests result files, including delivery after a later decision in the same task. This records requested deliverables, never grants export permission. False only when no file delivery is requested."});
-        properties["deliver_to"] = json!({"type":"string","description":"Only for a task executed locally for its initiator: the contact explicitly requested to receive files after local inspection/processing. This is the destination, not the executor. Omit when no onward delivery is requested or execution is on a peer."});
+        properties["deliver_to"] = json!({"type":"string","description":"The contact explicitly requested to receive result files, independently of the current executor. This changes only the destination, never who executes. Omit for delivery to the initiator or when no different recipient was requested."});
         properties["start_from_request"] = json!({"type":"boolean","description":"True only for the owner's direct imperative request to obtain existing files, with no unresolved choice, writes or program runs. False for questions, examples, hypotheticals or draft-only requests."});
         required.extend(["goal", "deliverables"]);
     }
@@ -2086,7 +2277,9 @@ async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result
     let system = format!(
         "{system} File attachments: The extra.delivery field (or task.delivery when present) contains authoritative current transport facts. When extra.delivery.ready=true, attachments are already received; candidate body/attachment.state describe preparation time only and must not trigger continuation for export or download. Use delivery.body and next_owner when explaining what happens next. Only say this owner can download when the matching item has available_here=true and state=offered. A prepared manifest alone is not downloadable. Remote export is controlled on the sender computer, either per-file approval or the sender Full access setting; the recipient cannot grant it. For a request to obtain existing actual files from a peer, use mode files; discovering candidate paths is the executor job and binary files are supported. For a follow-up asking to send a result already discussed, reuse the established project and findings. Add only the new delivery request; do not automatically repeat the earlier inventory or expand into validation. Keep constraints in plain language; say sender approval rather than grant. For execute requests that explicitly ask for result files, always set deliver_files=true, even when delivery follows a later user decision in the same task. Preserve all requested stages in this task. Requested delivery intent is already established: do not add whether to send those files to questions, prohibit the requested delivery, or defer it to a new confirmation. Runtime permission belongs to the dedicated sender controls, not model-generated intent questions. A new complete-task approval includes requested deliverables; Full access also supplies permission. Legacy isolated grants and separate file-only requests may require sender approval. Use current transport facts rather than guessing from mode labels. Do not predict that another approval will be required: describe an outstanding sender action only when current delivery facts require it. When escalating a different question, ask only that question and do not add speculative future permission steps. Review results are mirrored to both sender and recipient: identify a delivery destination by member name (the task initiator for task result files), never as your computer or this computer. In review, a candidate attachment manifest is evidence of prepared fixed files; evaluate the substantive result, then choose complete when adequate. Empty files and sources are valid for non-file answers or no-match reports; assess the original request, never require unrelated files or pretend that empty evidence proves file contents. Rust independently waits for actual download before final completion. Never request rerunning successful computation solely because its attachment is still transferring."
     );
-    let system = format!("{system} {CURRENT_EVIDENCE_RULE} Role contract: task.roles is authoritative for where execution occurs and who receives results. A recipient is never an executor. Current explicit assignment overrides locations inferred in previous drafts. On followup choose plan with executor OR result_recipient for role/direction corrections; choose supplement only for facts with the same goal and authorization. Material-location or scope changes that invalidate the execution plan use revise with effective_request; changed goals/deliverables/permission also use revise. Preserve original user wording as evidence. effective_request must contain the complete still-valid requirements and replace contradicted interpretations; do not concatenate abandoned drafts. Never treat old assistant prose as user facts. For plan do not change both fields at once; explain the second needed correction in body for review. A new member grants no local permissions. Destination wording always names the actual result recipient, including local execution with onward delivery.");
+    let system = format!(
+        "{system} {CURRENT_EVIDENCE_RULE} Role contract: task.roles is authoritative for where execution occurs and who receives results. A recipient is never an executor. Current explicit assignment overrides locations inferred in previous drafts. On followup choose plan with executor OR result_recipient for role/direction corrections. For a draft task, factual clarifications use revise with complete effective_request so the new confirmation restates them; do not use supplement before confirmation; choose supplement only for facts with the same goal and authorization. Material-location or scope changes that invalidate the execution plan use revise with effective_request; changed goals/deliverables/permission also use revise. Preserve original user wording as evidence. effective_request must contain the complete still-valid requirements and replace contradicted interpretations; do not concatenate abandoned drafts. Never treat old assistant prose as user facts. For plan do not change both fields at once; explain the second needed correction in body for review. A new member grants no local permissions. Destination wording always names the actual result recipient, including local execution with onward delivery."
+    );
     let system = format!(
         "{system} Result selection: Unless the owner specifies otherwise, 'latest result' means the final adopted output of the most recent completed run, identified from project status, a manifest or an explicit final-result pointer. File modification time alone is not evidence. Later scratch/probe/parameter-perturbation/intermediate outputs are not the adopted result. Do not require a scientific re-validation. In prepare preserve this default as a concise selection constraint, not a new question. In review for mode files, return file_summary with one or two everyday sentences explaining what the delivered result represents and why selected, including any inspection findings or numerical checks the user requested, based on the executor's evidence; leave receipt and next-button instructions to Rust. Do not turn a simple image request into a progress report."
     );
@@ -2097,9 +2290,19 @@ async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result
     } else {
         t.clone()
     };
-    model_task["roles"]=t["roles"].clone();
-    let changes={let mut q=store.conn.prepare("SELECT json_object('kind',kind,'body',body,'revision',revision,'replaced_roles',json(before_roles),'effective_roles',json(after_roles)) FROM task_role_changes WHERE task_id=?1 ORDER BY rowid DESC LIMIT 5")?;q.query_map([t["id"].as_str()],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?};
-    model_task["user_changes"]=json!(changes.iter().map(|v|serde_json::from_str::<Value>(v)).collect::<serde_json::Result<Vec<_>>>()?);
+    model_task["roles"] = t["roles"].clone();
+    model_task["inputs"] = t["inputs"].clone();
+    let changes = {
+        let mut q=store.conn.prepare("SELECT json_object('kind',kind,'body',body,'revision',revision,'replaced_roles',json(before_roles),'effective_roles',json(after_roles)) FROM task_role_changes WHERE task_id=?1 ORDER BY rowid DESC LIMIT 5")?;
+        q.query_map([t["id"].as_str()], |r| r.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?
+    };
+    model_task["user_changes"] = json!(
+        changes
+            .iter()
+            .map(|v| serde_json::from_str::<Value>(v))
+            .collect::<serde_json::Result<Vec<_>>>()?
+    );
     if stage == "review" {
         // The review compares current candidates to confirmed requirements,
         // not to prior assistant conclusions retained in the user-visible log.
@@ -2280,7 +2483,7 @@ fn start_execution(
     previous: Option<&str>,
     key: &str,
 ) -> Result<String> {
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     let id = create_execution(store, t, phase, snapshot, previous, key)?;
     tx.commit()?;
     Ok(id)
@@ -2294,7 +2497,10 @@ fn create_execution(
     key: &str,
 ) -> Result<String> {
     active(t)?;
-    ensure!(!crate::task_roles::fenced(&store.conn,string(t,"id")?,revision(t))?,"旧执行分配已停止");
+    ensure!(
+        !crate::task_roles::fenced(&store.conn, string(t, "id")?, revision(t))?,
+        "旧执行分配已停止"
+    );
     check_executor(&store.conn, string(t, "id")?)?;
     crate::task_materials::bind(store, t)?;
     let phase =
@@ -2384,7 +2590,7 @@ fn blocked(
     if terminal(&current) || current["revision"] != t["revision"] {
         return Ok(());
     }
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     let block = recovery::record(
         &tx,
         &current,
@@ -2474,7 +2680,7 @@ pub fn recover(store: &Store, i: &Instruction) -> Result<()> {
         "参与方已停止本次任务；可停止并归档，或修改要求后重新确认"
     );
     // User-triggered retry is explicit; a meeting can never invoke this action.
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     state(
         &tx,
         &t,
@@ -2589,7 +2795,7 @@ async fn process_job(store: &Store, t: &Value, kind: &str, data: Value, key: &st
                 "discard stale model decision"
             );
             let q = string(&data, "id")?;
-            let tx = store.conn.unchecked_transaction()?;
+            let tx = store.write_transaction()?;
             let open: bool = tx.query_row("SELECT EXISTS(SELECT 1 FROM task_questions WHERE id=?1 AND task_id=?2 AND revision=?3 AND state IN ('coordinating','investigating','user'))", params![q,t["id"].as_str(),revision(t)],|r|r.get(0))?;
             if !open {
                 return Ok(());
@@ -2775,7 +2981,12 @@ async fn process_job(store: &Store, t: &Value, kind: &str, data: Value, key: &st
                 .as_array()
                 .unwrap()
                 .iter()
-                .filter(|c| c["revision"] == t["revision"])
+                .filter(|c| {
+                    c["revision"] == t["revision"]
+                        && (t["roles"].is_null()
+                            || c["result"]["delivery_generation"]
+                                == t["roles"]["delivery_generation"])
+                })
                 .cloned()
                 .collect::<Vec<_>>();
             let expected = executors(t)?;
@@ -2841,7 +3052,10 @@ async fn process_job(store: &Store, t: &Value, kind: &str, data: Value, key: &st
                 fresh["revision"] == t["revision"] && !terminal(&fresh),
                 "discard stale review"
             );
-            if fresh["history"].as_array().map(Vec::len) != t["history"].as_array().map(Vec::len) {
+            if fresh["roles"] != t["roles"]
+                || fresh["history"].as_array().map(Vec::len)
+                    != t["history"].as_array().map(Vec::len)
+            {
                 job(
                     &store.conn,
                     &stable_id(key, "context-changed"),
@@ -2851,7 +3065,7 @@ async fn process_job(store: &Store, t: &Value, kind: &str, data: Value, key: &st
                 )?;
                 return Ok(());
             }
-            let tx = store.conn.unchecked_transaction()?;
+            let tx = store.write_transaction()?;
             journal(
                 &tx,
                 t,
@@ -3046,7 +3260,7 @@ fn defer_attachment_review(store: &Store, t: &Value, candidates: &Value) -> Resu
     }
     let delivery = crate::transfers::delivery_status(store, t, candidates)?;
     let pending = json!({"review_pending":true,"candidates":candidates,"revision":t["revision"]});
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     tx.execute("INSERT INTO task_file_delivery(task_id,revision,required,review) VALUES(?1,?2,1,?3) ON CONFLICT(task_id,revision) DO UPDATE SET review=excluded.review", params![t["id"].as_str(),revision(t),pending.to_string()])?;
     state(
         &tx,
@@ -3075,7 +3289,7 @@ fn finish_pending_deliveries(store: &Store) -> Result<()> {
         let t = get(store, &id)?;
         let result: Value = serde_json::from_str(&raw)?;
         if crate::transfers::delivery_ready(store, &t, &result["candidates"])? {
-            let tx = store.conn.unchecked_transaction()?;
+            let tx = store.write_transaction()?;
             if result["review_pending"] == true {
                 tx.execute(
                     "UPDATE task_file_delivery SET review=NULL WHERE task_id=?1 AND revision=?2",
@@ -3112,8 +3326,14 @@ fn finish_pending_deliveries(store: &Store) -> Result<()> {
 
 pub async fn tick(store: &Store, exe: &Path) -> Result<()> {
     crate::task_roles::tick(store)?;
-    let waiting={let mut q=store.conn.prepare("SELECT id FROM app_tasks WHERE protocol=2 AND initiator=?1 AND confirmed=revision AND state='waiting' AND roles IS NOT NULL")?; q.query_map([store.owner()?],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?};
-    for id in waiting {dispatch_confirmed(store,&get(store,&id)?)?;}
+    let waiting = {
+        let mut q=store.conn.prepare("SELECT id FROM app_tasks WHERE protocol=2 AND initiator=?1 AND confirmed=revision AND state='waiting' AND roles IS NOT NULL")?;
+        q.query_map([store.owner()?], |r| r.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?
+    };
+    for id in waiting {
+        dispatch_confirmed(store, &get(store, &id)?)?;
+    }
 
     if crate::access_mode::full(&store.conn)? {
         let ids = {
@@ -3151,7 +3371,10 @@ pub async fn tick(store: &Store, exe: &Path) -> Result<()> {
             return Ok(());
         };
         let t = get(store, &task)?;
-        if rev != revision(&t) || terminal(&t) || crate::task_roles::fenced(&store.conn,&task,rev)? {
+        if rev != revision(&t)
+            || terminal(&t)
+            || crate::task_roles::fenced(&store.conn, &task, rev)?
+        {
             store
                 .conn
                 .execute("UPDATE task_jobs SET state='superseded' WHERE id=?1", [&id])?;
@@ -3385,7 +3608,7 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
     }
     check_execution(&store.conn, id)?;
     if crate::task_inputs::unread(&store.conn, id, &run)? {
-        let tx = store.conn.unchecked_transaction()?;
+        let tx = store.write_transaction()?;
         tx.execute(
             "UPDATE task_executions SET state='pending' WHERE id=?1",
             [id],
@@ -3431,7 +3654,7 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
         }
         let mut q = out;
         q["id"] = json!(stable_id(&run, "question"));
-        let tx = store.conn.unchecked_transaction()?;
+        let tx = store.write_transaction()?;
         tx.execute("UPDATE task_questions SET state='superseded',answer=?2 WHERE state='investigating' AND execution_id IN (?1,(SELECT previous_id FROM task_executions WHERE id=?1))",params![id,format!("调查仍缺信息；关联后续问题 {}",q["id"])])?;
         save_question(&tx, t, &q, &store.owner()?, Some(id), "coordinating")?;
         tx.execute(
@@ -3493,9 +3716,13 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
             .execute("UPDATE task_executions SET state='done' WHERE id=?1", [id])?;
         return Ok(());
     }
-    let latest=get(store,string(t,"id")?)?;
-    ensure!(latest["revision"]==t["revision"] && !crate::task_roles::fenced(&store.conn,string(t,"id")?,revision(t))?,"执行分配已经改变，旧成果仅保留历史");
-    let t=&latest;
+    let latest = get(store, string(t, "id")?)?;
+    ensure!(
+        latest["revision"] == t["revision"]
+            && !crate::task_roles::fenced(&store.conn, string(t, "id")?, revision(t))?,
+        "执行分配已经改变，旧成果仅保留历史"
+    );
+    let t = &latest;
     let sources = if context["phase"] == "execute" {
         crate::task_workspace::sources(store, id, &out["files"])?
     } else if context["phase"] == "attachment" {
@@ -3547,8 +3774,8 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
         .iter()
         .map(|v| v["id"].clone())
         .collect::<Vec<_>>();
-    let candidate = json!({"delivery_generation":t["roles"]["delivery_generation"],"input_ids":input_ids,"body":out["body"],"files":out["files"],"sources":sources,"execution_id":id,"run_id":run,"attachment":attachment});
-    let tx = store.conn.unchecked_transaction()?;
+    let candidate = json!({"deliveries":out["deliveries"],"delivery_generation":t["roles"]["delivery_generation"],"input_ids":input_ids,"body":out["body"],"files":out["files"],"sources":sources,"execution_id":id,"run_id":run,"attachment":attachment});
+    let tx = store.write_transaction()?;
     tx.execute("UPDATE task_questions SET state='answered',answer=?2,answered_by=?3 WHERE state='investigating' AND execution_id IN (?1,(SELECT previous_id FROM task_executions WHERE id=?1))",params![id,out["body"].as_str(),format!("Execution run {run}")])?;
     let investigated: Option<String> = tx.query_row(
         "SELECT question_id FROM task_executions WHERE id=?1",
@@ -3689,7 +3916,7 @@ pub fn supplement(store: &Store, i: &Instruction) -> Result<()> {
             && t["confirmed"] == t["revision"],
         "补充只能用于本人发起的当前已确认任务；目标或执行成员变化请修改要求"
     );
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     let targets = executors(&t)?;
     crate::task_inputs::save(
         &tx,
@@ -3820,14 +4047,19 @@ pub async fn task_chat(store: &Store, i: &Instruction) -> Result<()> {
             self::answer(store, &response)?;
         }
         Some("plan") => {
-            ensure!(answer["executor"].is_string() ^ answer["result_recipient"].is_string(),"请选择只纠正执行成员或成果接收人，可使用 /roles");
-            let mut change=i.clone();
-            change.payload=json!({"revision":fresh["revision"],"executor":answer["executor"],"result_recipient":answer["result_recipient"]});
-            if crate::task_roles::change(store,&change)? {prepare_model(store,id).await?;}
+            ensure!(
+                answer["executor"].is_string() ^ answer["result_recipient"].is_string(),
+                "请选择只纠正执行成员或成果接收人，可使用 /roles"
+            );
+            let mut change = i.clone();
+            change.payload = json!({"revision":fresh["revision"],"executor":answer["executor"],"result_recipient":answer["result_recipient"]});
+            if crate::task_roles::change(store, &change)? {
+                prepare_model(store, id).await?;
+            }
         }
         Some("revise") => {
-            let mut revised=i.clone();
-            revised.payload=json!({"revision":fresh["revision"],"effective_request":string(&answer,"effective_request")?});
+            let mut revised = i.clone();
+            revised.payload = json!({"revision":fresh["revision"],"effective_request":string(&answer,"effective_request")?});
             revise(store, &revised)?;
             prepare_model(store, id).await?;
         }

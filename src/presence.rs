@@ -47,7 +47,9 @@ pub async fn heartbeat(store: &mut Store) -> Result<()> {
         heartbeat["team_activity_protocol"] = json!(1);
     }
     let roles_supported:bool=store.conn.query_row("SELECT EXISTS(SELECT 1 FROM app_preferences WHERE key='task_roles_protocol' AND value='1')",[],|r|r.get(0))?;
-    if roles_supported {heartbeat["task_roles_protocol"]=json!(1);}
+    if roles_supported {
+        heartbeat["task_roles_protocol"] = json!(1);
+    }
     let response = client
         .post(&url)
         .bearer_auth(&key)

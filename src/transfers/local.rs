@@ -427,7 +427,10 @@ pub fn allow(store: &Store, id: &str) -> Result<Value> {
     if let Some(t) = &m.task {
         let current = crate::task_coordinator::get(store, &t.id)?;
         ensure!(
-            current["revision"] == t.revision && current["state"] != "cancelled" && (current["roles"].is_null() || task_recipient(&current)?==m.recipient) && !crate::task_roles::fenced(&store.conn,&t.id,t.revision)?,
+            current["revision"] == t.revision
+                && current["state"] != "cancelled"
+                && (current["roles"].is_null() || task_recipient(&current)? == m.recipient)
+                && !crate::task_roles::fenced(&store.conn, &t.id, t.revision)?,
             "任务版本已改变或取消"
         );
     }
@@ -632,7 +635,11 @@ pub(crate) fn read_chunk(path: &Path, offset: u64, length: u64) -> Result<Vec<u8
 
 /// Only explicitly submitted delivery references are exported; evidence citations remain local.
 pub fn task_recipient(t: &Value) -> Result<&str> {
-    if !t["roles"].is_null() {return t["roles"]["recipients"][0].as_str().context("missing result recipient");}
+    if !t["roles"].is_null() {
+        return t["roles"]["recipients"][0]
+            .as_str()
+            .context("missing result recipient");
+    }
     let initiator = t["initiator"].as_str().context("missing initiator")?;
     if let Some(to) = t["draft"]["deliver_to"].as_str() {
         ensure!(
@@ -649,48 +656,119 @@ pub fn task_recipient(t: &Value) -> Result<&str> {
 
 /// Reuse exactly the frozen current output; do not run the computation or expose
 /// its task history to the new recipient. The new manifest starts unapproved.
-pub fn retarget_task_output(store: &Store,t: &Value) -> Result<()> {
-    let task=t["id"].as_str().context("missing task")?;
-    let rev=t["revision"].as_i64().unwrap();
-    let raw:Option<String>=store.conn.query_row("SELECT result FROM task_candidates WHERE task_id=?1 AND revision=?2 AND member=?3",params![task,rev,store.owner()?],|r|r.get(0)).optional()?;
-    let Some(raw)=raw else {return Ok(());};
-    let mut candidate:Value=serde_json::from_str(&raw)?;
-    let Some(old_id)=candidate["attachment"]["transfer_id"].as_str().map(str::to_owned) else {return Ok(());};
-    let old=manifest(store,&old_id)?;
-    let recipient=task_recipient(t)?;
-    if old.recipient==recipient {return Ok(());}
-    let previous=get(store,&old_id)?;
-    if previous["state"]!="delivered" && previous["state"]!="revoked" {revoke(store,&old_id)?;}
-    let generation=t["roles"]["delivery_generation"].as_i64().unwrap();
-    if recipient==store.owner()? {
-        candidate["attachment"]=Value::Null;
-    } else {
-        let staged=tempfile::tempdir_in(base(store))?;
-        let mut paths=vec![];
-        for file in &old.files {
-            let source:String=store.conn.query_row("SELECT path FROM transfer_files WHERE transfer_id=?1 AND file_id=?2",params![old.id,file.id],|r|r.get(0))?;
-            ensure!(checksum(Path::new(&source))?==(file.bytes,file.sha256.clone()),"已有成果副本已改变，不能重新发送");
-            let target=staged.path().join(&file.name);
-            fs::copy(&source,&target)?;
-            paths.push(target);
-        }
-        let id=stable_id(&old.id,&format!("delivery-generation:{generation}"));
-        prepare(store,Prepare{id:id.clone(),recipient:recipient.into(),note:format!("任务成果 · {} 个文件",paths.len()),paths,session:Some(t["session_id"].as_str().unwrap().into()),task:Some(TaskRef{id:task.into(),revision:rev}),replaces:None},true)?;
-        candidate["attachment"]=json!({"transfer_id":id,"manifest":manifest(store,&id)?,"state":get(store,&id)?["state"]});
+pub fn retarget_task_output(store: &Store, t: &Value) -> Result<()> {
+    let task = t["id"].as_str().context("missing task")?;
+    let rev = t["revision"].as_i64().unwrap();
+    let raw: Option<String> = store
+        .conn
+        .query_row(
+            "SELECT result FROM task_candidates WHERE task_id=?1 AND revision=?2 AND member=?3",
+            params![task, rev, store.owner()?],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let Some(raw) = raw else {
+        return Ok(());
+    };
+    let mut candidate: Value = serde_json::from_str(&raw)?;
+    let old_id = candidate["attachment"]["transfer_id"]
+        .as_str()
+        .map(str::to_owned);
+    let generation = t["roles"]["delivery_generation"].as_i64().unwrap();
+    if candidate["delivery_generation"] == generation {
+        return Ok(());
     }
-    candidate["delivery_generation"]=json!(generation);
-    store.conn.execute("UPDATE task_candidates SET result=?4 WHERE task_id=?1 AND revision=?2 AND member=?3",params![task,rev,store.owner()?,candidate.to_string()])?;
-    if t["initiator"]==store.owner()? {
+    if old_id.is_none() {
+        let execution = candidate["execution_id"]
+            .as_str()
+            .context("missing execution evidence")?;
+        candidate["attachment"] = json!(task_offer(store, t, execution, &candidate)?);
+    } else {
+        let old_id = old_id.unwrap();
+        let old = manifest(store, &old_id)?;
+        let recipient = task_recipient(t)?;
+        let previous = get(store, &old_id)?;
+        if previous["state"] != "delivered" && previous["state"] != "revoked" {
+            revoke(store, &old_id)?;
+        }
+        if recipient == store.owner()? {
+            candidate["attachment"] = Value::Null;
+        } else {
+            let staged = tempfile::tempdir()?;
+            let mut paths = vec![];
+            for (index, file) in old.files.iter().enumerate() {
+                let source: String = store.conn.query_row(
+                    "SELECT path FROM transfer_files WHERE transfer_id=?1 AND file_id=?2",
+                    params![old.id, file.id],
+                    |r| r.get(0),
+                )?;
+                ensure!(
+                    checksum(Path::new(&source))? == (file.bytes, file.sha256.clone()),
+                    "已有成果副本已改变，不能重新发送"
+                );
+                let directory = staged.path().join(index.to_string());
+                fs::create_dir(&directory)?;
+                let target = directory.join(&file.name);
+                fs::copy(&source, &target)?;
+                ensure!(
+                    checksum(&target)? == (file.bytes, file.sha256.clone()),
+                    "复制时成果变化"
+                );
+                paths.push(target);
+            }
+            let id = stable_id(&old.id, &format!("delivery-generation:{generation}"));
+            prepare(
+                store,
+                Prepare {
+                    id: id.clone(),
+                    recipient: recipient.into(),
+                    note: format!("任务成果 · {} 个文件", paths.len()),
+                    paths,
+                    session: Some(t["session_id"].as_str().unwrap().into()),
+                    task: Some(TaskRef {
+                        id: task.into(),
+                        revision: rev,
+                    }),
+                    replaces: None,
+                },
+                true,
+            )?;
+            candidate["attachment"] = json!({"transfer_id":id,"manifest":manifest(store,&id)?,"state":get(store,&id)?["state"]});
+        }
+    }
+    candidate["delivery_generation"] = json!(generation);
+    store.conn.execute(
+        "UPDATE task_candidates SET result=?4 WHERE task_id=?1 AND revision=?2 AND member=?3",
+        params![task, rev, store.owner()?, candidate.to_string()],
+    )?;
+    if t["initiator"] == store.owner()? {
         store.conn.execute("INSERT OR IGNORE INTO task_jobs(id,task_id,revision,kind,payload,created_at) VALUES(?1,?2,?3,'review','{}',?4)",params![stable_id(task,&format!("delivery-review:{rev}:{generation}")),task,rev,now()])?;
     } else {
-        crate::task_coordinator::emit(&store.conn,t,&store.owner()?,&stable_id(task,&format!("delivery-candidate:{rev}:{generation}")),"candidate",candidate,&[t["initiator"].as_str().unwrap().into()])?;
+        crate::task_coordinator::emit(
+            &store.conn,
+            t,
+            &store.owner()?,
+            &stable_id(task, &format!("delivery-candidate:{rev}:{generation}")),
+            "candidate",
+            candidate,
+            &[t["initiator"].as_str().unwrap().into()],
+        )?;
     }
     Ok(())
 }
 
 pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Result<Option<Value>> {
-    let current=crate::task_coordinator::get(store,t["id"].as_str().context("missing task")?)?;
-    ensure!(current["revision"]==t["revision"] && current["roles"]==t["roles"] && !crate::task_roles::fenced(&store.conn,t["id"].as_str().unwrap(),t["revision"].as_i64().unwrap())?,"执行或交付安排已改变，请读取当前安排");
+    let current = crate::task_coordinator::get(store, t["id"].as_str().context("missing task")?)?;
+    ensure!(
+        current["revision"] == t["revision"]
+            && current["roles"] == t["roles"]
+            && !crate::task_roles::fenced(
+                &store.conn,
+                t["id"].as_str().unwrap(),
+                t["revision"].as_i64().unwrap()
+            )?,
+        "执行或交付安排已改变，请读取当前安排"
+    );
     let recipient = task_recipient(t)?;
     if recipient == store.owner()? {
         return Ok(None);
@@ -727,7 +805,7 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
         .context("missing completed run")?
         .id
         .clone();
-    let generation=t["roles"]["delivery_generation"].as_i64().unwrap_or(0);
+    let generation = t["roles"]["delivery_generation"].as_i64().unwrap_or(0);
     let id = stable_id(&run, &format!("output-attachment:{generation}"));
     let result = prepare(
         store,
@@ -748,7 +826,8 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
         false,
     )?;
     let automatic:bool=store.conn.query_row("SELECT EXISTS(SELECT 1 FROM transfer_grants WHERE kind='task_outputs' AND task_id=?1 AND revision=?2 AND recipient=?3 AND revoked=0)",params![task,rev,recipient],|r|r.get(0))?;
-    let task_approved = access.as_ref().is_some_and(|a| a.full_access) && crate::task_roles::delivery_approved(&store.conn,t)?;
+    let task_approved = access.as_ref().is_some_and(|a| a.full_access)
+        && crate::task_roles::delivery_approved(&store.conn, t)?;
     if (automatic || task_approved) && !delivering_files && result["state"] == "draft" {
         allow(store, &id)?;
     }
@@ -877,8 +956,14 @@ pub fn delivery_ready(store: &Store, t: &Value, candidates: &Value) -> Result<bo
     if t["initiator"] != store.owner()? {
         return Ok(false);
     }
-    if crate::task_roles::roles(t)?.is_some() && task_recipient(t)?==store.owner()? && crate::task_roles::executors(t)?.contains(&store.owner()?) {return Ok(true);}
-    if t["roles"].is_null() && !t["draft"]["deliver_to"].is_string()
+    if crate::task_roles::roles(t)?.is_some()
+        && task_recipient(t)? == store.owner()?
+        && crate::task_roles::executors(t)?.contains(&store.owner()?)
+    {
+        return Ok(true);
+    }
+    if t["roles"].is_null()
+        && !t["draft"]["deliver_to"].is_string()
         && t["participants"]
             .as_array()
             .is_some_and(|m| m.iter().all(|v| v == &t["initiator"]))
@@ -897,9 +982,18 @@ pub fn delivery_ready(store: &Store, t: &Value, candidates: &Value) -> Result<bo
         if let Some(id) = result["attachment"]["transfer_id"].as_str() {
             found = true;
             let Ok(v) = get(store, id) else {
-                if recipient!=store.owner()? && result["attachment"]["manifest"]["recipient"]==recipient {
-                    let delivered=t["history"].as_array().into_iter().flatten().any(|e|e["revision"]==t["revision"] && e["sender"]==c["member"] && e["payload"]["transfer_id"]==id && e["payload"]["transfer_state"]=="delivered");
-                    if delivered {continue;}
+                if recipient != store.owner()?
+                    && result["attachment"]["manifest"]["recipient"] == recipient
+                {
+                    let delivered = t["history"].as_array().into_iter().flatten().any(|e| {
+                        e["revision"] == t["revision"]
+                            && e["sender"] == c["member"]
+                            && e["payload"]["transfer_id"] == id
+                            && e["payload"]["transfer_state"] == "delivered"
+                    });
+                    if delivered {
+                        continue;
+                    }
                 }
                 return Ok(false);
             };

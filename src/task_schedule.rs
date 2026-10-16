@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS relay_system_events(id TEXT PRIMARY KEY,recipient TEX
 CREATE TABLE IF NOT EXISTS relay_daily(member TEXT NOT NULL,team_date TEXT NOT NULL,cutoff INTEGER NOT NULL,PRIMARY KEY(member,team_date));
 CREATE TABLE IF NOT EXISTS relay_local_facts(id TEXT PRIMARY KEY,member TEXT NOT NULL,payload TEXT NOT NULL);
 COMMIT;")?;
+    c.execute_batch(crate::team_activity::RELAY_SCHEMA)?;
     let version: u32 = c.pragma_query_value(None, "user_version", |r| r.get(0))?;
     if version == 0 {
         c.pragma_update(None, "user_version", 1)?;
@@ -72,7 +73,9 @@ pub fn accept(c: &Connection, m: &Message, at: i64) -> Result<()> {
         return Ok(());
     }
     let w = Wire::parse(m)?;
-    if crate::task_roles::relay_control(c,m,&w)? {return Ok(());}
+    if crate::task_roles::relay_control(c, m, &w)? {
+        return Ok(());
+    }
     let existing: Option<(i64, String, String, i64, String)> = c
         .query_row(
             "SELECT revision,initiator,participants,sequence,state FROM relay_tasks WHERE id=?1",
@@ -81,11 +84,18 @@ pub fn accept(c: &Connection, m: &Message, at: i64) -> Result<()> {
         )
         .optional()?;
     if w.event == "proposal" {
-        if let Some(r)=crate::task_roles::roles(&w.data)? {
-            ensure!(r.members(&m.sender)==serde_json::from_value::<Vec<String>>(w.data["participants"].clone())?,"roles/participants mismatch");
+        if let Some(r) = crate::task_roles::roles(&w.data)? {
+            ensure!(
+                r.members(&m.sender)
+                    == serde_json::from_value::<Vec<String>>(w.data["participants"].clone())?,
+                "roles/participants mismatch"
+            );
             let pending:bool=c.query_row("SELECT EXISTS(SELECT 1 FROM relay_assignment_stops WHERE task_id=?1 AND initiator=?2 AND stopped=0)",params![w.task_id,m.sender],|r|r.get(0))?;
-            ensure!(!pending,"old assignment has not acknowledged stopping");
-            c.execute("INSERT OR IGNORE INTO relay_task_roles VALUES(?1,?2,?3)",params![w.task_id,w.revision,serde_json::to_string(&r)?])?;
+            ensure!(!pending, "old assignment has not acknowledged stopping");
+            c.execute(
+                "INSERT OR IGNORE INTO relay_task_roles VALUES(?1,?2,?3)",
+                params![w.task_id, w.revision, serde_json::to_string(&r)?],
+            )?;
         }
         ensure!(
             w.data["initiator"] == m.sender && w.data["confirmed"] == w.revision,
@@ -121,6 +131,24 @@ pub fn accept(c: &Connection, m: &Message, at: i64) -> Result<()> {
     } else {
         let (rev, initiator, people, seq, state) =
             existing.context("task proposal not received")?;
+        if w.revision < rev {
+            let historical: Option<String> = c
+                .query_row(
+                    "SELECT roles FROM relay_task_roles WHERE task_id=?1 AND revision=?2",
+                    params![w.task_id, w.revision],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            if let Some(raw) = historical {
+                let roles: crate::task_roles::Roles = serde_json::from_str(&raw)?;
+                let old_people = roles.members(&initiator);
+                ensure!(
+                    old_people.contains(&m.sender) && old_people.contains(&m.recipient),
+                    "historical task participant mismatch"
+                );
+                return Ok(());
+            }
+        }
         let people: Vec<String> = serde_json::from_str(&people)?;
         ensure!(
             people.contains(&m.sender) && people.contains(&m.recipient),
@@ -130,6 +158,27 @@ pub fn accept(c: &Connection, m: &Message, at: i64) -> Result<()> {
             return Ok(());
         }
         ensure!(w.revision == rev, "future task revision");
+        if w.event == "delivery_plan" {
+            ensure!(m.sender == initiator, "only initiator may change delivery");
+            let raw: String = c.query_row(
+                "SELECT roles FROM relay_task_roles WHERE task_id=?1 AND revision=?2",
+                params![w.task_id, rev],
+                |r| r.get(0),
+            )?;
+            let old: crate::task_roles::Roles = serde_json::from_str(&raw)?;
+            let next: crate::task_roles::Roles = serde_json::from_value(w.data["roles"].clone())?;
+            next.validate(&initiator)?;
+            ensure!(
+                old.executor == next.executor && old.others == next.others,
+                "delivery cannot alter execution"
+            );
+            if next.delivery_generation > old.delivery_generation {
+                c.execute(
+                    "UPDATE relay_task_roles SET roles=?3 WHERE task_id=?1 AND revision=?2",
+                    params![w.task_id, rev, serde_json::to_string(&next)?],
+                )?;
+            }
+        }
         if matches!(state.as_str(), "completed" | "cancelled") {
             return Ok(());
         }

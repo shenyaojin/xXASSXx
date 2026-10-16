@@ -267,7 +267,7 @@ fn schema_eleven_isolated_approval_is_not_silently_expanded() {
     let path = b.path.clone();
     drop(b);
     let c = rusqlite::Connection::open(&path).unwrap();
-    c.execute_batch("ALTER TABLE task_workspaces DROP COLUMN full_access; ALTER TABLE app_tasks DROP COLUMN recovery_protocol; ALTER TABLE task_jobs DROP COLUMN retry_at; ALTER TABLE task_jobs DROP COLUMN attempt_limit; ALTER TABLE task_executions DROP COLUMN retry_at; ALTER TABLE task_executions DROP COLUMN retry_attempts; ALTER TABLE task_executions DROP COLUMN retry_limit; DROP TABLE task_input_reads; DROP TABLE task_input_receipts; DROP TABLE task_inputs; DROP TABLE task_blocks; DROP TABLE task_recovery_grants; PRAGMA user_version=11;")
+    c.execute_batch("ALTER TABLE task_workspaces DROP COLUMN full_access; ALTER TABLE app_tasks DROP COLUMN recovery_protocol; ALTER TABLE task_jobs DROP COLUMN retry_at; ALTER TABLE task_jobs DROP COLUMN attempt_limit; ALTER TABLE task_executions DROP COLUMN retry_at; ALTER TABLE task_executions DROP COLUMN retry_attempts; ALTER TABLE task_executions DROP COLUMN retry_limit; DROP TABLE task_input_reads; DROP TABLE task_input_receipts; DROP TABLE task_inputs; DROP TABLE task_blocks; DROP TABLE task_recovery_grants; ALTER TABLE app_tasks DROP COLUMN roles; ALTER TABLE task_revisions DROP COLUMN roles; DROP TABLE task_stops; DROP TABLE task_role_changes; DROP TABLE task_delivery_approvals; PRAGMA user_version=11;")
         .unwrap();
     drop(c);
     let b = Store::open(&path).unwrap();
@@ -658,8 +658,10 @@ async fn exhausted_review_preserves_candidates_and_recovers_without_restarting_e
     assert!(
         task["error"]
             .as_str()
-            .unwrap()
-            .contains("结果检查连续 3 次")
+            .unwrap_or("")
+            .contains("结果检查连续 3 次"),
+        "A={task:#} B={:#}",
+        tasks::get(&b, &id).unwrap()
     );
     assert_eq!(task["archived"], false);
     assert_eq!(
@@ -1350,7 +1352,7 @@ async fn missing_analysis_materials_start_new_discovery_preserving_old_snapshot(
         0
     );
     assert_eq!(count(&b, "SELECT count(DISTINCT session_id) FROM runs"), 4);
-    assert_eq!(count(&b, "SELECT count(*) FROM task_candidates"), 0);
+    assert_eq!(count(&b, "SELECT count(*) FROM task_candidates"), 1);
     let candidates = b
         .messages(None)
         .unwrap()
@@ -2214,7 +2216,7 @@ async fn prepared_attachment_waits_for_receipt_before_model_can_request_more_wor
     )
     .unwrap();
     let manifest = xxassxx::transfers::manifest(&b, &batch).unwrap();
-    let candidate = json!({"body":"原图已准备，尚未授权发送","attachment":{"transfer_id":batch,"manifest":manifest,"state":"draft"}});
+    let candidate = json!({"delivery_generation":1,"body":"原图已准备，尚未授权发送","attachment":{"transfer_id":batch,"manifest":manifest,"state":"draft"}});
     let db = rusqlite::Connection::open(&a.path).unwrap();
     db.execute(
         "INSERT INTO task_candidates(task_id,revision,member,result) VALUES(?1,1,'b',?2)",
@@ -2682,4 +2684,178 @@ async fn transient_model_retry_is_persisted_bounded_and_cancel_fenced() {
     tasks::tick(&a, Path::new(BIN)).await.unwrap();
     assert_eq!(count_calls.load(Ordering::SeqCst), 3);
     server.abort();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn role_replacement_interrupts_writer_then_requires_local_effects_ack_and_new_grant() {
+    use xxassxx::{
+        task_roles,
+        task_workspace::{self, Command},
+    };
+    let team = Team::new();
+    files(&team, "b");
+    files(&team, "c");
+    let (i, id) = draft(&team, "@b 撤销执行测试");
+    let mut a = team.store("a");
+    tasks::prepare(
+        &a,
+        &id,
+        json!({"goal":"运行独立副本","deliverables":["结果"],"mode":"execute"}),
+    )
+    .unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    let mut b = team.store("b");
+    transfer(&a, &mut b);
+    let grant = task_workspace::execute(
+        &b,
+        Command::Allow {
+            task: id.clone(),
+            revision: 1,
+            parent: team.dir.path().join("b/work"),
+            read_dirs: vec![],
+            timeout_secs: 30,
+        },
+    )
+    .unwrap();
+    let workspace = std::path::PathBuf::from(grant["directory"].as_str().unwrap());
+    let mut control = Store::open(&b.path).unwrap();
+    let start = std::time::Instant::now();
+    let (result, ()) = tokio::join!(tasks::tick(&b, Path::new(BIN)), async {
+        for _ in 0..100 {
+            if workspace.join("calculation.py").exists() {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        assert!(workspace.join("calculation.py").exists());
+        let mut change = action(
+            &i,
+            &id,
+            "roles_task",
+            1,
+            "改由 c 执行，先停止旧运行并核对副作用",
+        );
+        change.payload["executor"] = json!("c");
+        assert!(task_roles::change(&a, &change).unwrap());
+        tasks::prepare(
+            &a,
+            &id,
+            json!({"goal":"运行独立副本","deliverables":["结果"],"mode":"execute"}),
+        )
+        .unwrap();
+        tasks::confirm(&a, &action(&i, &id, "confirm_task", 2, "确认新安排")).unwrap();
+        transfer(&a, &mut control);
+        assert_eq!(
+            count(
+                &a,
+                "SELECT count(*) FROM messages WHERE direction='out' AND json_extract(payload,'$.recipient')='c'"
+            ),
+            0
+        );
+    });
+    result.unwrap();
+    assert!(start.elapsed() < std::time::Duration::from_secs(15));
+    assert!(!workspace.join("late.txt").exists());
+    assert!(!workspace.join("result.txt").exists());
+    task_roles::tick(&b).unwrap();
+    let bt = tasks::get(&b, &id).unwrap();
+    assert_eq!(bt["assignment_stops"][0]["state"], "needs_check");
+    let mut ack = action(
+        &i,
+        &id,
+        "confirm_stop",
+        1,
+        "已核对：仅保留 calculation.py，未生成 late.txt 或 result.txt，无待执行外部操作",
+    );
+    ack.recipient = "b".into();
+    ack.session_id = bt["session_id"].as_str().unwrap().into();
+    task_roles::confirm_stop(&b, &ack).unwrap();
+    transfer(&b, &mut a);
+    tasks::tick(&a, Path::new(BIN)).await.unwrap();
+    let mut c = team.store("c");
+    transfer(&a, &mut c);
+    tasks::tick(&c, Path::new(BIN)).await.unwrap();
+    assert_eq!(count(&c, "SELECT count(*) FROM runs"), 0);
+    assert_eq!(count(&c, "SELECT count(*) FROM task_workspaces"), 0);
+    assert_eq!(tasks::get(&c, &id).unwrap()["roles"]["executor"], "c");
+    assert!(
+        task_workspace::execute(
+            &b,
+            Command::Allow {
+                task: id,
+                revision: 1,
+                parent: team.dir.path().join("b/work"),
+                read_dirs: vec![],
+                timeout_secs: 30
+            }
+        )
+        .is_err()
+    );
+}
+
+#[tokio::test]
+async fn recipient_change_reuses_frozen_output_and_requires_sender_permission_without_history_leak()
+{
+    let team = Team::new();
+    files(&team, "b");
+    let work = team.dir.path().join("b/work");
+    std::fs::write(work.join("status.json"), r#"{"latest":"result.png"}"#).unwrap();
+    std::fs::write(work.join("result.png"), b"\x89PNG\r\n\x1a\nfixture").unwrap();
+    let (i, id) = draft(&team, "@b 把结果图发给我");
+    let mut a = team.store("a");
+    tasks::prepare(
+        &a,
+        &id,
+        json!({"goal":"获取结果图","deliverables":["结果图"],"mode":"files"}),
+    )
+    .unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    let mut b = team.store("b");
+    transfer(&a, &mut b);
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    transfer(&b, &mut a);
+    let old = xxassxx::transfers::list(&b).unwrap()[0]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let old_manifest = xxassxx::transfers::manifest(&b, &old).unwrap();
+    let mut change = action(
+        &i,
+        &id,
+        "roles_task",
+        1,
+        "只改成果接收人为 c，保留计算与成果",
+    );
+    change.payload["result_recipient"] = json!("c");
+    assert!(!xxassxx::task_roles::change(&a, &change).unwrap());
+    transfer(&a, &mut b);
+    xxassxx::task_roles::tick(&b).unwrap();
+    transfer(&b, &mut a);
+    let batches = xxassxx::transfers::list(&b).unwrap();
+    assert_eq!(batches.len(), 2);
+    let current = batches.iter().find(|v| v["id"] != old).unwrap();
+    assert_eq!(current["state"], "draft");
+    assert_eq!(current["authorized"], false);
+    let m = xxassxx::transfers::manifest(&b, current["id"].as_str().unwrap()).unwrap();
+    assert_eq!(m.recipient, "c");
+    assert_eq!(m.files[0].sha256, old_manifest.files[0].sha256);
+    assert_eq!(m.files[0].name, old_manifest.files[0].name);
+    assert_eq!(
+        xxassxx::transfers::get(&b, &old).unwrap()["state"],
+        "revoked"
+    );
+    assert!(xxassxx::transfers::allow(&b, &old).is_err());
+    assert_eq!(count(&b, "SELECT count(*) FROM runs"), 1);
+    assert_eq!(tasks::get(&b, &id).unwrap()["revision"], 1);
+    assert_eq!(
+        tasks::get(&b, &id).unwrap()["participants"],
+        json!(["a", "b"])
+    );
+    assert!(
+        !b.messages(None)
+            .unwrap()
+            .iter()
+            .any(|r| r.message.recipient == "c" && r.message.operation == "task_v2")
+    );
+    assert_eq!(count(&team.store("c"), "SELECT count(*) FROM app_tasks"), 0);
 }

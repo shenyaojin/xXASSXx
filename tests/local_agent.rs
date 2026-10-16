@@ -322,7 +322,7 @@ async fn local_processing_delivers_to_the_named_contact_and_waits_for_receipt() 
         let id = command["task_id"].as_str().unwrap();
         let draft = json!({"goal":"本机核对后把图片发给 b","mode":"files","deliver_to":"b","deliverables":["核对依据和实际图片"],"questions":[]});
         let mut invalid = draft.clone();
-        invalid["deliver_to"] = json!("a");
+        invalid["deliver_to"] = json!("not-a-contact");
         assert!(tasks::prepare(&s, id, invalid).is_err());
         tasks::prepare(&s, id, draft).unwrap();
         if mode == Mode::AskForApproval {

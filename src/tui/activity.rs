@@ -179,6 +179,17 @@ impl ActivityUi {
                         .join("、")
                 ));
                 content.push(event["body"].as_str().unwrap_or("").into());
+                if let Some(recipients) = event["roles"]["recipients"].as_array() {
+                    content.push(format!(
+                        "成果接收：{}",
+                        recipients
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .map(|m| format!("@{m}"))
+                            .collect::<Vec<_>>()
+                            .join("、")
+                    ));
+                }
                 for source in event["sources"].as_array().into_iter().flatten() {
                     if let Some(path) = source["path"].as_str() {
                         content.push(format!(

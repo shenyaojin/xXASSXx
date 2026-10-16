@@ -538,3 +538,62 @@ fn codex_directory_picker_can_cancel_or_reject_outside_path_without_changing_cha
         0
     );
 }
+
+#[test]
+fn execution_approval_names_roles_and_rejects_changed_recipient() {
+    let (team, mut s, mut ui) = fixture();
+    s.allow_directory(&team.dir.path().join("a/work")).unwrap();
+    let id = business_task(&mut s, &ui, "本机计算后按约定发送成果");
+    let mut i = app::Instruction {
+        request_id: uuid::Uuid::new_v4().to_string(),
+        channel: "test".into(),
+        session_id: ui.session.clone(),
+        task_id: Some(id.clone()),
+        recipient: "a".into(),
+        body: "确认".into(),
+        action: "confirm_task".into(),
+        payload: json!({"revision":1}),
+    };
+    xxassxx::task_coordinator::prepare(&s, &id, json!({"goal":"本机计算", "deliverables":["结果"],"mode":"execute","deliver_files":true,"questions":[]})).unwrap();
+    xxassxx::task_coordinator::confirm(&s, &i).unwrap();
+    ui.refresh(&s).unwrap();
+    ui.selected_task = Some(id.clone());
+    ui.key(
+        &mut s,
+        KeyEvent::new(KeyCode::Char('g'), KeyModifiers::CONTROL),
+    )
+    .unwrap();
+    assert!(screen(&ui, &s, 150, 40).contains("本机执行成员：@a"));
+    i.request_id = uuid::Uuid::new_v4().to_string();
+    i.body = "接收 @b 原接收方向需纠正".into();
+    xxassxx::task_roles::change(&s, &i).unwrap();
+    assert!(
+        ui.key(&mut s, KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
+            .is_err()
+    );
+    let c = rusqlite::Connection::open(&s.path).unwrap();
+    assert_eq!(
+        c.query_row("SELECT count(*) FROM task_workspaces", [], |r| r
+            .get::<_, i64>(0))
+            .unwrap(),
+        0
+    );
+    key(&mut ui, &mut s, KeyCode::Esc);
+    ui.refresh(&s).unwrap();
+    ui.key(
+        &mut s,
+        KeyEvent::new(KeyCode::Char('g'), KeyModifiers::CONTROL),
+    )
+    .unwrap();
+    assert!(screen(&ui, &s, 150, 40).contains("成果接收人：@b"));
+    key(&mut ui, &mut s, KeyCode::Enter);
+    assert_eq!(
+        c.query_row(
+            "SELECT count(*) FROM task_delivery_approvals WHERE generation=2",
+            [],
+            |r| r.get::<_, i64>(0)
+        )
+        .unwrap(),
+        1
+    );
+}

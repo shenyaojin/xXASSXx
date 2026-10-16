@@ -68,7 +68,11 @@ impl Team {
             [],
         )
         .unwrap();
-        c.execute("INSERT INTO relay_role_capabilities SELECT member_id,seen_at FROM relay_presence",[]).unwrap();
+        c.execute(
+            "INSERT INTO relay_role_capabilities SELECT member_id,seen_at FROM relay_presence",
+            [],
+        )
+        .unwrap();
         t
     }
     fn start(root: &Path) -> (Child, String) {
