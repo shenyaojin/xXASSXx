@@ -1,0 +1,1598 @@
+{
+  "date": "2026-10-16",
+  "status": "A–H real acceptance complete; final CI recorded separately",
+  "scope": "isolated synthetic data only; no daily upgrade, release, original task resume, or standing Full access change",
+  "phase1_dependency": {
+    "implementation": "df26203",
+    "tested_source": "0d2f04f",
+    "evidence": "docs/stability-phase1-evidence.json",
+    "verified": [
+      "structured recovery reasons",
+      "bounded persistent budgets",
+      "received and consumed input receipts",
+      "deterministic answer/supplement/recover"
+    ]
+  },
+  "environment": {
+    "team": "stability-phase2",
+    "members": {
+      "a": "Lakota / lakota.mines.edu",
+      "b": "Trader / VM-0-8-ubuntu",
+      "c": "Lakota / lakota.mines.edu"
+    },
+    "global_access": "Ask for approval on all three; full_access=1 below is a task-specific grant, not a standing mode",
+    "model": "real DeepSeek compatible service (deepseek-flash), no mock in real acceptance",
+    "codex": "official codex-cli 0.162.1",
+    "terminal": "real interactive PTY 150x40, raw ANSI and pyte frames",
+    "relay": "actual isolated mailbox on Lakota local /tmp disk; NFS lock stall retained in raw trace"
+  },
+  "raw_root": "smoke-output/stability-phase2-20261016/",
+  "cases": {
+    "A": {
+      "status": "passed",
+      "summary": "a 本机官方 Codex 计算 83，一次计算；b 仅接收结果和程序，无任务或运行。",
+      "records": [
+        {
+          "member": "a",
+          "host": "lakota.mines.edu",
+          "task_visible": true,
+          "runtime_source": "d7b2092c0b22092d96fdca9ed0b612c520127b3a",
+          "binary_sha256": "163aad952595a1cfa1662d98486c7be09b8a866849b6d4f452188fb60211a061",
+          "raw_snapshot": "raw/lakota/evidence/A-a.json",
+          "approvals": [
+            {
+              "task_id": "24790d42-1a25-5f5c-bc66-a95041d01ab0",
+              "revision": 1,
+              "directory": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/a/work/xxassxx-task-24790d42-1a25-5f5c-bc66-a95041d01ab0-r1",
+              "read_roots": "[\"/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/a/work\"]",
+              "timeout_secs": 1800,
+              "created_at": 1792172143,
+              "full_access": 1
+            }
+          ],
+          "delivery_approvals": [
+            {
+              "task_id": "24790d42-1a25-5f5c-bc66-a95041d01ab0",
+              "revision": 1,
+              "generation": 1
+            }
+          ],
+          "runs": [
+            {
+              "id": "8e1e5797-2e20-4212-ac81-d1da44bf63fc",
+              "state": "succeeded",
+              "session_id": "01a145d1-4203-7b80-8f0a-70e46352b546",
+              "resumed_session_id": null,
+              "codex_version": "codex-cli 0.162.1",
+              "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/a/work/xxassxx-task-24790d42-1a25-5f5c-bc66-a95041d01ab0-r1",
+              "reads": 1,
+              "submissions": 1,
+              "error_code": null
+            }
+          ],
+          "transfers": [
+            {
+              "id": "76b6d2be-0583-541e-97c3-4fb7d700774b",
+              "state": "delivered",
+              "direction": "out"
+            }
+          ],
+          "task_id": "24790d42-1a25-5f5c-bc66-a95041d01ab0",
+          "revision": 1,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "a",
+            "recipients": [
+              "b"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [
+            {
+              "transfer_id": "76b6d2be-0583-541e-97c3-4fb7d700774b",
+              "name": "A_sum.py",
+              "bytes": 1513,
+              "sha256": "a6894e010079db4442572e840151105b5a76d4a63b3c9889d851c77c6b75b696",
+              "exists": true
+            },
+            {
+              "transfer_id": "76b6d2be-0583-541e-97c3-4fb7d700774b",
+              "name": "A_result.json",
+              "bytes": 153,
+              "sha256": "a5ead9218b7abfcf0817533a5203ffb918ef5e0cd5c2ee4ccf54eac28db11cb4",
+              "exists": true
+            }
+          ],
+          "stops": [],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": [
+            {
+              "id": "afcd2c74-03f9-4643-8b33-91b4403576b0",
+              "task_id": "24790d42-1a25-5f5c-bc66-a95041d01ab0",
+              "revision": 1,
+              "block_id": "fd51da15-c7d2-5320-b034-156d45ef1d72",
+              "execution_rounds": 12,
+              "model_rounds": 12,
+              "created_at": 1792172700
+            }
+          ]
+        },
+        {
+          "member": "b",
+          "host": "VM-0-8-ubuntu",
+          "task_visible": false,
+          "runtime_source": "d7b2092c0b22092d96fdca9ed0b612c520127b3a",
+          "binary_sha256": "163aad952595a1cfa1662d98486c7be09b8a866849b6d4f452188fb60211a061",
+          "raw_snapshot": "raw/trader/evidence/A-b.json",
+          "approvals": [],
+          "delivery_approvals": [],
+          "runs": [],
+          "transfers": [
+            {
+              "id": "76b6d2be-0583-541e-97c3-4fb7d700774b",
+              "state": "received",
+              "direction": "in"
+            }
+          ],
+          "files": [
+            {
+              "transfer_id": "76b6d2be-0583-541e-97c3-4fb7d700774b",
+              "name": "A_result.json",
+              "bytes": 153,
+              "sha256": "a5ead9218b7abfcf0817533a5203ffb918ef5e0cd5c2ee4ccf54eac28db11cb4",
+              "exists": true
+            },
+            {
+              "transfer_id": "76b6d2be-0583-541e-97c3-4fb7d700774b",
+              "name": "A_sum.py",
+              "bytes": 1513,
+              "sha256": "a6894e010079db4442572e840151105b5a76d4a63b3c9889d851c77c6b75b696",
+              "exists": true
+            }
+          ],
+          "stops": [],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        }
+      ]
+    },
+    "B": {
+      "status": "passed",
+      "summary": "b 只读自己机器的 identity.json 后发给 a；没有把 a 的物理路径带到 b。",
+      "records": [
+        {
+          "member": "a",
+          "host": "lakota.mines.edu",
+          "task_visible": true,
+          "runtime_source": "d7b2092c0b22092d96fdca9ed0b612c520127b3a",
+          "binary_sha256": "163aad952595a1cfa1662d98486c7be09b8a866849b6d4f452188fb60211a061",
+          "raw_snapshot": "raw/lakota/evidence/B-a.json",
+          "approvals": [],
+          "delivery_approvals": [],
+          "runs": [],
+          "transfers": [
+            {
+              "id": "bd42aaef-ad1d-5ddd-b702-20599415a3ba",
+              "state": "received",
+              "direction": "in"
+            }
+          ],
+          "task_id": "dc2806c4-5753-53c6-baba-b933e73f9501",
+          "revision": 1,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "b",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [
+            {
+              "transfer_id": "bd42aaef-ad1d-5ddd-b702-20599415a3ba",
+              "name": "identity.json",
+              "bytes": 42,
+              "sha256": "72cad93190c5f74b2394bf1853552846ab4b1bec9857635fd5f391b009b719de",
+              "exists": true
+            }
+          ],
+          "stops": [],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        },
+        {
+          "member": "b",
+          "host": "VM-0-8-ubuntu",
+          "task_visible": true,
+          "runtime_source": "d7b2092c0b22092d96fdca9ed0b612c520127b3a",
+          "binary_sha256": "163aad952595a1cfa1662d98486c7be09b8a866849b6d4f452188fb60211a061",
+          "raw_snapshot": "raw/trader/evidence/B-b.json",
+          "approvals": [],
+          "delivery_approvals": [],
+          "runs": [
+            {
+              "id": "d35fcf61-e9f1-4122-b86d-1e919a467415",
+              "state": "succeeded",
+              "session_id": null,
+              "resumed_session_id": null,
+              "codex_version": null,
+              "workdir": "/home/ubuntu/xxassxx-tests/stability-phase2-20261016/b/work",
+              "reads": 1,
+              "submissions": 1,
+              "error_code": null
+            }
+          ],
+          "transfers": [
+            {
+              "id": "bd42aaef-ad1d-5ddd-b702-20599415a3ba",
+              "state": "delivered",
+              "direction": "out"
+            }
+          ],
+          "task_id": "dc2806c4-5753-53c6-baba-b933e73f9501",
+          "revision": 1,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "b",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [
+            {
+              "transfer_id": "bd42aaef-ad1d-5ddd-b702-20599415a3ba",
+              "name": "identity.json",
+              "bytes": 42,
+              "sha256": "72cad93190c5f74b2394bf1853552846ab4b1bec9857635fd5f391b009b719de",
+              "exists": true
+            }
+          ],
+          "stops": [],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        }
+      ]
+    },
+    "C": {
+      "status": "passed",
+      "summary": "b 接收但未批准/启动；替换为 c，旧分配停止墓碑确认后才派发。b 无执行。乱序/重复提议另由真实 HTTP 自动回归覆盖。",
+      "records": [
+        {
+          "member": "a",
+          "host": "lakota.mines.edu",
+          "task_visible": true,
+          "runtime_source": "d7b2092c0b22092d96fdca9ed0b612c520127b3a",
+          "binary_sha256": "163aad952595a1cfa1662d98486c7be09b8a866849b6d4f452188fb60211a061",
+          "raw_snapshot": "raw/lakota/evidence/C-H-a.json",
+          "approvals": [],
+          "delivery_approvals": [],
+          "runs": [],
+          "transfers": [
+            {
+              "id": "7b593e3b-9899-5b84-8b33-1e7b11ae48ee",
+              "state": "received",
+              "direction": "in"
+            }
+          ],
+          "task_id": "26ab4516-014a-5809-b94d-8d6d84de1ad2",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "c",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [
+            {
+              "transfer_id": "7b593e3b-9899-5b84-8b33-1e7b11ae48ee",
+              "name": "C_result.json",
+              "bytes": 629,
+              "sha256": "2dd709e5012b444db566ab24a2fded47c7ece6a52f2fcb9c79cd24003562c187",
+              "exists": true
+            },
+            {
+              "transfer_id": "7b593e3b-9899-5b84-8b33-1e7b11ae48ee",
+              "name": "C_calculate.py",
+              "bytes": 2406,
+              "sha256": "f086a92229b5a217d52ad322c3225f13593fa3c1a829768fb91f1d0c2aa0d63d",
+              "exists": true
+            },
+            {
+              "transfer_id": "7b593e3b-9899-5b84-8b33-1e7b11ae48ee",
+              "name": "C_runs.log",
+              "bytes": 591,
+              "sha256": "05c4391e68ac6ba6bd85dae7cf908c1dc2de783bef01ccc4d35d50ff2bf7c32e",
+              "exists": true
+            }
+          ],
+          "stops": [
+            {
+              "id": "9c6dd5a8-de76-5fe7-ba40-7da5662178aa",
+              "revision": 1,
+              "executor": "b",
+              "state": "stopped",
+              "created_at": 1792173122,
+              "confirmed_at": 1792173132,
+              "reason": "执行 @c b 尚未开始，本次改由 c 在自己的隔离目录处理；目标、成果接收人和已补充的单位不变。"
+            }
+          ],
+          "inputs": [
+            {
+              "id": "962bfb82-5d76-42f0-8714-d4b943cdbfa2",
+              "revision": 1,
+              "kind": "supplement",
+              "body": "补充有效事实：values 的长度单位都是米，factor 为无量纲，结果单位写 m。这不改变目标、文件范围或授权。",
+              "created_at": 1792173110
+            },
+            {
+              "id": "f49962ca-5c53-5f26-9d71-16dff77af56e",
+              "revision": 2,
+              "kind": "supplement",
+              "body": "补充有效事实：values 的长度单位都是米，factor 为无量纲，结果单位写 m。这不改变目标、文件范围或授权。",
+              "created_at": 1792173122
+            },
+            {
+              "id": "11416197-a5d7-4ec0-accb-d76a331a67fa",
+              "revision": 2,
+              "kind": "supplement",
+              "body": "澄清原话中的隔离目录：指 c 已经允许的整个测试工作目录 member://c/work，不是产品自动创建的 xxassxx-task 产物子目录。values.json、identity.json、factor.json 都在这个已允许工作目录根部。授权范围不扩大，不访问该 work 之外；其余要求不变，factor 为 null 仍须问我。",
+              "created_at": 1792173276
+            },
+            {
+              "id": "17116436-0e44-425a-8c98-59fd5f8cb15f",
+              "revision": 2,
+              "kind": "answer",
+              "body": "本次 factor = 2。请作为程序参数使用，保持原始 factor.json 的 null 不变。结果单位 m，只运行一次计算并核对 C_runs.log 后发送结果和程序。",
+              "created_at": 1792173533
+            }
+          ],
+          "input_receipts": [
+            {
+              "input_id": "962bfb82-5d76-42f0-8714-d4b943cdbfa2",
+              "member": "b",
+              "received_at": 1792173121,
+              "read_at": null,
+              "execution_id": null,
+              "run_id": null
+            },
+            {
+              "input_id": "f49962ca-5c53-5f26-9d71-16dff77af56e",
+              "member": "c",
+              "received_at": 1792173224,
+              "read_at": 1792173224,
+              "execution_id": "3783c65d-c4dc-529d-adc5-e1027b631791",
+              "run_id": "fb594c3d-d76d-42da-b221-f5d2c2adc120"
+            },
+            {
+              "input_id": "11416197-a5d7-4ec0-accb-d76a331a67fa",
+              "member": "c",
+              "received_at": 1792173279,
+              "read_at": 1792173473,
+              "execution_id": "3783c65d-c4dc-529d-adc5-e1027b631791",
+              "run_id": "6cf9690d-25e8-4312-ab06-3c77442615d2"
+            },
+            {
+              "input_id": "17116436-0e44-425a-8c98-59fd5f8cb15f",
+              "member": "c",
+              "received_at": 1792173557,
+              "read_at": 1792173591,
+              "execution_id": "3783c65d-c4dc-529d-adc5-e1027b631791",
+              "run_id": "3bcfb01c-d551-45b9-97bf-3773a6959152"
+            }
+          ],
+          "recovery_grants": []
+        },
+        {
+          "member": "b",
+          "host": "VM-0-8-ubuntu",
+          "task_visible": true,
+          "runtime_source": "d7b2092c0b22092d96fdca9ed0b612c520127b3a",
+          "binary_sha256": "163aad952595a1cfa1662d98486c7be09b8a866849b6d4f452188fb60211a061",
+          "raw_snapshot": "raw/trader/evidence/C-H-b.json",
+          "approvals": [],
+          "delivery_approvals": [],
+          "runs": [],
+          "transfers": [],
+          "task_id": "26ab4516-014a-5809-b94d-8d6d84de1ad2",
+          "revision": 1,
+          "state": "cancelled",
+          "roles": {
+            "protocol": 1,
+            "executor": "b",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [],
+          "stops": [
+            {
+              "id": "9c6dd5a8-de76-5fe7-ba40-7da5662178aa",
+              "revision": 1,
+              "executor": "b",
+              "state": "stopped",
+              "created_at": 1792173126,
+              "confirmed_at": 1792173126,
+              "reason": "执行 @c b 尚未开始，本次改由 c 在自己的隔离目录处理；目标、成果接收人和已补充的单位不变。"
+            }
+          ],
+          "inputs": [
+            {
+              "id": "962bfb82-5d76-42f0-8714-d4b943cdbfa2",
+              "revision": 1,
+              "kind": "supplement",
+              "body": "补充有效事实：values 的长度单位都是米，factor 为无量纲，结果单位写 m。这不改变目标、文件范围或授权。",
+              "created_at": 1792173116
+            }
+          ],
+          "input_receipts": [
+            {
+              "input_id": "962bfb82-5d76-42f0-8714-d4b943cdbfa2",
+              "member": "b",
+              "received_at": 1792173116,
+              "read_at": null,
+              "execution_id": null,
+              "run_id": null
+            }
+          ],
+          "recovery_grants": []
+        },
+        {
+          "member": "c",
+          "host": "lakota.mines.edu",
+          "task_visible": true,
+          "runtime_source": "d7b2092c0b22092d96fdca9ed0b612c520127b3a",
+          "binary_sha256": "163aad952595a1cfa1662d98486c7be09b8a866849b6d4f452188fb60211a061",
+          "raw_snapshot": "raw/lakota/evidence/C-H-c.json",
+          "approvals": [
+            {
+              "task_id": "26ab4516-014a-5809-b94d-8d6d84de1ad2",
+              "revision": 2,
+              "directory": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work/xxassxx-task-26ab4516-014a-5809-b94d-8d6d84de1ad2-r2",
+              "read_roots": "[\"/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work\"]",
+              "timeout_secs": 1800,
+              "created_at": 1792173205,
+              "full_access": 1
+            }
+          ],
+          "delivery_approvals": [
+            {
+              "task_id": "26ab4516-014a-5809-b94d-8d6d84de1ad2",
+              "revision": 2,
+              "generation": 1
+            }
+          ],
+          "runs": [
+            {
+              "id": "fb594c3d-d76d-42da-b221-f5d2c2adc120",
+              "state": "succeeded",
+              "session_id": "01a145d8-f201-7720-81c0-7a91a1fe8a83",
+              "resumed_session_id": null,
+              "codex_version": "codex-cli 0.162.1",
+              "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work/xxassxx-task-26ab4516-014a-5809-b94d-8d6d84de1ad2-r2",
+              "reads": 1,
+              "submissions": 1,
+              "error_code": null
+            },
+            {
+              "id": "6cf9690d-25e8-4312-ab06-3c77442615d2",
+              "state": "succeeded",
+              "session_id": "01a145d8-f201-7720-81c0-7a91a1fe8a83",
+              "resumed_session_id": "01a145d8-f201-7720-81c0-7a91a1fe8a83",
+              "codex_version": "codex-cli 0.162.1",
+              "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work/xxassxx-task-26ab4516-014a-5809-b94d-8d6d84de1ad2-r2",
+              "reads": 1,
+              "submissions": 1,
+              "error_code": null
+            },
+            {
+              "id": "3bcfb01c-d551-45b9-97bf-3773a6959152",
+              "state": "succeeded",
+              "session_id": "01a145d8-f201-7720-81c0-7a91a1fe8a83",
+              "resumed_session_id": "01a145d8-f201-7720-81c0-7a91a1fe8a83",
+              "codex_version": "codex-cli 0.162.1",
+              "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work/xxassxx-task-26ab4516-014a-5809-b94d-8d6d84de1ad2-r2",
+              "reads": 1,
+              "submissions": 1,
+              "error_code": null
+            }
+          ],
+          "transfers": [
+            {
+              "id": "7b593e3b-9899-5b84-8b33-1e7b11ae48ee",
+              "state": "delivered",
+              "direction": "out"
+            }
+          ],
+          "task_id": "26ab4516-014a-5809-b94d-8d6d84de1ad2",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "c",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [
+            {
+              "transfer_id": "7b593e3b-9899-5b84-8b33-1e7b11ae48ee",
+              "name": "C_result.json",
+              "bytes": 629,
+              "sha256": "2dd709e5012b444db566ab24a2fded47c7ece6a52f2fcb9c79cd24003562c187",
+              "exists": true
+            },
+            {
+              "transfer_id": "7b593e3b-9899-5b84-8b33-1e7b11ae48ee",
+              "name": "C_calculate.py",
+              "bytes": 2406,
+              "sha256": "f086a92229b5a217d52ad322c3225f13593fa3c1a829768fb91f1d0c2aa0d63d",
+              "exists": true
+            },
+            {
+              "transfer_id": "7b593e3b-9899-5b84-8b33-1e7b11ae48ee",
+              "name": "C_runs.log",
+              "bytes": 591,
+              "sha256": "05c4391e68ac6ba6bd85dae7cf908c1dc2de783bef01ccc4d35d50ff2bf7c32e",
+              "exists": true
+            }
+          ],
+          "stops": [],
+          "inputs": [
+            {
+              "id": "f49962ca-5c53-5f26-9d71-16dff77af56e",
+              "revision": 2,
+              "kind": "supplement",
+              "body": "补充有效事实：values 的长度单位都是米，factor 为无量纲，结果单位写 m。这不改变目标、文件范围或授权。",
+              "created_at": 1792173142
+            },
+            {
+              "id": "11416197-a5d7-4ec0-accb-d76a331a67fa",
+              "revision": 2,
+              "kind": "supplement",
+              "body": "澄清原话中的隔离目录：指 c 已经允许的整个测试工作目录 member://c/work，不是产品自动创建的 xxassxx-task 产物子目录。values.json、identity.json、factor.json 都在这个已允许工作目录根部。授权范围不扩大，不访问该 work 之外；其余要求不变，factor 为 null 仍须问我。",
+              "created_at": 1792173277
+            },
+            {
+              "id": "17116436-0e44-425a-8c98-59fd5f8cb15f",
+              "revision": 2,
+              "kind": "answer",
+              "body": "本次 factor = 2。请作为程序参数使用，保持原始 factor.json 的 null 不变。结果单位 m，只运行一次计算并核对 C_runs.log 后发送结果和程序。",
+              "created_at": 1792173553
+            }
+          ],
+          "input_receipts": [
+            {
+              "input_id": "f49962ca-5c53-5f26-9d71-16dff77af56e",
+              "member": "c",
+              "received_at": 1792173142,
+              "read_at": 1792173590,
+              "execution_id": "3783c65d-c4dc-529d-adc5-e1027b631791",
+              "run_id": "3bcfb01c-d551-45b9-97bf-3773a6959152"
+            },
+            {
+              "input_id": "11416197-a5d7-4ec0-accb-d76a331a67fa",
+              "member": "c",
+              "received_at": 1792173277,
+              "read_at": 1792173590,
+              "execution_id": "3783c65d-c4dc-529d-adc5-e1027b631791",
+              "run_id": "3bcfb01c-d551-45b9-97bf-3773a6959152"
+            },
+            {
+              "input_id": "17116436-0e44-425a-8c98-59fd5f8cb15f",
+              "member": "c",
+              "received_at": 1792173553,
+              "read_at": 1792173590,
+              "execution_id": "3783c65d-c4dc-529d-adc5-e1027b631791",
+              "run_id": "3bcfb01c-d551-45b9-97bf-3773a6959152"
+            }
+          ],
+          "recovery_grants": [
+            {
+              "id": "9e79e94d-2f89-4986-a342-c69dfe7a362a",
+              "task_id": "26ab4516-014a-5809-b94d-8d6d84de1ad2",
+              "revision": 2,
+              "block_id": "825e9894-749b-57d3-84c4-bbe9e4ab77c0",
+              "execution_rounds": 1,
+              "model_rounds": 1,
+              "created_at": 1792173463
+            },
+            {
+              "id": "cdfb0dd2-96e8-481e-a697-9a931f5bfc42",
+              "task_id": "26ab4516-014a-5809-b94d-8d6d84de1ad2",
+              "revision": 2,
+              "block_id": "f10b8147-8a19-5b41-a391-02563514c219",
+              "execution_rounds": 1,
+              "model_rounds": 1,
+              "created_at": 1792173583
+            }
+          ]
+        }
+      ]
+    },
+    "D": {
+      "status": "passed",
+      "summary": "b 的 D 程序在等待期间被产品停止；PID 消失且无结果/副作用日志。b 本机 /handoff 确认后，c 自行批准、单次运行 83。",
+      "records": [
+        {
+          "member": "a",
+          "host": "lakota.mines.edu",
+          "task_visible": true,
+          "runtime_source": "4ee42af36f4fe182defe91397e847e22a6a4427b",
+          "binary_sha256": "4930b5ad1a55459f032334cc7e13e0f6c2de0ea9873f2ad3a02f1c47bfbc1248",
+          "raw_snapshot": "raw/lakota/evidence/D-a.json",
+          "approvals": [],
+          "delivery_approvals": [],
+          "runs": [],
+          "transfers": [
+            {
+              "id": "47209bc1-f790-542d-bd05-9ffb99c8a054",
+              "state": "received",
+              "direction": "in"
+            }
+          ],
+          "task_id": "74b497e3-596f-5c15-84eb-4eb58139c5a4",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "c",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [
+            {
+              "transfer_id": "47209bc1-f790-542d-bd05-9ffb99c8a054",
+              "name": "D_result.json",
+              "bytes": 254,
+              "sha256": "192d28cd2ec569d64b75c9a3b833d66fa02c78b0adc61c847ee1086e603f293f",
+              "exists": true
+            },
+            {
+              "transfer_id": "47209bc1-f790-542d-bd05-9ffb99c8a054",
+              "name": "D_runs.log",
+              "bytes": 236,
+              "sha256": "4f6f0c5dad450870e52283a46ff8adeaae9e88a8987fb74909b69079a7292dba",
+              "exists": true
+            },
+            {
+              "transfer_id": "47209bc1-f790-542d-bd05-9ffb99c8a054",
+              "name": "role_fixture.py",
+              "bytes": 934,
+              "sha256": "8e3423a0ab4a1719a7c6b380f610a000d080754517bd8d4e8f63171839a5cae6",
+              "exists": true
+            }
+          ],
+          "stops": [
+            {
+              "id": "c23be60a-a725-5da8-b46b-c3c9e227032a",
+              "revision": 1,
+              "executor": "b",
+              "state": "stopped",
+              "created_at": 1792173987,
+              "confirmed_at": 1792174060,
+              "reason": "这项任务改由 c 执行，b 停止当前运行。目标、交付文件和成果接收人 a 不变；必须等 b 停止并核对副作用后，c 才在自己的 work 运行。"
+            }
+          ],
+          "inputs": [
+            {
+              "id": "95bd9876-5e7d-4809-8721-202e060a1cdb",
+              "revision": 2,
+              "kind": "supplement",
+              "body": "纠正复述中的额外解释：按我的原话，只发送 D_result.json、D_runs.log 和 role_fixture.py 三个指定文件，不发送 values.json 或 identity.json。原目标和计算不变，旧模型复述中添加的两个输入文件不是我的要求。",
+              "created_at": 1792174077
+            }
+          ],
+          "input_receipts": [
+            {
+              "input_id": "95bd9876-5e7d-4809-8721-202e060a1cdb",
+              "member": "c",
+              "received_at": 1792174086,
+              "read_at": 1792174133,
+              "execution_id": "aa9887fa-d172-540a-87c1-2b4f1d12ae0e",
+              "run_id": "54025e51-6903-40b8-bdae-4447201a9103"
+            }
+          ],
+          "recovery_grants": []
+        },
+        {
+          "member": "b",
+          "host": "VM-0-8-ubuntu",
+          "task_visible": true,
+          "runtime_source": "4ee42af36f4fe182defe91397e847e22a6a4427b",
+          "binary_sha256": "4930b5ad1a55459f032334cc7e13e0f6c2de0ea9873f2ad3a02f1c47bfbc1248",
+          "raw_snapshot": "raw/trader/evidence/D-b.json",
+          "approvals": [
+            {
+              "task_id": "74b497e3-596f-5c15-84eb-4eb58139c5a4",
+              "revision": 1,
+              "directory": "/home/ubuntu/xxassxx-tests/stability-phase2-20261016/b/work/xxassxx-task-74b497e3-596f-5c15-84eb-4eb58139c5a4-r1",
+              "read_roots": "[\"/home/ubuntu/xxassxx-tests/stability-phase2-20261016/b/work\"]",
+              "timeout_secs": 1800,
+              "created_at": 1792173950,
+              "full_access": 1
+            }
+          ],
+          "delivery_approvals": [
+            {
+              "task_id": "74b497e3-596f-5c15-84eb-4eb58139c5a4",
+              "revision": 1,
+              "generation": 1
+            }
+          ],
+          "runs": [
+            {
+              "id": "4f3fc88f-72c2-4b4a-9539-58aff266a617",
+              "state": "failed",
+              "session_id": "01a145e4-4c30-7f80-8ea7-7d156f1fb4e5",
+              "resumed_session_id": null,
+              "codex_version": "codex-cli 0.162.1",
+              "workdir": "/home/ubuntu/xxassxx-tests/stability-phase2-20261016/b/work/xxassxx-task-74b497e3-596f-5c15-84eb-4eb58139c5a4-r1",
+              "reads": 1,
+              "submissions": 0,
+              "error_code": "authorization_changed"
+            }
+          ],
+          "transfers": [],
+          "task_id": "74b497e3-596f-5c15-84eb-4eb58139c5a4",
+          "revision": 1,
+          "state": "cancelled",
+          "roles": {
+            "protocol": 1,
+            "executor": "b",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [],
+          "stops": [
+            {
+              "id": "c23be60a-a725-5da8-b46b-c3c9e227032a",
+              "revision": 1,
+              "executor": "b",
+              "state": "stopped",
+              "created_at": 1792173990,
+              "confirmed_at": 1792174054,
+              "reason": "这项任务改由 c 执行，b 停止当前运行。目标、交付文件和成果接收人 a 不变；必须等 b 停止并核对副作用后，c 才在自己的 work 运行。"
+            }
+          ],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        },
+        {
+          "member": "c",
+          "host": "lakota.mines.edu",
+          "task_visible": true,
+          "runtime_source": "4ee42af36f4fe182defe91397e847e22a6a4427b",
+          "binary_sha256": "4930b5ad1a55459f032334cc7e13e0f6c2de0ea9873f2ad3a02f1c47bfbc1248",
+          "raw_snapshot": "raw/lakota/evidence/D-c.json",
+          "approvals": [
+            {
+              "task_id": "74b497e3-596f-5c15-84eb-4eb58139c5a4",
+              "revision": 2,
+              "directory": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work/xxassxx-task-74b497e3-596f-5c15-84eb-4eb58139c5a4-r2",
+              "read_roots": "[\"/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work\"]",
+              "timeout_secs": 1800,
+              "created_at": 1792174124,
+              "full_access": 1
+            }
+          ],
+          "delivery_approvals": [
+            {
+              "task_id": "74b497e3-596f-5c15-84eb-4eb58139c5a4",
+              "revision": 2,
+              "generation": 1
+            }
+          ],
+          "runs": [
+            {
+              "id": "54025e51-6903-40b8-bdae-4447201a9103",
+              "state": "succeeded",
+              "session_id": "01a145e6-ef76-7791-a05c-3bb2f5ea8fb4",
+              "resumed_session_id": null,
+              "codex_version": "codex-cli 0.162.1",
+              "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work/xxassxx-task-74b497e3-596f-5c15-84eb-4eb58139c5a4-r2",
+              "reads": 1,
+              "submissions": 1,
+              "error_code": null
+            },
+            {
+              "id": "adb3e7b8-bb06-44b1-8878-5d79377e9b9c",
+              "state": "succeeded",
+              "session_id": "01a145e6-ef76-7791-a05c-3bb2f5ea8fb4",
+              "resumed_session_id": "01a145e6-ef76-7791-a05c-3bb2f5ea8fb4",
+              "codex_version": "codex-cli 0.162.1",
+              "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work/xxassxx-task-74b497e3-596f-5c15-84eb-4eb58139c5a4-r2",
+              "reads": 1,
+              "submissions": 1,
+              "error_code": null
+            }
+          ],
+          "transfers": [
+            {
+              "id": "47209bc1-f790-542d-bd05-9ffb99c8a054",
+              "state": "delivered",
+              "direction": "out"
+            }
+          ],
+          "task_id": "74b497e3-596f-5c15-84eb-4eb58139c5a4",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "c",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [
+            {
+              "transfer_id": "47209bc1-f790-542d-bd05-9ffb99c8a054",
+              "name": "D_result.json",
+              "bytes": 254,
+              "sha256": "192d28cd2ec569d64b75c9a3b833d66fa02c78b0adc61c847ee1086e603f293f",
+              "exists": true
+            },
+            {
+              "transfer_id": "47209bc1-f790-542d-bd05-9ffb99c8a054",
+              "name": "D_runs.log",
+              "bytes": 236,
+              "sha256": "4f6f0c5dad450870e52283a46ff8adeaae9e88a8987fb74909b69079a7292dba",
+              "exists": true
+            },
+            {
+              "transfer_id": "47209bc1-f790-542d-bd05-9ffb99c8a054",
+              "name": "role_fixture.py",
+              "bytes": 934,
+              "sha256": "8e3423a0ab4a1719a7c6b380f610a000d080754517bd8d4e8f63171839a5cae6",
+              "exists": true
+            }
+          ],
+          "stops": [],
+          "inputs": [
+            {
+              "id": "95bd9876-5e7d-4809-8721-202e060a1cdb",
+              "revision": 2,
+              "kind": "supplement",
+              "body": "纠正复述中的额外解释：按我的原话，只发送 D_result.json、D_runs.log 和 role_fixture.py 三个指定文件，不发送 values.json 或 identity.json。原目标和计算不变，旧模型复述中添加的两个输入文件不是我的要求。",
+              "created_at": 1792174081
+            }
+          ],
+          "input_receipts": [
+            {
+              "input_id": "95bd9876-5e7d-4809-8721-202e060a1cdb",
+              "member": "c",
+              "received_at": 1792174081,
+              "read_at": 1792174166,
+              "execution_id": "aa9887fa-d172-540a-87c1-2b4f1d12ae0e",
+              "run_id": "adb3e7b8-bb06-44b1-8878-5d79377e9b9c"
+            }
+          ],
+          "recovery_grants": []
+        }
+      ]
+    },
+    "E": {
+      "status": "passed",
+      "summary": "E2：b 信箱断线时 a 改派 c，c 未获任务。b 离线完成一次旧计算；重连后旧附件撤销、旧结果未完成新版。b /handoff 核对后 c 才批准并单次运行 83，最终来源 c。",
+      "records": [
+        {
+          "member": "a",
+          "host": "lakota.mines.edu",
+          "task_visible": true,
+          "runtime_source": "fb58ae105b6cbd8e6c7edc9d0889ab76e460ea12",
+          "binary_sha256": "67622426fbc55cb2096585dc950b93442f272ba7c66af6aa986926dea18bfffb",
+          "raw_snapshot": "raw/lakota/evidence/E2-a.json",
+          "approvals": [],
+          "delivery_approvals": [],
+          "runs": [],
+          "transfers": [
+            {
+              "id": "94eac42c-556c-562c-abfd-4622f451b8a9",
+              "state": "revoked",
+              "direction": "in"
+            },
+            {
+              "id": "f7b7c357-aa55-53fe-9492-4259166aeccf",
+              "state": "received",
+              "direction": "in"
+            }
+          ],
+          "task_id": "00cb0f32-801c-5dc5-9e73-63f7772f279b",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "c",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [
+            {
+              "transfer_id": "f7b7c357-aa55-53fe-9492-4259166aeccf",
+              "name": "E2_result.json",
+              "bytes": 278,
+              "sha256": "6a8e25b1ae89dee7610f74eb3e0920fd3dae696226bef8ebb2c68ab1ae490919",
+              "exists": true
+            },
+            {
+              "transfer_id": "f7b7c357-aa55-53fe-9492-4259166aeccf",
+              "name": "E2_runs.log",
+              "bytes": 258,
+              "sha256": "047f8c90670ae6f0d2d7b1a66f1f298d8f760779ffb3963f6340b879108d6323",
+              "exists": true
+            },
+            {
+              "transfer_id": "f7b7c357-aa55-53fe-9492-4259166aeccf",
+              "name": "role_fixture_v2.py",
+              "bytes": 951,
+              "sha256": "ccf335bed08d8b238dc53c51cfe5b8b9fd7f2d5dd5100a118297559c3d322a81",
+              "exists": true
+            }
+          ],
+          "stops": [
+            {
+              "id": "f1166640-c6cc-53ff-bb1f-cbaa1bd9dced",
+              "revision": 1,
+              "executor": "b",
+              "state": "stopped",
+              "created_at": 1792175490,
+              "confirmed_at": 1792175586,
+              "reason": "执行 @c B 信箱暂时断线，改由 C 在 C 自己的工作目录完成同一任务；先等待 B 停止并核对副作用，保持原目标、三件成果与接收人 a 不变。"
+            }
+          ],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        },
+        {
+          "member": "b",
+          "host": "VM-0-8-ubuntu",
+          "task_visible": true,
+          "runtime_source": "fb58ae105b6cbd8e6c7edc9d0889ab76e460ea12",
+          "binary_sha256": "67622426fbc55cb2096585dc950b93442f272ba7c66af6aa986926dea18bfffb",
+          "raw_snapshot": "raw/trader/evidence/E2-b.json",
+          "approvals": [
+            {
+              "task_id": "00cb0f32-801c-5dc5-9e73-63f7772f279b",
+              "revision": 1,
+              "directory": "/home/ubuntu/xxassxx-tests/stability-phase2-20261016/b/work/xxassxx-task-00cb0f32-801c-5dc5-9e73-63f7772f279b-r1",
+              "read_roots": "[\"/home/ubuntu/xxassxx-tests/stability-phase2-20261016/b/work\"]",
+              "timeout_secs": 1800,
+              "created_at": 1792175465,
+              "full_access": 1
+            }
+          ],
+          "delivery_approvals": [
+            {
+              "task_id": "00cb0f32-801c-5dc5-9e73-63f7772f279b",
+              "revision": 1,
+              "generation": 1
+            }
+          ],
+          "runs": [
+            {
+              "id": "a55db517-197d-4dff-aa56-4709a5e1dd91",
+              "state": "succeeded",
+              "session_id": "01a145fb-6845-76e2-8592-6a290c4ab0df",
+              "resumed_session_id": null,
+              "codex_version": "codex-cli 0.162.1",
+              "workdir": "/home/ubuntu/xxassxx-tests/stability-phase2-20261016/b/work/xxassxx-task-00cb0f32-801c-5dc5-9e73-63f7772f279b-r1",
+              "reads": 1,
+              "submissions": 1,
+              "error_code": null
+            }
+          ],
+          "transfers": [
+            {
+              "id": "94eac42c-556c-562c-abfd-4622f451b8a9",
+              "state": "revoked",
+              "direction": "out"
+            }
+          ],
+          "task_id": "00cb0f32-801c-5dc5-9e73-63f7772f279b",
+          "revision": 1,
+          "state": "cancelled",
+          "roles": {
+            "protocol": 1,
+            "executor": "b",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [
+            {
+              "transfer_id": "94eac42c-556c-562c-abfd-4622f451b8a9",
+              "name": "E2_result.json",
+              "bytes": 260,
+              "sha256": "9ef9177b49cd7c9db662274d0d01080f4b8a188bda4de091ce6eb5c566ee783d",
+              "exists": true
+            },
+            {
+              "transfer_id": "94eac42c-556c-562c-abfd-4622f451b8a9",
+              "name": "E2_runs.log",
+              "bytes": 240,
+              "sha256": "8d25a04078b6d0b80925c406843e8ebf4223eac27e461a587470dfedb57ca296",
+              "exists": true
+            },
+            {
+              "transfer_id": "94eac42c-556c-562c-abfd-4622f451b8a9",
+              "name": "role_fixture_v2.py",
+              "bytes": 951,
+              "sha256": "ccf335bed08d8b238dc53c51cfe5b8b9fd7f2d5dd5100a118297559c3d322a81",
+              "exists": true
+            }
+          ],
+          "stops": [
+            {
+              "id": "f1166640-c6cc-53ff-bb1f-cbaa1bd9dced",
+              "revision": 1,
+              "executor": "b",
+              "state": "stopped",
+              "created_at": 1792175565,
+              "confirmed_at": 1792175581,
+              "reason": "执行 @c B 信箱暂时断线，改由 C 在 C 自己的工作目录完成同一任务；先等待 B 停止并核对副作用，保持原目标、三件成果与接收人 a 不变。"
+            }
+          ],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        },
+        {
+          "member": "c",
+          "host": "lakota.mines.edu",
+          "task_visible": true,
+          "runtime_source": "fb58ae105b6cbd8e6c7edc9d0889ab76e460ea12",
+          "binary_sha256": "67622426fbc55cb2096585dc950b93442f272ba7c66af6aa986926dea18bfffb",
+          "raw_snapshot": "raw/lakota/evidence/E2-c.json",
+          "approvals": [
+            {
+              "task_id": "00cb0f32-801c-5dc5-9e73-63f7772f279b",
+              "revision": 2,
+              "directory": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work/xxassxx-task-00cb0f32-801c-5dc5-9e73-63f7772f279b-r2",
+              "read_roots": "[\"/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work\"]",
+              "timeout_secs": 1800,
+              "created_at": 1792175610,
+              "full_access": 1
+            }
+          ],
+          "delivery_approvals": [
+            {
+              "task_id": "00cb0f32-801c-5dc5-9e73-63f7772f279b",
+              "revision": 2,
+              "generation": 1
+            }
+          ],
+          "runs": [
+            {
+              "id": "6c7e67c0-24e6-462d-9e36-caa28419d640",
+              "state": "succeeded",
+              "session_id": "01a145fd-9e4a-7441-bdd2-235fa852001a",
+              "resumed_session_id": null,
+              "codex_version": "codex-cli 0.162.1",
+              "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work/xxassxx-task-00cb0f32-801c-5dc5-9e73-63f7772f279b-r2",
+              "reads": 1,
+              "submissions": 1,
+              "error_code": null
+            }
+          ],
+          "transfers": [
+            {
+              "id": "f7b7c357-aa55-53fe-9492-4259166aeccf",
+              "state": "delivered",
+              "direction": "out"
+            }
+          ],
+          "task_id": "00cb0f32-801c-5dc5-9e73-63f7772f279b",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "c",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [
+            {
+              "transfer_id": "f7b7c357-aa55-53fe-9492-4259166aeccf",
+              "name": "E2_result.json",
+              "bytes": 278,
+              "sha256": "6a8e25b1ae89dee7610f74eb3e0920fd3dae696226bef8ebb2c68ab1ae490919",
+              "exists": true
+            },
+            {
+              "transfer_id": "f7b7c357-aa55-53fe-9492-4259166aeccf",
+              "name": "E2_runs.log",
+              "bytes": 258,
+              "sha256": "047f8c90670ae6f0d2d7b1a66f1f298d8f760779ffb3963f6340b879108d6323",
+              "exists": true
+            },
+            {
+              "transfer_id": "f7b7c357-aa55-53fe-9492-4259166aeccf",
+              "name": "role_fixture_v2.py",
+              "bytes": 951,
+              "sha256": "ccf335bed08d8b238dc53c51cfe5b8b9fd7f2d5dd5100a118297559c3d322a81",
+              "exists": true
+            }
+          ],
+          "stops": [],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        }
+      ]
+    },
+    "F": {
+      "status": "passed",
+      "summary": "F2：自然语言将远端 b 纠正为本机 a，保留原目标及三件成果。b 未执行，a 新批准后单次运行 83；最终明确成果保存在 a 本机，无需网络发送。",
+      "records": [
+        {
+          "member": "a",
+          "host": "lakota.mines.edu",
+          "task_visible": true,
+          "runtime_source": "6941c08d960c8c66bc68fc85b2419d157ccba28e",
+          "binary_sha256": "acb2b53fb169ebc3e33d3dd6196594a507c4fc81649f32efd6e1ceb834b88ff0",
+          "raw_snapshot": "raw/lakota/evidence/F2-a.json",
+          "approvals": [
+            {
+              "task_id": "caf8a03d-ff95-5c7b-8c49-f5b10dabbbfd",
+              "revision": 2,
+              "directory": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/a/work/xxassxx-task-caf8a03d-ff95-5c7b-8c49-f5b10dabbbfd-r2",
+              "read_roots": "[\"/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/a/work\"]",
+              "timeout_secs": 1800,
+              "created_at": 1792176033,
+              "full_access": 1
+            }
+          ],
+          "delivery_approvals": [
+            {
+              "task_id": "caf8a03d-ff95-5c7b-8c49-f5b10dabbbfd",
+              "revision": 2,
+              "generation": 1
+            }
+          ],
+          "runs": [
+            {
+              "id": "58e2617b-a828-43d7-9d31-1e400e3c6087",
+              "state": "succeeded",
+              "session_id": "01a14604-13c1-7610-acb0-4d928077c30c",
+              "resumed_session_id": null,
+              "codex_version": "codex-cli 0.162.1",
+              "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/a/work/xxassxx-task-caf8a03d-ff95-5c7b-8c49-f5b10dabbbfd-r2",
+              "reads": 1,
+              "submissions": 1,
+              "error_code": null
+            }
+          ],
+          "transfers": [],
+          "task_id": "caf8a03d-ff95-5c7b-8c49-f5b10dabbbfd",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "a",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [],
+          "stops": [
+            {
+              "id": "d092acdf-d0e8-5eec-9deb-495aec180bcc",
+              "revision": 1,
+              "executor": "b",
+              "state": "stopped",
+              "created_at": 1792176009,
+              "confirmed_at": 1792176031,
+              "reason": "纠正执行地点：改为我 a 在本机 a 自己的 work 目录执行，b 不再执行。原目标、F2 的三件成果及成果接收人 a 保持不变；先安全撤销 b 的旧分配。"
+            }
+          ],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        },
+        {
+          "member": "b",
+          "host": "VM-0-8-ubuntu",
+          "task_visible": true,
+          "runtime_source": "6941c08d960c8c66bc68fc85b2419d157ccba28e",
+          "binary_sha256": "acb2b53fb169ebc3e33d3dd6196594a507c4fc81649f32efd6e1ceb834b88ff0",
+          "raw_snapshot": "raw/trader/evidence/F2-b.json",
+          "approvals": [],
+          "delivery_approvals": [],
+          "runs": [],
+          "transfers": [],
+          "task_id": "caf8a03d-ff95-5c7b-8c49-f5b10dabbbfd",
+          "revision": 1,
+          "state": "cancelled",
+          "roles": {
+            "protocol": 1,
+            "executor": "b",
+            "recipients": [
+              "a"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "files": [],
+          "stops": [
+            {
+              "id": "d092acdf-d0e8-5eec-9deb-495aec180bcc",
+              "revision": 1,
+              "executor": "b",
+              "state": "stopped",
+              "created_at": 1792176020,
+              "confirmed_at": 1792176020,
+              "reason": "纠正执行地点：改为我 a 在本机 a 自己的 work 目录执行，b 不再执行。原目标、F2 的三件成果及成果接收人 a 保持不变；先安全撤销 b 的旧分配。"
+            }
+          ],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        }
+      ],
+      "local_files": {
+        "F2_result.json": {
+          "sha256": "9a9ad737999ac19b85f16198ef17b0fc2be6e24e3e09679a2ad40d5133580c59",
+          "bytes": 279
+        },
+        "F2_runs.log": {
+          "sha256": "3e3f1d01e24f62fd72ead42460cf8e23e6fc4c68a32e797e344e00b9903eb312",
+          "bytes": 259
+        },
+        "role_fixture_f2.py": {
+          "sha256": "e2c736491c379b96a779ca67de0f075aa5c17e93f2cbda2f0f56d056d36915ba",
+          "bytes": 661
+        }
+      }
+    },
+    "G": {
+      "status": "passed",
+      "summary": "a 已准备 A_result.json 尚未发送，收件人 b 改 c。执行版本仍为 1，交付代数变 2；旧批次撤销，新发送单独批准；原计算日志始终一行，c 收到原字节，b 未收。",
+      "records": [
+        {
+          "member": "a",
+          "host": "lakota.mines.edu",
+          "task_visible": true,
+          "runtime_source": "4ee42af36f4fe182defe91397e847e22a6a4427b",
+          "binary_sha256": "4930b5ad1a55459f032334cc7e13e0f6c2de0ea9873f2ad3a02f1c47bfbc1248",
+          "raw_snapshot": "raw/lakota/evidence/G-a.json",
+          "approvals": [],
+          "delivery_approvals": [],
+          "runs": [
+            {
+              "id": "f32240fd-01dd-49c4-8bde-3f176b84842d",
+              "state": "succeeded",
+              "session_id": null,
+              "resumed_session_id": null,
+              "codex_version": null,
+              "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/a/work",
+              "reads": 1,
+              "submissions": 1,
+              "error_code": null
+            }
+          ],
+          "transfers": [
+            {
+              "id": "6af48933-c588-51d4-aeb4-8ddbc91d427b",
+              "state": "revoked",
+              "direction": "out"
+            },
+            {
+              "id": "f2f10db4-96b8-5b23-b15b-cfc147d726c4",
+              "state": "delivered",
+              "direction": "out"
+            }
+          ],
+          "task_id": "7125dea0-4d22-5ab4-81a2-34f4e5882e77",
+          "revision": 1,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "a",
+            "recipients": [
+              "c"
+            ],
+            "others": [],
+            "delivery_generation": 2
+          },
+          "files": [
+            {
+              "transfer_id": "6af48933-c588-51d4-aeb4-8ddbc91d427b",
+              "name": "A_result.json",
+              "bytes": 153,
+              "sha256": "a5ead9218b7abfcf0817533a5203ffb918ef5e0cd5c2ee4ccf54eac28db11cb4",
+              "exists": true
+            },
+            {
+              "transfer_id": "f2f10db4-96b8-5b23-b15b-cfc147d726c4",
+              "name": "A_result.json",
+              "bytes": 153,
+              "sha256": "a5ead9218b7abfcf0817533a5203ffb918ef5e0cd5c2ee4ccf54eac28db11cb4",
+              "exists": true
+            }
+          ],
+          "stops": [],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        },
+        {
+          "member": "b",
+          "host": "VM-0-8-ubuntu",
+          "task_visible": false,
+          "runtime_source": "4ee42af36f4fe182defe91397e847e22a6a4427b",
+          "binary_sha256": "4930b5ad1a55459f032334cc7e13e0f6c2de0ea9873f2ad3a02f1c47bfbc1248",
+          "raw_snapshot": "raw/trader/evidence/G-b.json",
+          "approvals": [],
+          "delivery_approvals": [],
+          "runs": [],
+          "transfers": [],
+          "files": [],
+          "stops": [],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        },
+        {
+          "member": "c",
+          "host": "lakota.mines.edu",
+          "task_visible": false,
+          "runtime_source": "4ee42af36f4fe182defe91397e847e22a6a4427b",
+          "binary_sha256": "4930b5ad1a55459f032334cc7e13e0f6c2de0ea9873f2ad3a02f1c47bfbc1248",
+          "raw_snapshot": "raw/lakota/evidence/G-c.json",
+          "approvals": [],
+          "delivery_approvals": [],
+          "runs": [],
+          "transfers": [
+            {
+              "id": "f2f10db4-96b8-5b23-b15b-cfc147d726c4",
+              "state": "received",
+              "direction": "in"
+            }
+          ],
+          "files": [
+            {
+              "transfer_id": "f2f10db4-96b8-5b23-b15b-cfc147d726c4",
+              "name": "A_result.json",
+              "bytes": 153,
+              "sha256": "a5ead9218b7abfcf0817533a5203ffb918ef5e0cd5c2ee4ccf54eac28db11cb4",
+              "exists": true
+            }
+          ],
+          "stops": [],
+          "inputs": [],
+          "input_receipts": [],
+          "recovery_grants": []
+        }
+      ]
+    },
+    "H": {
+      "status": "passed",
+      "summary": "与 C 同任务：单位补充跨修订保留原话及来源；c 位置补充与问题答案复用原批准。实际预算耗尽两次，经有限 /recover 继续；停 c 服务期间 a 回答，重连后同一 Codex 会话消费答案，最终 166 米，仅一次实际计算。",
+      "records": [],
+      "same_task_as": "C"
+    }
+  },
+  "builds": [
+    {
+      "source_commit": "d7b2092c0b22092d96fdca9ed0b612c520127b3a",
+      "binary_sha256": "163aad952595a1cfa1662d98486c7be09b8a866849b6d4f452188fb60211a061",
+      "input_manifest": "source-attestation.json"
+    },
+    {
+      "source_commit": "4ee42af36f4fe182defe91397e847e22a6a4427b",
+      "binary_sha256": "4930b5ad1a55459f032334cc7e13e0f6c2de0ea9873f2ad3a02f1c47bfbc1248",
+      "input_manifest": "source-attestation-4ee42af.json",
+      "input_count": 147
+    },
+    {
+      "source_commit": "6941c08d960c8c66bc68fc85b2419d157ccba28e",
+      "binary_sha256": "acb2b53fb169ebc3e33d3dd6196594a507c4fc81649f32efd6e1ceb834b88ff0",
+      "input_manifest": "source-attestation-6941c08.json",
+      "input_count": 147
+    },
+    {
+      "source_commit": "c1716bdf7df45558e8b91cc0493f0581531963f5",
+      "binary_sha256": "6446cc6c29f9d1a05216cba7fc717da409c14734e204f4ff0826565fedd733e7",
+      "input_manifest": "source-attestation-c1716bd.json",
+      "input_count": 147
+    },
+    {
+      "source_commit": "fb58ae105b6cbd8e6c7edc9d0889ab76e460ea12",
+      "binary_sha256": "67622426fbc55cb2096585dc950b93442f272ba7c66af6aa986926dea18bfffb",
+      "input_manifest": "source-attestation-fb58ae1.json",
+      "input_count": 147
+    }
+  ],
+  "failures_retained": [
+    {
+      "case": "A initial",
+      "reason": "SQLite read-to-write WAL snapshot upgrade returned busy before execution; write transactions now reserve before reading. No failed-attempt computation was counted."
+    },
+    {
+      "case": "D early presentation",
+      "reason": "stop state was hidden behind permission/delivery text; both UI priority and next responsible member corrected. E2 exercises final stop display."
+    },
+    {
+      "case": "E first",
+      "task_id": "813198e9-1eab-5ee2-8809-70231b7e794f",
+      "reason": "Physical handoff and c files succeeded but final incorrectly claimed b side-effect confirmation missing. Failed acceptance; added typed side_effects_checked evidence and verified E2."
+    },
+    {
+      "case": "F first",
+      "task_id": "2f571a03-e4e5-5d8c-a7be-c70760bb53a1",
+      "reason": "Correct a execution, but final invented a transfer wait for local output. Failed acceptance; structured local delivery status corrected and F2 verified."
+    },
+    {
+      "case": "T text probe",
+      "reason": "T first delivered correct 26-byte result but final claimed sender retained no copy. T2 uses current Rust transport wording; T2 result includes a longer evidence explanation than the requested single sentence. This style limitation is not a role or visibility pass criterion."
+    },
+    {
+      "source": "6941c08",
+      "reason": "Regression caught ordinary non-file answers being appended with missing-attachment text. Fixed in 7460e15; original assertion retained and full suite passed."
+    }
+  ],
+  "extra_text_delivery": {
+    "task_id": "8a55bbb1-fb6e-5863-a241-e0ec98c6a6e6",
+    "records": [
+      {
+        "member": "a",
+        "host": "lakota.mines.edu",
+        "task_visible": true,
+        "runtime_source": "6941c08d960c8c66bc68fc85b2419d157ccba28e",
+        "binary_sha256": "acb2b53fb169ebc3e33d3dd6196594a507c4fc81649f32efd6e1ceb834b88ff0",
+        "raw_snapshot": "raw/lakota/evidence/T2-a.json",
+        "approvals": [],
+        "delivery_approvals": [],
+        "runs": [
+          {
+            "id": "fd30a169-975d-43db-8b74-bd97e94c7ba7",
+            "state": "succeeded",
+            "session_id": null,
+            "resumed_session_id": null,
+            "codex_version": null,
+            "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/a/work",
+            "reads": 1,
+            "submissions": 1,
+            "error_code": null
+          },
+          {
+            "id": "26ce8fbc-6120-487e-9a94-14e9887b9d6c",
+            "state": "succeeded",
+            "session_id": null,
+            "resumed_session_id": null,
+            "codex_version": null,
+            "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/a/member.task-materials/3d0f6513-0efe-56da-bf54-6433b6d577f1",
+            "reads": 1,
+            "submissions": 1,
+            "error_code": null
+          }
+        ],
+        "transfers": [
+          {
+            "id": "043020db-4f3d-563f-a5f7-1ceece92d62d",
+            "state": "delivered",
+            "direction": "out"
+          }
+        ],
+        "task_id": "8a55bbb1-fb6e-5863-a241-e0ec98c6a6e6",
+        "revision": 1,
+        "state": "completed",
+        "roles": {
+          "protocol": 1,
+          "executor": "a",
+          "recipients": [
+            "b"
+          ],
+          "others": [],
+          "delivery_generation": 1
+        },
+        "files": [
+          {
+            "transfer_id": "043020db-4f3d-563f-a5f7-1ceece92d62d",
+            "name": "result.txt",
+            "bytes": 641,
+            "sha256": "d0002e4b1dcbc2c4a7312dfc695adfab8d3a3a2235428f10c630485b7be2633a",
+            "exists": true
+          }
+        ],
+        "stops": [],
+        "inputs": [],
+        "input_receipts": [],
+        "recovery_grants": []
+      },
+      {
+        "member": "b",
+        "host": "VM-0-8-ubuntu",
+        "task_visible": false,
+        "runtime_source": "6941c08d960c8c66bc68fc85b2419d157ccba28e",
+        "binary_sha256": "acb2b53fb169ebc3e33d3dd6196594a507c4fc81649f32efd6e1ceb834b88ff0",
+        "raw_snapshot": "raw/trader/evidence/T2-b.json",
+        "approvals": [],
+        "delivery_approvals": [],
+        "runs": [],
+        "transfers": [
+          {
+            "id": "043020db-4f3d-563f-a5f7-1ceece92d62d",
+            "state": "received",
+            "direction": "in"
+          }
+        ],
+        "files": [
+          {
+            "transfer_id": "043020db-4f3d-563f-a5f7-1ceece92d62d",
+            "name": "result.txt",
+            "bytes": 641,
+            "sha256": "d0002e4b1dcbc2c4a7312dfc695adfab8d3a3a2235428f10c630485b7be2633a",
+            "exists": true
+          }
+        ],
+        "stops": [],
+        "inputs": [],
+        "input_receipts": [],
+        "recovery_grants": []
+      }
+    ],
+    "checks": "a authorizes the actual 641-byte current result; b gets result.txt and has zero task records/runs. Both-side hashes equal; no old files or task history sent."
+  },
+  "automated": {
+    "source_commit": "7460e15",
+    "suites": 29,
+    "passed": 213,
+    "failed": 0,
+    "ignored": 3,
+    "clippy": "passed, one existing libc::time_t deprecation warning",
+    "mock_boundary": "mock models and fake executors used only in automatic tests, not A–H",
+    "coverage": [
+      "role replacement",
+      "duplicate/reordered proposals and stop controls",
+      "late old-version results",
+      "cancellation and permission revocation",
+      "schema migration preserves old contracts",
+      "old client/relay capability block",
+      "recipient-only and outsider visibility",
+      "stale approval form",
+      "real child process stop and side-effect acknowledgement",
+      "role-only preparation preserves requirements without model rewording"
+    ],
+    "log": "test-all-7460e15.log",
+    "note": "Canonical targets selected because pre-existing backup test filenames contain spaces; CI repair removes those files from test discovery while preserving their bytes."
+  }
+}
