@@ -1976,6 +1976,10 @@ pub fn execution_context(c: &Connection, id: &str) -> Result<Option<Value>> {
         v["revision"].as_i64().unwrap(),
     )?;
     v["roles"] = json!(crate::task_roles::load(c, string(&v, "task_id")?)?);
+    v["assignment_change"] = c.query_row(
+        "SELECT json_extract(j.payload,'$.assignment_change') FROM task_journal j JOIN app_tasks t ON t.id=j.task_id AND t.initiator=j.sender WHERE j.task_id=?1 AND j.revision=?2 AND j.kind='proposal' ORDER BY j.rowid DESC LIMIT 1",
+        params![v["task_id"].as_str(),v["revision"].as_i64()],|r|r.get::<_,Option<String>>(0)
+    ).optional()?.flatten().map(|s|serde_json::from_str::<Value>(&s)).transpose()?.unwrap_or(Value::Null);
     v["role_policy"] = json!(
         "The explicit current executor is this member. Resolve materials only within this device's current authorized roots; a result recipient has no execution role. Current roles supersede prior inferred ownership or delivery directions. Prior assistant drafts are not user facts. The kernel sends only the selected current outputs to the current recipient under this device's current permissions."
     );
@@ -2139,7 +2143,7 @@ fn decision_parameters(stage: &str) -> Result<Value> {
         properties["mode"] =
             json!({"type":"string","enum":["analysis","listing","execute","files"]});
         properties["deliver_files"] = json!({"type":"boolean","description":"Required for mode execute. True when the user requests result files, including delivery after a later decision in the same task. This records requested deliverables, never grants export permission. False only when no file delivery is requested."});
-        properties["deliver_to"] = json!({"type":"string","description":"The contact explicitly requested to receive result files, independently of the current executor. This changes only the destination, never who executes. Omit for delivery to the initiator or when no different recipient was requested."});
+        properties["deliver_to"] = json!({"type":"string","description":"The contact explicitly requested to receive results, independently of the current executor. This changes only the destination, never who executes. A text-only answer for a separate recipient is delivered as result.txt under sender permission. Omit for delivery to the initiator or when no different recipient was requested."});
         properties["start_from_request"] = json!({"type":"boolean","description":"True only for the owner's direct imperative request to obtain existing files, with no unresolved choice, writes or program runs. False for questions, examples, hypotheticals or draft-only requests."});
         required.extend(["goal", "deliverables"]);
     }
@@ -2437,6 +2441,20 @@ pub async fn prepare_model(store: &Store, id: &str) -> Result<()> {
     if t["confirmed"] == t["revision"] {
         return Ok(());
     }
+    // A role-only correction must not ask a model to reinterpret the deliverables
+    // or authorization. Reuse the previously confirmed contract verbatim.
+    if t["role_changes"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .any(|c| c["revision"] == t["revision"] && c["kind"] == "execution_plan")
+    {
+        if let Some(previous) = t["revisions"].as_array().into_iter().flatten().find(|r| {
+            r["revision"].as_i64() == Some(revision(&t) - 1) && r["draft"]["goal"].is_string()
+        }) {
+            return prepare(store, id, previous["draft"].clone());
+        }
+    }
     let outcome = async {
         let draft = decision(store, &t, "prepare", json!({})).await?;
         // Fence the awaited model decision against concurrent edits/cancellation.
@@ -2598,6 +2616,9 @@ fn blocked(
     if terminal(&current) || current["revision"] != t["revision"] {
         return Ok(());
     }
+    if crate::task_roles::fenced(&store.conn, string(t, "id")?, revision(t))? {
+        return Ok(()); // Stop coordination owns this state; it is not a retryable permission error.
+    }
     let tx = store.write_transaction()?;
     let block = recovery::record(
         &tx,
@@ -2671,6 +2692,10 @@ fn retry_local(c: &Connection, t: &Value, key: &str) -> Result<()> {
 }
 pub fn recover(store: &Store, i: &Instruction) -> Result<()> {
     let t = get(store, i.task_id.as_deref().context("请选择任务")?)?;
+    ensure!(
+        !crate::task_roles::fenced(&store.conn, string(&t, "id")?, revision(&t))?,
+        "旧执行分配已撤销；请用 /handoff 核对停止与副作用，不能恢复旧执行"
+    );
     ensure!(
         (t["state"] == "needs_attention" || (t["state"] == "waiting" && t["initiator"] == store.owner()?
             && store.conn.query_row("SELECT EXISTS(SELECT 1 FROM task_journal WHERE task_id=?1 AND revision=?2 AND kind='progress' AND json_extract(payload,'$.state')='needs_attention')",params![t["id"].as_str(),revision(&t)], |r| r.get::<_,bool>(0))?)) && i.payload["revision"] == t["revision"],
@@ -3225,6 +3250,18 @@ fn finish_delivery(
                 .filter(|s| !s.trim().is_empty())
                 .map(|s| format!("\n\n{}", s.trim()))
                 .unwrap_or_default()
+        ));
+    }
+    if t["draft"]["mode"] == "files"
+        && !t["roles"].is_null()
+        && crate::transfers::task_recipient(t)? == t["roles"]["executor"].as_str().unwrap_or("")
+    {
+        final_result["body"] = json!(format!(
+            "成果保存在执行成员 @{} 本机，无需网络发送。\n{}",
+            crate::transfers::task_recipient(t)?,
+            final_result["file_summary"]
+                .as_str()
+                .unwrap_or("已按当前要求核对所选文件。")
         ));
     }
     let body = string(&final_result, "body")?.to_string();

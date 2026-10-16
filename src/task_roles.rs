@@ -281,6 +281,7 @@ fn acknowledge(store: &Store, id: &str, evidence: Option<&str>) -> Result<bool> 
             "UPDATE task_stops SET state='needs_check' WHERE id=?1",
             [id],
         )?;
+        store.conn.execute("UPDATE app_tasks SET state='waiting',next_owner=?3,waiting_reason='旧执行已停止；请在本机 /handoff 核对副作用与安全边界',error=NULL WHERE id=?1 AND revision=?2 AND state NOT IN ('completed','cancelled')",params![task,rev,executor])?;
         return Ok(false);
     }
     let evidence = evidence.unwrap_or("本端没有启动记录；已保存不可撤销的旧分配停止标记");

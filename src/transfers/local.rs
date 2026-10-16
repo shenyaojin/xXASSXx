@@ -1026,6 +1026,12 @@ pub fn delivery_ready(store: &Store, t: &Value, candidates: &Value) -> Result<bo
     if t["initiator"] != store.owner()? {
         return Ok(false);
     }
+    if !t["roles"].is_null() && task_recipient(t)? == t["roles"]["executor"].as_str().unwrap_or("")
+    {
+        return Ok(candidates.as_array().is_some_and(|items| {
+            !items.is_empty() && items.iter().all(|c| c["member"] == t["roles"]["executor"])
+        }));
+    }
     if crate::task_roles::roles(t)?.is_some()
         && task_recipient(t)? == store.owner()?
         && crate::task_roles::executors(t)?.contains(&store.owner()?)

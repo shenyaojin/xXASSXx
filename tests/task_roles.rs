@@ -78,7 +78,11 @@ async fn replacement_waits_for_old_member_and_tombstone_defeats_reordered_propos
     let mut change = command(&i, &id, 1, "执行 @c 原成员尚未开始，替换执行分配");
     change.payload["executor"] = json!("c");
     assert!(roles::change(&a, &change).unwrap());
-    prepare(&a, &id);
+    tasks::prepare_model(&a, &id).await.unwrap();
+    assert_eq!(
+        tasks::get(&a, &id).unwrap()["draft"]["deliverables"],
+        json!(["结果"])
+    );
     tasks::confirm(&a, &command(&i, &id, 2, "确认新安排")).unwrap();
     assert_eq!(
         messages(&a, "proposal").len(),
@@ -216,6 +220,25 @@ fn text_result_is_a_separate_authorized_delivery_without_private_history() {
     assert_eq!(transfer["manifest"]["files"][0]["name"], "result.txt");
     assert_eq!(count(&team.store("b"), "SELECT count(*) FROM app_tasks"), 0);
     assert!(messages(&a, "proposal").is_empty());
+}
+
+#[test]
+fn executor_may_keep_its_own_result_without_fictitious_transport() {
+    let team = Team::new();
+    let (_, id) = create(&team, "b");
+    let a = team.store("a");
+    let mut t = tasks::get(&a, &id).unwrap();
+    t["roles"]["recipients"] = json!(["b"]);
+    assert!(
+        xxassxx::transfers::delivery_ready(
+            &a,
+            &t,
+            &json!([{"member":"b","result":{"body":"已核对本机结果"}}])
+        )
+        .unwrap()
+    );
+    assert!(!xxassxx::transfers::delivery_ready(&a, &t, &json!([])).unwrap());
+    assert!(!xxassxx::transfers::delivery_ready(&a, &t, &json!([{"member":"c"}])).unwrap());
 }
 
 #[test]

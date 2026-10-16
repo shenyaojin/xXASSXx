@@ -2760,6 +2760,9 @@ async fn role_replacement_interrupts_writer_then_requires_local_effects_ack_and_
     task_roles::tick(&b).unwrap();
     let bt = tasks::get(&b, &id).unwrap();
     assert_eq!(bt["assignment_stops"][0]["state"], "needs_check");
+    assert_eq!(bt["state"], "waiting");
+    assert!(bt["waiting_for"].as_str().unwrap().contains("/handoff"));
+    assert!(tasks::recover(&b, &action(&i, &id, "retry_task", 1, "误恢复已撤销执行")).is_err());
     let mut ack = action(
         &i,
         &id,
