@@ -150,6 +150,8 @@ xxassxx client task-access allow TASK_ID --revision 1 --parent /path/to/project 
 
 使用命令开放后，同样自动继续。结果会返回原对话，输入、日志和较大的结果文件留在执行方；文件引用附带大小和校验值。中断后继续会先检查已有结果，不应把完成的程序盲目重跑。待处理问题可直接在当前任务聊天中回答；收到答案后复用同一授权继续执行。界面区分“答案已提交”和“执行方已接收”，不会把尚未送达的答案显示成已继续。任务目标重开后需为新版本重新批准。
 
+0.9.0 候选提供确定性入口：`/answer` 选择并回答具体问题，`/supplement` 保存当前任务的补充或纠正，`/recover` 查看失败原因、责任人和步骤后允许有限继续。输入分别显示本机保存、执行方接收和执行读取；普通补充不会解除权限或其他阻塞。详情、真实验收及迁移接口见 [稳定性第一阶段](docs/stability-phase1.md)。
+
 ```bash
 xxassxx client task-access list
 xxassxx client task-access revoke TASK_ID --revision 1
@@ -276,7 +278,7 @@ curl -i https://team.example.com/v1/whoami
 3. 用匹配本机架构的新安装包重新执行 `install.sh --from .`，或安装本机源码构建的新程序。
 4. 运行 `xxassxx client doctor`，然后用 `xxassxx open /自己的工作目录` 打开界面。工作目录用 Ctrl+P 切换，允许读取的目录用 Ctrl+R 单独管理。
 
-当前个人数据库版本为 9，首次打开自动迁移并保留历史记录；未完成的旧任务会暂停，检查执行记录后再显式恢复。旧程序不能读取 schema 9，不能只换回旧程序或手工调低数据库版本。成员数据默认位于 `~/.local/share/xxassxx/client/`，团队数据位于 `~/.local/share/xxassxx/server/`；不要删除后重建。
+当前源码候选的个人数据库版本为 13，首次打开增量迁移并保留历史和原批准范围；新的自动恢复协议不追溯启用旧任务。公开版本与日常部署以 [接续摘要](docs/current-state.md) 为准。旧程序不能读取 schema 13，不能只换回旧程序或手工调低数据库版本，升级前应备份。成员数据默认位于 `~/.local/share/xxassxx/client/`，团队数据位于 `~/.local/share/xxassxx/server/`；不要删除后重建。
 
 ## 遇到问题
 
