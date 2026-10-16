@@ -1,6 +1,6 @@
 # 项目理念与接续摘要
 
-更新日期：2026-10-16（America/Denver；稳定性第二阶段候选已完成 A–H 真实验收，CI 专项修复验证中；日常部署记录沿用 10 月 14 日验收）。`0.8.0-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl，包含白名单读取与 Codex 能力交接。`owner` 与 `mba` 两台 Mac 均已从 GitHub 发布包手动升级到 0.8.0，保留各自数据、配置与 Ask for approval；owner 原库已是 schema 10，MBA 此前由 schema 9 迁到 10。其他机器本轮未修改：据此前部署记录，Lakota `test` 与 Trader `trader` 日常端为 0.7.2，Trader 为 Full access、Lakota 为 Ask；Trader 独立信箱为 0.7.0、schema 2。
+更新日期：2026-10-16（America/Denver；稳定性第二阶段候选已完成 A–H 真实验收，Linux/ARM Mac CI 专项修复已通过；日常部署记录沿用 10 月 14 日验收）。`0.8.0-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl，包含白名单读取与 Codex 能力交接。`owner` 与 `mba` 两台 Mac 均已从 GitHub 发布包手动升级到 0.8.0，保留各自数据、配置与 Ask for approval；owner 原库已是 schema 10，MBA 此前由 schema 9 迁到 10。其他机器本轮未修改：据此前部署记录，Lakota `test` 与 Trader `trader` 日常端为 0.7.2，Trader 为 Full access、Lakota 为 Ask；Trader 独立信箱为 0.7.0、schema 2。
 
 ## 稳定性第二阶段：执行分配与成果接收（2026-10-16，候选已完成 A–H 实机验收）
 
@@ -12,7 +12,9 @@
 
 核心提交 `d7b2092`，最终交接重验 `fb58ae1`、本机交付重验 `6941c08`；`7460e15` 修正回归发现的普通回答附件误报。Lakota 完整自动回归 213 通过、0 失败、3 既有忽略，Clippy 通过。早期 E/F 的物理执行虽正确，最终答复分别错误声称“交接未确认”“本机成果等待传输”，明确判为失败，修复后用独立 E2/F2 重验通过。新角色切换不通过重新生成草稿添加交付物；交付状态和停止核对由结构化记录提供。纯文字成果可独立封装为 result.txt；额外文字测试中，模型仍可能比用户要求的一句话更长，不能把这种格式偏差描述成已经解决。
 
-独立角色模型、修订及迁移说明见 [第二阶段说明](stability-phase2.md)，身份、版本、批准、停止确认、运行会话、文件哈希和失败保留见 [精简证据](stability-phase2-evidence.json)。原始画面、合成文件、完整审计和日志位于 Git 忽略的 `smoke-output/stability-phase2-20261016/`。日常客户端、原任务、站立访问模式和发布状态未变。本机未构建 Rust target。精确提交的 Linux/ARM Mac CI 专项结果完成后追加，不能把尚未推送源码说成远端 CI 已验证。
+最终源码 `404a460` 追加真实 D2 重验：b 正在运行时改派 c，产品终止旧进程、b 核对无结果与外部副作用，再由 c 独立批准并单次计算 83。三端使用相同二进制，a/c 的最终答复与三份文件哈希均正确。停止确认及待发控制消息改为同一事务落盘，存储失败可重试。Lakota 默认完整回归 215 通过、0 失败、3 既有忽略，格式与 Clippy 通过。
+
+独立角色模型、修订及迁移说明见 [第二阶段说明](stability-phase2.md)，身份、版本、批准、停止确认、运行会话、文件哈希和失败保留见 [精简证据](stability-phase2-evidence.json)。原始画面、合成文件、完整审计和日志位于 Git 忽略的 `smoke-output/stability-phase2-20261016/`。日常客户端、原任务、站立访问模式和发布状态未变。本机未构建 Rust target。源码 `404a460` 的 [Linux/ARM Mac CI](https://github.com/shenyaojin/xXASSXx/actions/runs/38951976776) 全部通过：Linux 215 项、ARM Mac 214 项，均 0 失败、3 项既有忽略，构建、打包、隔离安装及下载哈希核验成功。修复信箱 WAL 读后升级写锁竞争、两个内核临时目录的 Mac 系统路径别名问题；既有测试备份改为 `.rs.bak` 并保持字节不变，避免 Cargo 误发现。具体原因与证据见 [CI 修复记录](ci-stability-20261016.md)。三端测试服务、代理、信箱及两条隧道已关闭，数据库和附件已归档。
 
 ## 稳定性第一阶段：恢复原任务与输入消费（2026-10-16，候选已验收）
 

@@ -1,6 +1,6 @@
 {
   "date": "2026-10-16",
-  "status": "A–H real acceptance complete; final CI recorded separately",
+  "status": "A–H real acceptance complete; final D2 and Linux/ARM CI passed",
   "scope": "isolated synthetic data only; no daily upgrade, release, original task resume, or standing Full access change",
   "phase1_dependency": {
     "implementation": "df26203",
@@ -1417,6 +1417,18 @@
       "input_manifest": "source-attestation.json"
     },
     {
+      "source_commit": "0562275e7e694b31b9d79f812643bde9c575da5a",
+      "binary_sha256": "1c44e6107040461a3cedc0f10f33565904fc797a6cfba9a4b9aa55818e5a3317",
+      "input_manifest": "source-attestation-0562275.json",
+      "input_count": 147
+    },
+    {
+      "source_commit": "404a4602394fe7bb46680d8dfcde9f0ed87b27a3",
+      "binary_sha256": "f194b8a6d8a9f69ebe6a8d6dffab5b56ebb90337c7a42914001e345d83c37676",
+      "input_manifest": "source-attestation-404a460.json",
+      "input_count": 147
+    },
+    {
       "source_commit": "4ee42af36f4fe182defe91397e847e22a6a4427b",
       "binary_sha256": "4930b5ad1a55459f032334cc7e13e0f6c2de0ea9873f2ad3a02f1c47bfbc1248",
       "input_manifest": "source-attestation-4ee42af.json",
@@ -1432,6 +1444,12 @@
       "source_commit": "c1716bdf7df45558e8b91cc0493f0581531963f5",
       "binary_sha256": "6446cc6c29f9d1a05216cba7fc717da409c14734e204f4ff0826565fedd733e7",
       "input_manifest": "source-attestation-c1716bd.json",
+      "input_count": 147
+    },
+    {
+      "source_commit": "e4e32616e1bd62f756d49792479549e40c19f2fa",
+      "binary_sha256": "2dbcc34bd4df068e146965ed4941b48877897ad64a5ae9009e212b8e9dfd028c",
+      "input_manifest": "source-attestation-e4e3261.json",
       "input_count": 147
     },
     {
@@ -1573,6 +1591,313 @@
     "checks": "a authorizes the actual 641-byte current result; b gets result.txt and has zero task records/runs. Both-side hashes equal; no old files or task history sent."
   },
   "automated": {
+    "source_commit": "404a4602394fe7bb46680d8dfcde9f0ed87b27a3",
+    "suites": 30,
+    "passed": 215,
+    "failed": 0,
+    "ignored": 3,
+    "format": "passed",
+    "clippy": "passed; existing libc::time_t deprecation warning retained",
+    "mock_boundary": "mock models and fake executors used only in automatic tests, not A–H",
+    "coverage": [
+      "role replacement",
+      "duplicate/reordered proposals and stop controls",
+      "late old-version results",
+      "cancellation and permission revocation",
+      "schema migration preserves old contracts",
+      "old client/relay capability block",
+      "recipient-only and outsider visibility",
+      "stale approval form",
+      "real child process stop and side-effect acknowledgement",
+      "role-only preparation preserves requirements without model rewording",
+      "stop acknowledgement and outbound event atomic rollback/retry",
+      "real relay WAL contention waits and deduplicates"
+    ],
+    "log": "test-all-404a460.log",
+    "note": "Default cargo test includes all discovered canonical test targets and doctests; existing backup test bytes retained in .rs.bak files."
+  },
+  "final_handoff_smoke": {
+    "source_commit": "404a4602394fe7bb46680d8dfcde9f0ed87b27a3",
+    "status": "passed",
+    "task_id": "e4fa7c38-194d-55d4-8382-9be265b166d6",
+    "records": [
+      {
+        "member": "a",
+        "host": "lakota.mines.edu",
+        "task_visible": true,
+        "runtime_source": "404a4602394fe7bb46680d8dfcde9f0ed87b27a3",
+        "binary_sha256": "f194b8a6d8a9f69ebe6a8d6dffab5b56ebb90337c7a42914001e345d83c37676",
+        "raw_snapshot": "raw/lakota/evidence/D2-a.json",
+        "approvals": [],
+        "delivery_approvals": [],
+        "runs": [],
+        "transfers": [
+          {
+            "id": "fae44a7a-600a-5fbd-84ea-4b40265290eb",
+            "state": "received",
+            "direction": "in"
+          }
+        ],
+        "task_id": "e4fa7c38-194d-55d4-8382-9be265b166d6",
+        "revision": 2,
+        "state": "completed",
+        "roles": {
+          "protocol": 1,
+          "executor": "c",
+          "recipients": [
+            "a"
+          ],
+          "others": [],
+          "delivery_generation": 1
+        },
+        "files": [
+          {
+            "transfer_id": "fae44a7a-600a-5fbd-84ea-4b40265290eb",
+            "name": "D2_result.json",
+            "bytes": 279,
+            "sha256": "b90e67e05722a6047afa7359c20e711ac9e5a07cb075a55253a3bfb50aa950df",
+            "exists": true
+          },
+          {
+            "transfer_id": "fae44a7a-600a-5fbd-84ea-4b40265290eb",
+            "name": "D2_runs.log",
+            "bytes": 259,
+            "sha256": "a28ffeebcbaa3066bb683a48351a1157a72260d9ca4b674004b94a60241b02ee",
+            "exists": true
+          },
+          {
+            "transfer_id": "fae44a7a-600a-5fbd-84ea-4b40265290eb",
+            "name": "role_fixture_v2.py",
+            "bytes": 951,
+            "sha256": "ccf335bed08d8b238dc53c51cfe5b8b9fd7f2d5dd5100a118297559c3d322a81",
+            "exists": true
+          }
+        ],
+        "stops": [
+          {
+            "id": "11bb148b-efa0-54b6-ac47-7f2c8b9fa1fa",
+            "revision": 1,
+            "executor": "b",
+            "state": "stopped",
+            "created_at": 1792177543,
+            "confirmed_at": 1792177584,
+            "reason": "执行 @c B 的程序正在运行；请安全停止并核对副作用后，由 C 在 C 本机 work 执行。原目标、D2 参数、三份交付物和接收人 a 不变。"
+          }
+        ],
+        "inputs": [],
+        "input_receipts": [],
+        "recovery_grants": []
+      },
+      {
+        "member": "b",
+        "host": "VM-0-8-ubuntu",
+        "task_visible": true,
+        "runtime_source": "404a4602394fe7bb46680d8dfcde9f0ed87b27a3",
+        "binary_sha256": "f194b8a6d8a9f69ebe6a8d6dffab5b56ebb90337c7a42914001e345d83c37676",
+        "raw_snapshot": "raw/trader/evidence/D2-b.json",
+        "approvals": [
+          {
+            "task_id": "e4fa7c38-194d-55d4-8382-9be265b166d6",
+            "revision": 1,
+            "directory": "/home/ubuntu/xxassxx-tests/stability-phase2-20261016/b/work/xxassxx-task-e4fa7c38-194d-55d4-8382-9be265b166d6-r1",
+            "read_roots": "[\"/home/ubuntu/xxassxx-tests/stability-phase2-20261016/b/work\"]",
+            "timeout_secs": 1800,
+            "created_at": 1792177503,
+            "full_access": 1
+          }
+        ],
+        "delivery_approvals": [
+          {
+            "task_id": "e4fa7c38-194d-55d4-8382-9be265b166d6",
+            "revision": 1,
+            "generation": 1
+          }
+        ],
+        "runs": [
+          {
+            "id": "bf6cc71e-15e4-4331-a7d6-5a281d20a6e6",
+            "state": "failed",
+            "session_id": "01a1461a-82ea-78d1-8089-1dd98328ccc3",
+            "resumed_session_id": null,
+            "codex_version": "codex-cli 0.162.1",
+            "workdir": "/home/ubuntu/xxassxx-tests/stability-phase2-20261016/b/work/xxassxx-task-e4fa7c38-194d-55d4-8382-9be265b166d6-r1",
+            "reads": 1,
+            "submissions": 0,
+            "error_code": "authorization_changed"
+          }
+        ],
+        "transfers": [],
+        "task_id": "e4fa7c38-194d-55d4-8382-9be265b166d6",
+        "revision": 1,
+        "state": "cancelled",
+        "roles": {
+          "protocol": 1,
+          "executor": "b",
+          "recipients": [
+            "a"
+          ],
+          "others": [],
+          "delivery_generation": 1
+        },
+        "files": [],
+        "stops": [
+          {
+            "id": "11bb148b-efa0-54b6-ac47-7f2c8b9fa1fa",
+            "revision": 1,
+            "executor": "b",
+            "state": "stopped",
+            "created_at": 1792177552,
+            "confirmed_at": 1792177577,
+            "reason": "执行 @c B 的程序正在运行；请安全停止并核对副作用后，由 C 在 C 本机 work 执行。原目标、D2 参数、三份交付物和接收人 a 不变。"
+          }
+        ],
+        "inputs": [],
+        "input_receipts": [],
+        "recovery_grants": []
+      },
+      {
+        "member": "c",
+        "host": "lakota.mines.edu",
+        "task_visible": true,
+        "runtime_source": "404a4602394fe7bb46680d8dfcde9f0ed87b27a3",
+        "binary_sha256": "f194b8a6d8a9f69ebe6a8d6dffab5b56ebb90337c7a42914001e345d83c37676",
+        "raw_snapshot": "raw/lakota/evidence/D2-c.json",
+        "approvals": [
+          {
+            "task_id": "e4fa7c38-194d-55d4-8382-9be265b166d6",
+            "revision": 2,
+            "directory": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work/xxassxx-task-e4fa7c38-194d-55d4-8382-9be265b166d6-r2",
+            "read_roots": "[\"/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work\"]",
+            "timeout_secs": 1800,
+            "created_at": 1792177616,
+            "full_access": 1
+          }
+        ],
+        "delivery_approvals": [
+          {
+            "task_id": "e4fa7c38-194d-55d4-8382-9be265b166d6",
+            "revision": 2,
+            "generation": 1
+          }
+        ],
+        "runs": [
+          {
+            "id": "86524254-d344-4357-b2ec-09e69a8889e4",
+            "state": "succeeded",
+            "session_id": "01a1461c-3faa-7091-95b7-b6de4615b2ce",
+            "resumed_session_id": null,
+            "codex_version": "codex-cli 0.162.1",
+            "workdir": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work/xxassxx-task-e4fa7c38-194d-55d4-8382-9be265b166d6-r2",
+            "reads": 1,
+            "submissions": 1,
+            "error_code": null
+          }
+        ],
+        "transfers": [
+          {
+            "id": "fae44a7a-600a-5fbd-84ea-4b40265290eb",
+            "state": "delivered",
+            "direction": "out"
+          }
+        ],
+        "task_id": "e4fa7c38-194d-55d4-8382-9be265b166d6",
+        "revision": 2,
+        "state": "completed",
+        "roles": {
+          "protocol": 1,
+          "executor": "c",
+          "recipients": [
+            "a"
+          ],
+          "others": [],
+          "delivery_generation": 1
+        },
+        "files": [
+          {
+            "transfer_id": "fae44a7a-600a-5fbd-84ea-4b40265290eb",
+            "name": "D2_result.json",
+            "bytes": 279,
+            "sha256": "b90e67e05722a6047afa7359c20e711ac9e5a07cb075a55253a3bfb50aa950df",
+            "exists": true
+          },
+          {
+            "transfer_id": "fae44a7a-600a-5fbd-84ea-4b40265290eb",
+            "name": "D2_runs.log",
+            "bytes": 259,
+            "sha256": "a28ffeebcbaa3066bb683a48351a1157a72260d9ca4b674004b94a60241b02ee",
+            "exists": true
+          },
+          {
+            "transfer_id": "fae44a7a-600a-5fbd-84ea-4b40265290eb",
+            "name": "role_fixture_v2.py",
+            "bytes": 951,
+            "sha256": "ccf335bed08d8b238dc53c51cfe5b8b9fd7f2d5dd5100a118297559c3d322a81",
+            "exists": true
+          }
+        ],
+        "stops": [],
+        "inputs": [],
+        "input_receipts": [],
+        "recovery_grants": []
+      }
+    ],
+    "before_stop_c": [
+      {
+        "member": "c",
+        "host": "lakota.mines.edu",
+        "task_visible": false,
+        "runtime_source": "404a4602394fe7bb46680d8dfcde9f0ed87b27a3",
+        "binary_sha256": "f194b8a6d8a9f69ebe6a8d6dffab5b56ebb90337c7a42914001e345d83c37676",
+        "raw_snapshot": "raw/lakota/evidence/D2-before-stop-c.json",
+        "approvals": [],
+        "delivery_approvals": [],
+        "runs": [],
+        "transfers": [],
+        "files": [],
+        "stops": [],
+        "inputs": [],
+        "input_receipts": [],
+        "recovery_grants": []
+      }
+    ],
+    "stop_check": {
+      "case": "D2",
+      "member": "b",
+      "hostname": "VM-0-8-ubuntu",
+      "cwd": "/home/ubuntu/xxassxx-tests/stability-phase2-20261016/b/work",
+      "pid": 980266,
+      "started": 1792177524.653481,
+      "checked_at": 1792177562.6505523,
+      "alive": false,
+      "result_exists": false,
+      "log_exists": false,
+      "matching_processes": []
+    },
+    "file_verification": {
+      "result": {
+        "case": "D2",
+        "member": "c",
+        "hostname": "lakota.mines.edu",
+        "cwd": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/c/work",
+        "pid": 2365178,
+        "started": 1792177634.4509914,
+        "execution_count": 1,
+        "sum": 83,
+        "completed": 1792177634.4519145
+      },
+      "matched_files": 3,
+      "log_lines": 1,
+      "after_stop_confirmation": true
+    },
+    "terminal_frames": [
+      "raw/lakota/a/pty-404a460/D2-17-A-confirm-r2.txt",
+      "raw/trader/b/pty-404a460/D2-18-B-needs-check.txt",
+      "raw/lakota/c/pty-404a460/D2-26-C-own-approval.txt",
+      "raw/lakota/a/pty-404a460/D2-30-A-review.txt",
+      "raw/lakota/c/pty-404a460/D2-31-C-final.txt"
+    ]
+  },
+  "automated_previous": {
     "source_commit": "7460e15",
     "suites": 29,
     "passed": 213,
@@ -1594,5 +1919,93 @@
     ],
     "log": "test-all-7460e15.log",
     "note": "Canonical targets selected because pre-existing backup test filenames contain spaces; CI repair removes those files from test discovery while preserving their bytes."
+  },
+  "cleanup": {
+    "lakota": {
+      "checked_at": 1792177725.0054824,
+      "records": [
+        {
+          "member": "a",
+          "service": "stopped"
+        },
+        {
+          "member": "a",
+          "proxy_pid": 2252279,
+          "proxy": "stopped"
+        },
+        {
+          "member": "c",
+          "service": "stopped"
+        },
+        {
+          "member": "c",
+          "proxy_pid": 2252280,
+          "proxy": "stopped"
+        },
+        {
+          "relay_pid": 2363391,
+          "relay": "stopped",
+          "archive": "/rcp/rcp42/home/shenyaojin/xxassxx-tests/stability-phase2-20261016/evidence/relay-final-with-attachments.tar.gz",
+          "archive_sha256": "9cdf8ee9d1c8241b854f4191cc444f983aea0fc5846491cea614d2ada503e380"
+        }
+      ]
+    },
+    "trader": {
+      "checked_at": 1792177725.6939526,
+      "records": [
+        {
+          "member": "b",
+          "service": "stopped"
+        },
+        {
+          "member": "b",
+          "proxy_pid": 950010,
+          "proxy": "stopped"
+        }
+      ]
+    },
+    "local_tunnels": {
+      "checked_at": 1792177735.11593,
+      "stopped": [
+        7453,
+        12491
+      ]
+    }
+  },
+  "ci": {
+    "run_id": 38951976776,
+    "url": "https://github.com/shenyaojin/xXASSXx/actions/runs/38951976776",
+    "source_commit": "404a4602394fe7bb46680d8dfcde9f0ed87b27a3",
+    "status": "success",
+    "release": "skipped",
+    "platforms": {
+      "aarch64-apple-darwin": {
+        "job_id": 117145346408,
+        "suites": 30,
+        "passed": 214,
+        "failed": 0,
+        "ignored": 3,
+        "package_sha256": "44ddee525128aa6cb1e73497305d2281bd6bdc31cd033bab7acfdc4aea722334",
+        "binary_sha256": "f44c8469148b89d48ce0e56bb9650717d15c845d0794f7a8f05ae1e60616dad7",
+        "build_package_install_version": "passed",
+        "log": "ci-job-117145346408.log"
+      },
+      "x86_64-unknown-linux-musl": {
+        "job_id": 117145346599,
+        "suites": 30,
+        "passed": 215,
+        "failed": 0,
+        "ignored": 3,
+        "package_sha256": "3be10bb641d6242eaac476d18d53a4de90ea40b7cd8f90b6f8d75a876a2612de",
+        "binary_sha256": "ac82edb66e02d0497d19c7af94389827056b7e4caf543bb526763b155ef903d9",
+        "build_package_install_version": "passed",
+        "log": "ci-job-117145346599.log"
+      }
+    },
+    "local_arm_install": {
+      "version": "xxassxx 0.9.0-alpha",
+      "architecture": "Mach-O 64-bit arm64",
+      "isolated": true
+    }
   }
 }
