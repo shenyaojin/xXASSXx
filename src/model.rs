@@ -213,26 +213,33 @@ impl HttpModel {
         if let Some(key) = &self.key {
             req = req.bearer_auth(key);
         }
+        use crate::task_recovery::{Reason, failure};
         let response = req.send().await.map_err(|e| {
-            anyhow::anyhow!(if e.is_timeout() {
-                "model_timeout"
-            } else {
-                "model_unavailable"
-            })
+            failure(
+                Reason::TransientModel,
+                if e.is_timeout() {
+                    "model_timeout"
+                } else {
+                    "model_unavailable"
+                },
+            )
         })?;
         let status = response.status().as_u16();
-        if !(200..300).contains(&status) && !matches!(status, 401 | 402 | 403 | 429) {
-            anyhow::bail!("model_http_failed (HTTP {status})");
+        if !(200..300).contains(&status) {
+            let reason = if matches!(status, 408 | 500 | 502 | 503 | 504) {
+                Reason::TransientModel
+            } else {
+                Reason::ModelConfiguration
+            };
+            return Err(failure(
+                reason,
+                match status {
+                    401 | 403 => "model_auth_failed".to_owned(),
+                    402 | 429 => "model_quota_limited".to_owned(),
+                    _ => format!("model_http_failed (HTTP {status})"),
+                },
+            ));
         }
-        ensure!(
-            (200..300).contains(&status),
-            "{}",
-            match status {
-                401 | 403 => "model_auth_failed",
-                402 | 429 => "model_quota_limited",
-                _ => "model_http_failed",
-            }
-        );
         let value = crate::team::response_json(response)
             .await
             .map_err(|_| anyhow::anyhow!("model_invalid_response"))?;

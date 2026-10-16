@@ -313,13 +313,17 @@ pub async fn execute(store: &Store, task: &str, exe: &Path) -> Result<()> {
             .last()
             .and_then(|r| r.error_code.as_deref())
             .unwrap_or("runner_failed");
-        if detail == "timeout" {
-            anyhow::bail!(
-                "本轮工作超过了 {} 秒的等待时间，已暂停。按 CtrlY 可检查已有进展后继续。",
-                wait_secs
-            );
-        }
-        anyhow::bail!("执行助手遇到问题，已暂停。按 CtrlY 重试；错误详情：{detail}");
+        use crate::task_recovery::{Reason, failure};
+        return Err(failure(
+            match detail {
+                "model_transient" => Reason::TransientModel,
+                "model_configuration" => Reason::ModelConfiguration,
+                "authorization_changed" => Reason::LocalPermission,
+                "timeout" | "interrupted" | "lease_expired" => Reason::ExecutionUncertain,
+                _ => Reason::ExecutionError,
+            },
+            format!("执行助手已暂停，运行记录：{detail}；请检查后恢复"),
+        ));
     }
     Ok(())
 }

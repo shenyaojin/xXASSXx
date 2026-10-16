@@ -1,5 +1,6 @@
 //! Versioned business tasks layered on app_tasks and the existing authenticated outbox.
 //! Model decisions are data. Confirmation, revision fences and completion belong to Rust.
+use crate::task_recovery::{self as recovery, Reason};
 use crate::{
     app::{self, Instruction},
     store::{Store, now},
@@ -48,6 +49,8 @@ impl Wire {
                     | "cancel"
                     | "suspend"
                     | "meeting_report"
+                    | "input"
+                    | "input_receipt"
             ),
             "unknown task event"
         );
@@ -83,6 +86,14 @@ pub fn get(store: &Store, id: &str) -> Result<Value> {
         "SELECT json_object('id',id,'revision',revision,'stage',stage,'state',state,'error',error) FROM task_model_attempts WHERE task_id=?1 ORDER BY rowid",
         id,
     )?;
+    v["recovery_protocol"] = json!(store.conn.query_row(
+        "SELECT recovery_protocol FROM app_tasks WHERE id=?1",
+        [id],
+        |r| r.get::<_, i64>(0)
+    )?);
+    v["blocker"] = recovery::current(&store.conn, &v)?;
+    v["inputs"] = crate::task_inputs::list(&store.conn, id, revision(&v))?;
+    v["recovery_budget"] = json!({"extra_execution_rounds":recovery::extra(&store.conn,&v,false)?,"extra_model_rounds":recovery::extra(&store.conn,&v,true)?});
     v["short_id"] = json!(format!("T-{}", &id[..8]));
     v["project"] = json!(store.conn.query_row(
         "SELECT path FROM app_projects WHERE id=?1",
@@ -129,6 +140,14 @@ pub fn get(store: &Store, id: &str) -> Result<Value> {
         id,
     )?;
     v["execution_permission"] = crate::task_workspace::view(store, &v)?;
+    if v["blocker"].is_null() && !terminal(&v) {
+        if v["questions"].as_array().unwrap().iter().any(|q|q["revision"]==v["revision"] && q["state"]=="user") {
+            v["blocker"]=json!({"reason":Reason::UserInput,"action":"answer_question","owner":v["initiator"],"detail":"请用 /answer 选择要回答的问题；普通补充不会解除其他问题"});
+        } else if store.conn.query_row("SELECT EXISTS(SELECT 1 FROM task_jobs WHERE task_id=?1 AND revision=?2 AND state='awaiting_access')",params![id,revision(&v)],|r|r.get::<_,bool>(0))? {
+            v["blocker"]=json!({"reason":Reason::LocalPermission,"action":"approve_locally","owner":store.owner()?,"detail":"请在本机 CtrlG 查看并允许任务"});
+        }
+    }
+
     v["artifact"] = if v["state"] == "completed" {
         json!(store.workflow_artifact_path(&format!("app-{id}-r{}", v["revision"])))
     } else {
@@ -168,6 +187,9 @@ pub fn get(store: &Store, id: &str) -> Result<Value> {
             .map(|s| serde_json::from_str::<Value>(&s))
             .transpose()?
             .unwrap_or(Value::Null);
+    }
+    if terminal(&v) {
+        v["blocker"] = Value::Null;
     }
     Ok(v)
 }
@@ -294,7 +316,7 @@ fn journal(
     )?;
     Ok(seq)
 }
-fn emit(
+pub(crate) fn emit(
     c: &Connection,
     t: &Value,
     sender: &str,
@@ -318,7 +340,11 @@ fn emit(
         revision: revision(t),
         sequence,
         event: event.into(),
-        data: crate::task_prose::portable(c, sender, string(t, "id")?, data)?,
+        data: if matches!(event, "input" | "input_receipt") {
+            data
+        } else {
+            crate::task_prose::portable(c, sender, string(t, "id")?, data)?
+        },
     };
     if recipients.iter().all(|p| p == sender) && members(t)?.len() == 1 {
         // Local-only tasks still publish bounded facts for relay schedules. This
@@ -423,7 +449,7 @@ fn wait_for_access(store: &Store, t: &Value, job_id: &str) -> Result<bool> {
 // never replay an uncertain physical run or unrelated model failure.
 pub(crate) fn access_granted(store: &Store, t: &Value) -> Result<()> {
     let c = &store.conn;
-    let resumed = c.execute("UPDATE task_jobs SET state='pending',error=NULL,attempts=0 WHERE task_id=?1 AND revision=?2 AND kind='start' AND state IN ('pending','awaiting_access','failed','uncertain') AND NOT EXISTS(SELECT 1 FROM task_executions WHERE task_id=?1 AND revision=?2)", params![t["id"].as_str(),revision(t)])?;
+    let resumed = c.execute("UPDATE task_jobs SET state='pending',error=NULL WHERE task_id=?1 AND revision=?2 AND kind='start' AND state IN ('pending','awaiting_access','failed','uncertain') AND NOT EXISTS(SELECT 1 FROM task_executions WHERE task_id=?1 AND revision=?2)", params![t["id"].as_str(),revision(t)])?;
     if resumed == 0 {
         return Ok(());
     }
@@ -543,6 +569,10 @@ pub fn create(c: &Connection, i: &Instruction, owner: &str, peer: Option<&str>) 
         Some(&id),
         "task_draft",
         json!({"body":"已创建待确认任务；尚未联系参与成员。","task_id":id}),
+    )?;
+    c.execute(
+        "UPDATE app_tasks SET recovery_protocol=1 WHERE id=?1",
+        [&id],
     )?;
     Ok(id)
 }
@@ -706,7 +736,7 @@ fn direct_file_request(store: &Store, t: &Value, draft: &Value) -> Result<Option
     Ok(None)
 }
 fn public_task(t: &Value) -> Value {
-    json!({"team_activity":t["team_activity"],"initiator":t["initiator"],"participants":t["participants"],"original":t["original"],"draft":t["draft"],"title":t["title"],"confirmed":t["confirmed"],"state":t["state"],"next_owner":t["next_owner"],"waiting_for":t["waiting_for"],"updated_at":t["updated_at"]})
+    json!({"team_activity":t["team_activity"],"initiator":t["initiator"],"participants":t["participants"],"original":t["original"],"draft":t["draft"],"title":t["title"],"confirmed":t["confirmed"],"recovery_protocol":t["recovery_protocol"],"state":t["state"],"next_owner":t["next_owner"],"waiting_for":t["waiting_for"],"updated_at":t["updated_at"]})
 }
 pub fn confirm(store: &Store, i: &Instruction) -> Result<()> {
     let tx = store.conn.unchecked_transaction()?;
@@ -961,6 +991,10 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
         let session_id = stable_id(&w.task_id, &format!("local-session:{}", store.owner()?));
         store.conn.execute("INSERT OR IGNORE INTO app_sessions(id,project_id,recipient,title,created_at) VALUES(?1,?2,?3,?4,?5)",params![session_id,project_id,store.owner()?,format!("任务 T-{}",&w.task_id[..8]),now()])?;
         store.conn.execute("INSERT OR IGNORE INTO app_tasks(id,session_id,project_id,title,goal,peer,state,created_at,protocol,revision,initiator,participants,original,draft,confirmed,updated_at) VALUES(?1,?2,?3,?4,?5,?6,'queued',?7,2,?8,?6,?9,?10,?11,?8,?7)",params![w.task_id,session_id,project_id,w.data["title"].as_str().unwrap_or("团队任务"),w.data["draft"]["goal"].as_str().context("missing goal")?,m.sender,now(),w.revision,w.data["participants"].to_string(),string(&w.data,"original")?,w.data["draft"].to_string()])?;
+        store.conn.execute(
+            "UPDATE app_tasks SET recovery_protocol=?2 WHERE id=?1",
+            params![w.task_id, w.data["recovery_protocol"].as_i64().unwrap_or(0)],
+        )?;
     }
     if w.event == "proposal" && w.data["team_activity"] == true {
         tx.execute(
@@ -1040,6 +1074,65 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
         return Ok(());
     }
     match w.event.as_str() {
+        "input" => {
+            ensure!(t["initiator"] == m.sender, "补充只能来自任务发起人");
+            let id = string(&w.data, "input_id")?;
+            crate::task_inputs::save(
+                &tx,
+                &t,
+                id,
+                &m.sender,
+                string(&w.data, "kind")?,
+                w.data["question_id"].as_str(),
+                string(&w.data, "body")?,
+                &[store.owner()?],
+                true,
+            )?;
+            emit(
+                &tx,
+                &t,
+                &store.owner()?,
+                &stable_id(&m.message_id, "received"),
+                "input_receipt",
+                json!({"input_id":id,"status":"received","at":now()}),
+                std::slice::from_ref(&m.sender),
+            )?;
+            // Running workers consume at get_task/submission boundaries. A candidate
+            // may need a fresh turn, but a supplement cannot clear any blocker.
+            if !has_pending_questions(&tx, &t)? && t["state"] != "needs_attention" {
+                let ex:Option<String>=tx.query_row("SELECT id FROM task_executions WHERE task_id=?1 AND revision=?2 AND state='candidate' ORDER BY rowid DESC LIMIT 1",params![t["id"].as_str(),revision(&t)],|r|r.get(0)).optional()?;
+                if let Some(ex) = ex {
+                    tx.execute(
+                        "UPDATE task_executions SET state='pending' WHERE id=?1",
+                        [&ex],
+                    )?;
+                    tx.execute("UPDATE tasks SET state='pending' WHERE id=?1", [&ex])?;
+                }
+            }
+        }
+        "input_receipt" => {
+            ensure!(
+                t["initiator"] == store.owner()? && executors(&t)?.contains(&m.sender),
+                "输入回执成员不符"
+            );
+            crate::task_inputs::receipt(&tx, &t, &m.sender, &w.data)?;
+            notify(
+                &tx,
+                &t,
+                &format!("input-receipt:{}", m.message_id),
+                "task_progress",
+                &format!(
+                    "补充 {}：@{} {}。",
+                    w.data["input_id"].as_str().unwrap_or(""),
+                    m.sender,
+                    if w.data["status"] == "read" {
+                        "执行已读取；是否采用以最终结果为准"
+                    } else {
+                        "已接收，等待执行读取"
+                    }
+                ),
+            )?;
+        }
         "proposal" => {
             ensure!(
                 t["initiator"] == m.sender && w.data["confirmed"] == w.revision,
@@ -1202,7 +1295,7 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
                 t["state"] == "needs_attention",
                 "执行方当前没有待恢复的任务"
             );
-            retry_local(&tx, &t)?;
+            retry_local(&tx, &t, &m.message_id)?;
             state(
                 &tx,
                 &t,
@@ -1298,18 +1391,26 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
                 )?;
             }
         }
-        "accepted" if w.data["recovered"] == true && executors(&t)?.contains(&m.sender) => {
+        "accepted"
+            if w.data["recovered"] == true
+                && (executors(&t)?.contains(&m.sender) || t["initiator"] == m.sender) =>
+        {
             // A fresh, explicit retry by the responsible executor can clear
             // that executor's failure. Ordinary progress must not do so, nor
             // may one member clear another member's pending decision/error.
-            if t["state"] == "needs_attention" && t["next_owner"] == m.sender {
-                state(
-                    &tx,
-                    &t,
-                    "processing",
-                    Some(&m.sender),
-                    Some("执行方已恢复，继续处理"),
-                )?;
+            if t["next_owner"] == m.sender
+                && (t["blocker"].is_null() || t["blocker"]["owner"] == m.sender)
+            {
+                recovery::resolve(&tx, &t)?;
+                if !has_pending_questions(&tx, &t)? {
+                    state(
+                        &tx,
+                        &t,
+                        "processing",
+                        Some(&m.sender),
+                        Some("负责成员已恢复，继续处理"),
+                    )?;
+                }
                 tx.execute("UPDATE app_tasks SET error=NULL WHERE id=?1", [&w.task_id])?;
                 notify(
                     &tx,
@@ -1350,6 +1451,20 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
             }
         }
         "accepted" | "progress" | "meeting_report" => {
+            if w.data["blocker"].is_object() {
+                let b = &w.data["blocker"];
+                let reason: Reason = serde_json::from_value(b["reason"].clone())?;
+                recovery::record(
+                    &tx,
+                    &t,
+                    &m.message_id,
+                    reason,
+                    string(b, "step_kind")?,
+                    string(b, "step_id")?,
+                    w.data["body"].as_str().unwrap_or("需要检查"),
+                    &m.sender,
+                )?;
+            }
             // Progress is ordered per sender; it cannot erase an outstanding user question.
             if t["waiting_for"] != "等待用户回答" && t["state"] != "needs_attention" {
                 if w.data["state"] == "needs_attention" {
@@ -1463,6 +1578,10 @@ fn answer_inner(c: &Connection, t: &Value, a: &Value, by: &str) -> Result<()> {
         "UPDATE task_questions SET state='answered',answer=?2,answered_by=?3 WHERE id=?1",
         params![q, answer, by],
     )?;
+    let block = recovery::current(c, t)?;
+    if t["state"] == "needs_attention" && block["reason"] != "user_input" {
+        return Ok(());
+    }
     let pending: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM task_questions WHERE task_id=?1 AND revision=?2 AND state IN ('user','coordinating','investigating') AND (?3 IS NULL OR execution_id=?3))",params![t["id"].as_str(),revision(t),execution], |r|r.get(0))?;
     if pending {
         state(
@@ -1528,6 +1647,26 @@ pub fn answer(store: &Store, i: &Instruction) -> Result<()> {
     let asker:String=store.conn.query_row("SELECT asker FROM task_questions WHERE id=?1 AND task_id=?2 AND revision=?3 AND state IN ('user','answered')",params![q,t["id"].as_str(),revision(&t)],|r|r.get(0)).optional()?.context("请选择当前等待用户的问题")?;
     let tx = store.conn.unchecked_transaction()?;
     let mut data = json!({"question_id":q,"body":i.body});
+    crate::task_inputs::save(
+        &tx,
+        &t,
+        &i.request_id,
+        &store.owner()?,
+        "answer",
+        Some(q),
+        &i.body,
+        std::slice::from_ref(&asker),
+        false,
+    )?;
+    emit(
+        &tx,
+        &t,
+        &store.owner()?,
+        &stable_id(&i.request_id, "answer-input"),
+        "input",
+        json!({"input_id":i.request_id,"kind":"answer","question_id":q,"body":i.body}),
+        std::slice::from_ref(&asker),
+    )?;
     answer_inner(&tx, &t, &data, &store.owner()?)?;
     data["pending_questions"] = json!(has_pending_questions(&tx, &t)?);
     emit(
@@ -1580,9 +1719,11 @@ pub fn check_execution(c: &Connection, execution: &str) -> Result<Option<Value>>
     let valid:bool=c.query_row("SELECT revision=?2 AND confirmed=?2 AND state NOT IN ('draft','completed','cancelled','needs_attention') AND COALESCE(waiting_reason,'') != '等待新修订' FROM app_tasks WHERE id=?1",params![id,rev],|r|r.get(0))?;
     ensure!(valid, "任务已取消、修订、暂停或等待处理");
     check_executor(c, &id)?;
-    crate::task_materials::check_binding(c, &id, rev)?;
+    crate::task_materials::check_binding(c, &id, rev)
+        .map_err(|e| recovery::failure(Reason::LocalPermission, e.to_string()))?;
     if phase == "execute" {
-        crate::task_workspace::binding(c, &id, rev)?;
+        crate::task_workspace::binding(c, &id, rev)
+            .map_err(|e| recovery::failure(Reason::LocalPermission, e.to_string()))?;
     }
     Ok(Some(
         json!({"task_id":id,"revision":rev,"phase":phase,"snapshot_id":snapshot}),
@@ -1614,6 +1755,11 @@ pub fn execution_context(c: &Connection, id: &str) -> Result<Option<Value>> {
     // A new physical scope uses a new Codex session, but must keep the previous
     // discovery's reported coverage and limitations. This is prior-run evidence,
     // never a grant to read the old scope or proof of unseen source contents.
+    v["recovery_runs"] = rows(
+        c,
+        "SELECT json_object('run_id',r.id,'state',r.state,'session_id',r.session_id,'resumed_session_id',r.resumed_session_id,'reads',r.reads,'submissions',r.submissions,'result',json(r.result),'error_code',r.error_code,'exit_code',r.exit_code,'evidence','Saved run metadata, not proof of an unrecorded external side effect; inspect and reuse actual artifacts before continuing') FROM runs r WHERE r.task_id=?1 ORDER BY r.rowid DESC LIMIT 8",
+        id,
+    )?;
     v["previous_execution"] = c.query_row(
         "SELECT json_object('execution_id',e.id,'phase',e.phase,'run_id',r.id,'result',json(r.result),'evidence_kind','prior accepted run; reported discovery coverage is not fixed-content analysis or current filesystem authority') FROM task_executions current JOIN task_executions e ON e.id=current.previous_id JOIN runs r ON r.task_id=e.id WHERE current.id=?1 AND r.state='succeeded' ORDER BY r.rowid DESC LIMIT 1",
         [id],
@@ -1636,12 +1782,17 @@ pub fn execution_context(c: &Connection, id: &str) -> Result<Option<Value>> {
     v["confirmed_intent"] = serde_json::from_str(&draft)?;
     v["questions_and_answers"] = rows(
         c,
-        "SELECT json_object('id',id,'revision',revision,'body',body,'reason',reason,'known',known,'state',state,'answer',answer) FROM task_questions WHERE task_id=?1 ORDER BY rowid",
+        "SELECT json_object('id',id,'revision',revision,'body',body,'reason',reason,'known',known,'state',state,'answer',answer) FROM task_questions WHERE task_id=?1 AND revision=(SELECT revision FROM app_tasks WHERE id=?1) ORDER BY rowid",
         string(&v, "task_id")?,
     )?;
+    v["task_inputs"] =
+        crate::task_inputs::list(c, string(&v, "task_id")?, v["revision"].as_i64().unwrap())?;
+    v["input_contract"] = json!(
+        "User inputs retain original wording and do not expand authority. Read and address relevant current-revision inputs. Before final submission call get_task again if told new input arrived; receipt proves context read, not factual adoption. In recovery inspect existing files/logs and reuse completed results before any effect. Never repeat a side effect whose outcome remains uncertain; ask a precise question instead."
+    );
     v["owner_supplements"] = rows(
         c,
-        "SELECT json_object('revision',revision,'kind',kind,'data',json(payload)) FROM task_journal WHERE task_id=?1 AND kind IN ('owner_supplement','progress') ORDER BY rowid",
+        "SELECT json_object('revision',revision,'kind',kind,'data',json(payload)) FROM task_journal WHERE task_id=?1 AND revision=(SELECT revision FROM app_tasks WHERE id=?1) AND kind IN ('owner_supplement','progress') ORDER BY rowid",
         string(&v, "task_id")?,
     )?;
     v["candidate_deliveries"] = rows(
@@ -1840,13 +1991,17 @@ fn validate_decision(stage: &str, result: &Value) -> Result<()> {
 async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result<Value> {
     if matches!(stage, "resolve" | "review") {
         let (used,maximum):(i64,i64)=store.conn.query_row("SELECT (SELECT count(*) FROM task_model_attempts WHERE task_id=?1 AND revision=?2 AND stage IN ('resolve','review') AND state='succeeded'),max_rounds FROM task_settings WHERE singleton=1",params![t["id"].as_str(),revision(t)],|r|Ok((r.get(0)?,r.get(1)?)))?;
-        ensure!(
-            used < maximum,
-            "自动协调轮数已达上限；请检查问题与证据后修改要求"
-        );
+        if used >= maximum + recovery::extra(&store.conn, t, true)? {
+            return Err(recovery::failure(
+                Reason::BudgetExhausted,
+                "自动协调轮数已达上限；可检查后允许有限继续",
+            ));
+        }
     }
-    let cfg = crate::model::ModelConfig::parse(&store.member_config()?.model)?;
-    let model = crate::model::HttpModel::new(cfg)?;
+    let cfg = crate::model::ModelConfig::parse(&store.member_config()?.model)
+        .map_err(|e| recovery::failure(Reason::ModelConfiguration, e.to_string()))?;
+    let model = crate::model::HttpModel::new(cfg)
+        .map_err(|e| recovery::failure(Reason::ModelConfiguration, e.to_string()))?;
     let mut history = app::history(store, string(t, "session_id")?)?
         .into_iter()
         .filter(|m| {
@@ -2009,9 +2164,7 @@ async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result
             Ok(v) => return Ok(v),
             Err(e) => {
                 last = e.to_string();
-                if outcome.is_err() {
-                    return Err(e);
-                }
+                outcome?;
             }
         }
     }
@@ -2047,12 +2200,31 @@ pub async fn prepare_model(store: &Store, id: &str) -> Result<()> {
         // Rejected user commands and failed follow-up replies must not revoke
         // a concurrently running executor's authorization.
         if current["revision"] == t["revision"] && current["state"] == "draft" {
-            attention(
-                store,
-                &t,
-                &uuid::Uuid::new_v4().to_string(),
-                &error.to_string(),
+            let key = stable_id(&format!("{id}:{}", revision(&t)), "prepare-retry");
+            job(&store.conn, &key, &t, "prepare", json!({}))?;
+            store.conn.execute(
+                "UPDATE task_jobs SET attempts=MAX(attempts,1),error=?2 WHERE id=?1",
+                params![key, error.to_string()],
             )?;
+            let reason = recovery::classify(error);
+            if reason == Reason::TransientModel {
+                store.conn.execute(
+                    "UPDATE task_jobs SET retry_at=?2 WHERE id=?1",
+                    params![key, now() + 2],
+                )?;
+                notify(
+                    &store.conn,
+                    &t,
+                    &format!("prepare-retry:{}", revision(&t)),
+                    "task_progress",
+                    "模型暂时不可用，需求已保存，将有限重试。",
+                )?;
+                return Ok(());
+            }
+            store
+                .conn
+                .execute("UPDATE task_jobs SET state='failed' WHERE id=?1", [&key])?;
+            blocked(store, &t, &key, reason, "job", &key, &error.to_string())?;
         }
     }
     outcome
@@ -2153,11 +2325,32 @@ fn create_execution(
     Ok(id)
 }
 pub(crate) fn attention(store: &Store, t: &Value, key: &str, error: &str) -> Result<()> {
+    blocked(store, t, key, Reason::ExecutionError, "legacy", key, error)
+}
+fn blocked(
+    store: &Store,
+    t: &Value,
+    key: &str,
+    reason: Reason,
+    kind: &str,
+    step: &str,
+    error: &str,
+) -> Result<()> {
     let current = get(store, string(t, "id")?)?;
     if terminal(&current) || current["revision"] != t["revision"] {
         return Ok(());
     }
     let tx = store.conn.unchecked_transaction()?;
+    let block = recovery::record(
+        &tx,
+        &current,
+        key,
+        reason,
+        kind,
+        step,
+        error,
+        &store.owner()?,
+    )?;
     state(
         &tx,
         &current,
@@ -2177,7 +2370,7 @@ pub(crate) fn attention(store: &Store, t: &Value, key: &str, error: &str) -> Res
             &store.owner()?,
             &stable_id(key, "attention"),
             "progress",
-            json!({"state":"needs_attention","body":error,"next_owner":store.owner()?,"updated_at":now()}),
+            json!({"state":"needs_attention","body":error,"blocker":block,"next_owner":store.owner()?,"updated_at":now()}),
             &members(&current)?,
         )?;
     }
@@ -2186,18 +2379,32 @@ pub(crate) fn attention(store: &Store, t: &Value, key: &str, error: &str) -> Res
         &current,
         &format!("attention:{key}"),
         "task_attention",
-        &format!("任务需要处理：{error}"),
+        &format!(
+            "{}：{error}\n责任人：@{}。用 /recover 查看失败步骤并允许有限继续；/supplement 可保存纠正，/answer 可回答指定问题。",
+            reason.label(),
+            store.owner()?
+        ),
     )?;
     tx.commit()?;
     Ok(())
 }
-fn retry_local(c: &Connection, t: &Value) -> Result<()> {
-    c.execute("UPDATE task_jobs SET state='pending',error=NULL WHERE task_id=?1 AND revision=?2 AND state IN ('failed','uncertain')",params![t["id"].as_str(),revision(t)])?;
-    // A successful physical run may still have an unusable business result
-    // (e.g. material freezing failed). Explicit recovery must resume Codex to
-    // correct that result, while the old run's accepted submission stays immutable.
-    c.execute("UPDATE tasks SET state='pending' WHERE state='succeeded' AND id IN (SELECT id FROM task_executions WHERE task_id=?1 AND revision=?2 AND state IN ('failed','uncertain'))",params![t["id"].as_str(),revision(t)])?;
-    c.execute("UPDATE task_executions SET state='pending',recovery_reason=?3 WHERE task_id=?1 AND revision=?2 AND state IN ('failed','uncertain')",params![t["id"].as_str(),revision(t),format!("显式重试：{}。请重新获取当前限制并修正先前结果。",t["error"].as_str().unwrap_or("检查执行记录"))])?;
+fn retry_local(c: &Connection, t: &Value, key: &str) -> Result<()> {
+    let block = recovery::current(c, t)?;
+    if block["reason"] == "local_permission" {
+        crate::task_materials::check_binding(c, string(t, "id")?, revision(t))?;
+        if t["draft"]["mode"] == "execute" {
+            crate::task_workspace::binding(c, string(t, "id")?, revision(t))?;
+        }
+    }
+    recovery::grant(c, t, key)?;
+    let step = block["step_id"].as_str();
+    let legacy = block.is_null() || block["step_kind"] == "legacy";
+    c.execute("UPDATE task_jobs SET state='pending',error=NULL,retry_at=NULL,attempt_limit=attempts+(SELECT max_retries FROM task_settings WHERE singleton=1) WHERE task_id=?1 AND revision=?2 AND state IN ('failed','uncertain','pending') AND (?3 OR id=?4)",params![t["id"].as_str(),revision(t),legacy,step])?;
+    // A verified physical result is reused by postprocessing. Only invalid
+    // submissions explicitly requiring correction may reopen a successful run.
+    c.execute("UPDATE task_executions SET state='pending',recovery_reason=?5 WHERE task_id=?1 AND revision=?2 AND state IN ('failed','uncertain') AND (?3 OR id=?4)",params![t["id"].as_str(),revision(t),legacy,step,format!("用户显式恢复。先核对历史运行和现有产物，再复用已完成工作；无法确定副作用是否完成时提交问题，不可盲目重放。原错误：{}",t["error"].as_str().unwrap_or("检查执行记录"))])?;
+    c.execute("UPDATE task_executions SET retry_at=NULL,retry_limit=retry_attempts+(SELECT max_retries FROM task_settings WHERE singleton=1) WHERE task_id=?1 AND revision=?2 AND (?3 OR id=?4)",params![t["id"].as_str(),revision(t),legacy,step])?;
+    recovery::resolve(c, t)?;
     c.execute(
         "UPDATE app_tasks SET error=NULL WHERE id=?1",
         [t["id"].as_str()],
@@ -2211,6 +2418,12 @@ pub fn recover(store: &Store, i: &Instruction) -> Result<()> {
             && store.conn.query_row("SELECT EXISTS(SELECT 1 FROM task_journal WHERE task_id=?1 AND revision=?2 AND kind='progress' AND json_extract(payload,'$.state')='needs_attention')",params![t["id"].as_str(),revision(&t)], |r| r.get::<_,bool>(0))?)) && i.payload["revision"] == t["revision"],
         "只有当前修订的需要处理任务可重试"
     );
+    if let Some(block) = i.payload["block_id"].as_str() {
+        ensure!(
+            t["blocker"]["id"] == block,
+            "失败步骤已变化，请重新查看后恢复"
+        );
+    }
     let withdrawn: bool = store.conn.query_row("SELECT EXISTS(SELECT 1 FROM task_journal WHERE task_id=?1 AND revision=?2 AND sender!=?3 AND kind='progress' AND json_extract(payload,'$.stage')='member_stopped')",params![t["id"].as_str(),revision(&t),store.owner()?],|r|r.get(0))?;
     ensure!(
         !withdrawn,
@@ -2265,7 +2478,7 @@ pub fn recover(store: &Store, i: &Instruction) -> Result<()> {
         tx.commit()?;
         return Ok(());
     }
-    retry_local(&tx, &t)?;
+    retry_local(&tx, &t, &i.request_id)?;
     if t["confirmed"] == t["revision"] {
         emit(
             &tx,
@@ -2285,8 +2498,19 @@ pub fn recover(store: &Store, i: &Instruction) -> Result<()> {
     Ok(())
 }
 async fn process_job(store: &Store, t: &Value, kind: &str, data: Value, key: &str) -> Result<()> {
-    active(t)?;
+    if kind != "prepare" {
+        active(t)?;
+    }
     match kind {
+        "prepare" => {
+            let draft = decision(store, t, "prepare", json!({})).await?;
+            let current = get(store, string(t, "id")?)?;
+            ensure!(
+                current["revision"] == t["revision"] && current["state"] == "draft",
+                "草稿已变化"
+            );
+            prepare(store, string(t, "id")?, draft)?;
+        }
         "start" => {
             start_execution(store, t, "discover", None, None, key)?;
         }
@@ -2520,6 +2744,27 @@ async fn process_job(store: &Store, t: &Value, kind: &str, data: Value, key: &st
             {
                 return Ok(());
             }
+            // Delivery cannot outrun a correction sent while a previous candidate
+            // was in transit. A newer candidate supplies the exact read input IDs.
+            let inputs = crate::task_inputs::list(&store.conn, string(t, "id")?, revision(t))?;
+            for input in inputs.as_array().unwrap() {
+                for member in &expected {
+                    if input["receipts"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .any(|r| r["member"] == *member)
+                        && !current.iter().any(|c| {
+                            c["member"] == *member
+                                && c["result"]["input_ids"]
+                                    .as_array()
+                                    .is_some_and(|ids| ids.contains(&input["id"]))
+                        })
+                    {
+                        return Ok(());
+                    }
+                }
+            }
             let unresolved:i64=store.conn.query_row("SELECT count(*) FROM task_questions WHERE task_id=?1 AND revision=?2 AND state NOT IN ('answered','superseded')",params![t["id"].as_str(),revision(t)],|r|r.get(0))?;
             if unresolved > 0 {
                 return Ok(());
@@ -2542,10 +2787,12 @@ async fn process_job(store: &Store, t: &Value, kind: &str, data: Value, key: &st
             let candidate_version = format!("{:x}", Sha256::digest(serde_json::to_vec(&current)?));
             if result["action"] == "escalate" {
                 let (repeats,limit):(i64,i64)=store.conn.query_row("SELECT (SELECT count(*) FROM task_journal WHERE task_id=?1 AND revision=?2 AND kind='agent_review' AND json_extract(payload,'$.action')='escalate' AND json_extract(payload,'$._candidate_version')=?3),max_no_progress FROM task_settings WHERE singleton=1",params![t["id"].as_str(),revision(t),candidate_version],|r|Ok((r.get(0)?,r.get(1)?)))?;
-                ensure!(
-                    repeats < limit,
-                    "同一候选反复追问仍未解决，已停止自动追问；请检查问题后修改要求"
-                );
+                if repeats >= limit + recovery::extra(&store.conn, t, true)? {
+                    return Err(recovery::failure(
+                        Reason::BudgetExhausted,
+                        "同一候选反复追问仍未解决；请检查问题后允许有限继续",
+                    ));
+                }
             }
             result["_candidate_version"] = json!(candidate_version);
             let fresh = get(store, string(t, "id")?)?;
@@ -2838,7 +3085,7 @@ pub async fn tick(store: &Store, exe: &Path) -> Result<()> {
     }
     finish_pending_deliveries(store)?;
     let pending = {
-        let mut q=store.conn.prepare("SELECT j.id,j.task_id,j.revision,j.kind,j.payload,j.state,j.attempts FROM task_jobs j JOIN app_tasks a ON a.id=j.task_id WHERE j.state IN ('pending','running') AND a.state NOT IN ('needs_attention','draft','completed','cancelled') ORDER BY j.rowid LIMIT 1")?;
+        let mut q=store.conn.prepare("SELECT j.id,j.task_id,j.revision,j.kind,j.payload,j.state,j.attempts FROM task_jobs j JOIN app_tasks a ON a.id=j.task_id WHERE j.state IN ('pending','running') AND (j.retry_at IS NULL OR j.retry_at<=strftime('%s','now')) AND a.state NOT IN ('needs_attention','completed','cancelled') AND (a.state!='draft' OR j.kind='prepare') ORDER BY j.rowid LIMIT 1")?;
         q.query_map([], |r| {
             Ok((
                 r.get::<_, String>(0)?,
@@ -2879,17 +3126,48 @@ pub async fn tick(store: &Store, exe: &Path) -> Result<()> {
             }
         }
         if status == "running" {
-            store.conn.execute("UPDATE task_jobs SET state='uncertain',error='协调时服务中断，未自动重放模型调用' WHERE id=?1",[&id])?;
-            attention(store, &t, &id, "协调时服务中断，检查历史后显式重试")?;
-            continue;
+            // Model decisions have no effects until validated/committed; start
+            // and other mutations remain explicitly recoverable after a crash.
+            if t["recovery_protocol"] == 1
+                && matches!(kind.as_str(), "review" | "resolve" | "prepare")
+            {
+                store
+                    .conn
+                    .execute("UPDATE task_jobs SET state='pending' WHERE id=?1", [&id])?;
+            } else {
+                store
+                    .conn
+                    .execute("UPDATE task_jobs SET state='uncertain' WHERE id=?1", [&id])?;
+                blocked(
+                    store,
+                    &t,
+                    &format!("{id}:{attempts}"),
+                    Reason::ExecutionUncertain,
+                    "job",
+                    &id,
+                    "协调时服务中断；请核对已有记录后恢复",
+                )?;
+                continue;
+            }
         }
         let max: i64 = store.conn.query_row(
-            "SELECT max_retries FROM task_settings WHERE singleton=1",
-            [],
+            "SELECT MAX(s.max_retries,j.attempt_limit) FROM task_settings s,task_jobs j WHERE s.singleton=1 AND j.id=?1",
+            [&id],
             |r| r.get(0),
         )?;
         if attempts >= max {
-            attention(store, &t, &id, "协调尝试已达上限；请修改要求或重开")?;
+            store
+                .conn
+                .execute("UPDATE task_jobs SET state='failed' WHERE id=?1", [&id])?;
+            blocked(
+                store,
+                &t,
+                &format!("{id}:{attempts}"),
+                Reason::BudgetExhausted,
+                "job",
+                &id,
+                "自动协调尝试已用完；可查看记录后允许有限继续",
+            )?;
             continue;
         }
         store.conn.execute(
@@ -2906,13 +3184,63 @@ pub async fn tick(store: &Store, exe: &Path) -> Result<()> {
             ],
         )?;
         if let Err(e) = result {
-            attention(store, &t, &id, &e.to_string())?;
+            let reason = recovery::classify(&e);
+            if t["recovery_protocol"] == 1 && reason == Reason::TransientModel && attempts + 1 < max
+            {
+                let fresh = get(store, &task)?;
+                if fresh["revision"] == t["revision"] && !terminal(&fresh) {
+                    let delay = (2_i64.pow((attempts as u32).min(6)) * 2).min(120);
+                    let at = now() + delay;
+                    store.conn.execute(
+                        "UPDATE task_jobs SET state='pending',retry_at=?2 WHERE id=?1",
+                        params![id, at],
+                    )?;
+                    let body = format!(
+                        "模型或网络暂时不可用，{} 秒后自动重试（{}/{}）。已有结果保留。",
+                        delay,
+                        attempts + 1,
+                        max
+                    );
+                    state(
+                        &store.conn,
+                        &fresh,
+                        if fresh["confirmed"].is_null() {
+                            "draft"
+                        } else {
+                            "waiting"
+                        },
+                        Some(&store.owner()?),
+                        Some(&body),
+                    )?;
+                    notify(
+                        &store.conn,
+                        &fresh,
+                        &format!("backoff:{id}:{attempts}"),
+                        "task_progress",
+                        &body,
+                    )?;
+                }
+            } else {
+                blocked(
+                    store,
+                    &t,
+                    &format!("{id}:{}", attempts + 1),
+                    if reason == Reason::TransientModel {
+                        Reason::BudgetExhausted
+                    } else {
+                        reason
+                    },
+                    "job",
+                    &id,
+                    &e.to_string(),
+                )?;
+            }
         }
     }
     if store.member_config()?.executor.mode != "auto" {
         return Ok(());
     }
-    let execution:Option<(String,String)>=store.conn.query_row("SELECT e.id,e.task_id FROM task_executions e JOIN app_tasks a ON a.id=e.task_id WHERE e.revision=a.revision AND e.state IN ('pending','running') AND a.state NOT IN ('draft','completed','cancelled','needs_attention') ORDER BY e.rowid LIMIT 1",[],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
+    let execution:Option<(String,String)>=store.conn.query_row("SELECT e.id,e.task_id FROM task_executions e JOIN app_tasks a ON a.id=e.task_id WHERE e.revision=a.revision AND e.state IN ('pending','running') AND (e.retry_at IS NULL OR e.retry_at<=strftime('%s','now')) AND a.state NOT IN ('draft','completed','cancelled','needs_attention') ORDER BY e.rowid LIMIT 1",[],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
     if let Some((id, task)) = execution {
         let Ok(_lock) =
             crate::supervisor::TaskLock::acquire(&store.path, &stable_id(&id, "native-dispatch"))
@@ -2926,7 +3254,40 @@ pub async fn tick(store: &Store, exe: &Path) -> Result<()> {
                 "UPDATE task_executions SET state='failed' WHERE id=?1",
                 [&id],
             )?;
-            attention(store, &t, &id, &e.to_string())?;
+            let reason = recovery::classify(&e);
+            if t["recovery_protocol"] == 1 && reason == Reason::TransientModel {
+                let (attempts,limit):(i64,i64)=store.conn.query_row("SELECT e.retry_attempts,MAX(e.retry_limit,s.max_retries) FROM task_executions e,task_settings s WHERE e.id=?1 AND s.singleton=1",[&id],|r|Ok((r.get(0)?,r.get(1)?)))?;
+                store.conn.execute(
+                    "UPDATE task_executions SET retry_attempts=retry_attempts+1 WHERE id=?1",
+                    [&id],
+                )?;
+                if attempts + 1 < limit {
+                    store.conn.execute(
+                        "UPDATE task_executions SET state='pending',retry_at=?2 WHERE id=?1",
+                        params![
+                            id,
+                            now() + (2_i64.pow((attempts as u32).min(6)) * 2).min(120)
+                        ],
+                    )?;
+                    notify(
+                        &store.conn,
+                        &t,
+                        &format!("execution-backoff:{id}:{attempts}"),
+                        "task_progress",
+                        "只读模型调用暂时失败，稍后有限重试；没有启动有副作用的执行。",
+                    )?;
+                    return Ok(());
+                }
+            }
+            blocked(
+                store,
+                &t,
+                &format!("{id}:{}", uuid::Uuid::new_v4()),
+                reason,
+                "execution",
+                &id,
+                &e.to_string(),
+            )?;
         }
     }
     Ok(())
@@ -2934,7 +3295,7 @@ pub async fn tick(store: &Store, exe: &Path) -> Result<()> {
 async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result<()> {
     let context = check_execution(&store.conn, id)?.context("missing business execution")?;
     let (count,max,no_progress):(i64,i64,i64)=store.conn.query_row("SELECT (SELECT COALESCE(SUM(round),0) FROM task_executions WHERE task_id=?1 AND revision=?2),max_rounds,max_no_progress FROM task_settings WHERE singleton=1",params![t["id"].as_str(),revision(t)],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?)))?;
-    ensure!(count < max, "自动执行轮数已达上限");
+
     if let Some(snapshot) = context["snapshot_id"].as_str() {
         crate::task_materials::verify(store, snapshot)?;
     }
@@ -2945,9 +3306,18 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
                 r.get(0)
             })?;
     if status == "running" && store.task(id)?.state != "succeeded" {
-        bail!("执行在重启前未确认结束；不自动重放，请检查后显式重试");
+        return Err(recovery::failure(
+            Reason::ExecutionUncertain,
+            "执行在重启前未确认结束；请查看已有成果后显式恢复",
+        ));
     }
-    if status != "running" {
+    if status != "running" && store.task(id)?.state != "succeeded" {
+        if count >= max + recovery::extra(&store.conn, t, false)? {
+            return Err(recovery::failure(
+                Reason::BudgetExhausted,
+                "自动执行轮数已达上限；可检查后允许有限继续",
+            ));
+        }
         store.conn.execute(
             "UPDATE task_executions SET state='running',round=round+1 WHERE id=?1",
             [id],
@@ -2969,8 +3339,23 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
         return Ok(());
     }
     check_execution(&store.conn, id)?;
+    if crate::task_inputs::unread(&store.conn, id, &run)? {
+        let tx = store.conn.unchecked_transaction()?;
+        tx.execute(
+            "UPDATE task_executions SET state='pending' WHERE id=?1",
+            [id],
+        )?;
+        tx.execute("UPDATE tasks SET state='pending' WHERE id=?1", [id])?;
+        tx.commit()?;
+        return Ok(());
+    }
     let prior:i64=store.conn.query_row("SELECT count(*) FROM task_journal WHERE task_id=?1 AND revision=?2 AND kind='execution_output' AND json_extract(payload,'$.phase')=?3 AND json_extract(payload,'$.body')=?4 AND id!=?5",params![t["id"].as_str(),revision(t),context["phase"].as_str(),out["body"].as_str(),stable_id(&run,"output")],|r|r.get(0))?;
-    ensure!(prior < no_progress, "重复执行结果无进展已达上限");
+    if prior >= no_progress + recovery::extra(&store.conn, t, false)? {
+        return Err(recovery::failure(
+            Reason::BudgetExhausted,
+            "重复执行结果无进展已达上限",
+        ));
+    }
     journal(
         &store.conn,
         t,
@@ -2993,7 +3378,12 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
             params![t["id"].as_str(), revision(t), out["body"].as_str()],
             |r| r.get(0),
         )?;
-        ensure!(repeats < no_progress, "重复问题无进展已达上限");
+        if repeats >= no_progress + recovery::extra(&store.conn, t, false)? {
+            return Err(recovery::failure(
+                Reason::BudgetExhausted,
+                "重复问题无进展已达上限",
+            ));
+        }
         let mut q = out;
         q["id"] = json!(stable_id(&run, "question"));
         let tx = store.conn.unchecked_transaction()?;
@@ -3020,7 +3410,15 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
             .as_array()
             .is_some_and(|files| !files.is_empty())
     {
-        let snapshot = crate::task_materials::freeze(store, t, id, &out["files"])?;
+        let snapshot = match crate::task_materials::freeze(store, t, id, &out["files"]) {
+            Ok(snapshot) => snapshot,
+            Err(error) => {
+                store
+                    .conn
+                    .execute("UPDATE tasks SET state='pending' WHERE id=?1", [id])?;
+                return Err(error);
+            }
+        };
         start_execution(store, t, "analyze", Some(&snapshot), Some(id), &snapshot)?;
         let message = format!(
             "@{} 已找到 {} 份相关材料，正在阅读和整理答案。",
@@ -3095,7 +3493,13 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
         )
     })
     .await??;
-    let candidate = json!({"body":out["body"],"files":out["files"],"sources":sources,"execution_id":id,"run_id":run,"attachment":attachment});
+    let input_ids = crate::task_inputs::list(&store.conn, string(t, "id")?, revision(t))?
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v["id"].clone())
+        .collect::<Vec<_>>();
+    let candidate = json!({"input_ids":input_ids,"body":out["body"],"files":out["files"],"sources":sources,"execution_id":id,"run_id":run,"attachment":attachment});
     let tx = store.conn.unchecked_transaction()?;
     tx.execute("UPDATE task_questions SET state='answered',answer=?2,answered_by=?3 WHERE state='investigating' AND execution_id IN (?1,(SELECT previous_id FROM task_executions WHERE id=?1))",params![id,out["body"].as_str(),format!("Execution run {run}")])?;
     let investigated: Option<String> = tx.query_row(
@@ -3228,6 +3632,72 @@ fn chat_status(t: &Value) -> String {
     }
 }
 
+pub fn supplement(store: &Store, i: &Instruction) -> Result<()> {
+    let t = get(store, i.task_id.as_deref().context("请选择任务")?)?;
+    active(&t)?;
+    ensure!(
+        t["initiator"] == store.owner()?
+            && i.payload["revision"] == t["revision"]
+            && t["confirmed"] == t["revision"],
+        "补充只能用于本人发起的当前已确认任务；目标或执行成员变化请修改要求"
+    );
+    let tx = store.conn.unchecked_transaction()?;
+    let targets = executors(&t)?;
+    crate::task_inputs::save(
+        &tx,
+        &t,
+        &i.request_id,
+        &store.owner()?,
+        "supplement",
+        None,
+        &i.body,
+        &targets,
+        false,
+    )?;
+    emit(
+        &tx,
+        &t,
+        &store.owner()?,
+        &stable_id(&i.request_id, "input"),
+        "input",
+        json!({"input_id":i.request_id,"kind":"supplement","body":i.body}),
+        &targets,
+    )?;
+    journal(
+        &tx,
+        &t,
+        &store.owner()?,
+        &i.request_id,
+        "owner_supplement",
+        &json!({"body":i.body,"input_id":i.request_id}),
+    )?;
+    notify(
+        &tx,
+        &t,
+        &format!("supplement:{}", i.request_id),
+        "task_progress",
+        &format!(
+            "补充 {} 已在本机保存，等待执行方接收和读取。当前暂停或待答问题仍需按提示处理。",
+            i.request_id
+        ),
+    )?;
+    if targets.contains(&store.owner()?)
+        && !has_pending_questions(&tx, &t)?
+        && t["state"] != "needs_attention"
+    {
+        let ex:Option<String>=tx.query_row("SELECT id FROM task_executions WHERE task_id=?1 AND revision=?2 AND state='candidate' ORDER BY rowid DESC LIMIT 1",params![t["id"].as_str(),revision(&t)],|r|r.get(0)).optional()?;
+        if let Some(ex) = ex {
+            tx.execute(
+                "UPDATE task_executions SET state='pending' WHERE id=?1",
+                [&ex],
+            )?;
+            tx.execute("UPDATE tasks SET state='pending' WHERE id=?1", [&ex])?;
+        }
+    }
+    tx.commit()?;
+    Ok(())
+}
+
 pub async fn task_chat(store: &Store, i: &Instruction) -> Result<()> {
     let id = i.task_id.as_deref().context("请选择任务")?;
     let t = get(store, id)?;
@@ -3319,33 +3789,9 @@ pub async fn task_chat(store: &Store, i: &Instruction) -> Result<()> {
             app::respond(store, i, "task_progress", &body)?;
         }
         Some("supplement") => {
-            active(&t)?;
-            let tx = store.conn.unchecked_transaction()?;
-            journal(
-                &tx,
-                &t,
-                &store.owner()?,
-                &i.request_id,
-                "owner_supplement",
-                &json!({"body":i.body}),
-            )?;
-            emit(
-                &tx,
-                &t,
-                &store.owner()?,
-                &stable_id(&i.request_id, "supplement"),
-                "progress",
-                json!({"supplement":i.body,"body":"用户补充当前任务的事实信息","updated_at":now()}),
-                &members(&t)?,
-            )?;
-            notify(
-                &tx,
-                &t,
-                &format!("supplement:{}", i.request_id),
-                "task_progress",
-                &format!("补充已保存在此任务。\n{}", chat_status(&fresh)),
-            )?;
-            tx.commit()?;
+            let mut input = i.clone();
+            input.payload = json!({"revision":fresh["revision"]});
+            supplement(store, &input)?;
         }
         _ => bail!("invalid followup decision"),
     }

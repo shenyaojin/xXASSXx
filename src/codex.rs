@@ -841,7 +841,16 @@ async fn adaptive_execute(
 ) -> std::result::Result<Executed, Failure> {
     if crate::local_agent::attempt(store, lease)
         .await
-        .map_err(|e| Failure::new("local_agent", e.to_string()))?
+        .map_err(|e| {
+            Failure::new(
+                match crate::task_recovery::classify(&e) {
+                    crate::task_recovery::Reason::TransientModel => "model_transient",
+                    crate::task_recovery::Reason::ModelConfiguration => "model_configuration",
+                    _ => "local_agent",
+                },
+                e.to_string(),
+            )
+        })?
     {
         return Ok(Executed::LocalAgent);
     }

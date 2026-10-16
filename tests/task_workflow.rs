@@ -267,7 +267,7 @@ fn schema_eleven_isolated_approval_is_not_silently_expanded() {
     let path = b.path.clone();
     drop(b);
     let c = rusqlite::Connection::open(&path).unwrap();
-    c.execute_batch("ALTER TABLE task_workspaces DROP COLUMN full_access; PRAGMA user_version=11;")
+    c.execute_batch("ALTER TABLE task_workspaces DROP COLUMN full_access; ALTER TABLE app_tasks DROP COLUMN recovery_protocol; ALTER TABLE task_jobs DROP COLUMN retry_at; ALTER TABLE task_jobs DROP COLUMN attempt_limit; ALTER TABLE task_executions DROP COLUMN retry_at; ALTER TABLE task_executions DROP COLUMN retry_attempts; ALTER TABLE task_executions DROP COLUMN retry_limit; DROP TABLE task_input_reads; DROP TABLE task_input_receipts; DROP TABLE task_inputs; DROP TABLE task_blocks; DROP TABLE task_recovery_grants; PRAGMA user_version=11;")
         .unwrap();
     drop(c);
     let b = Store::open(&path).unwrap();
@@ -575,6 +575,9 @@ async fn model_server_with_invalid_reviews(
         let remaining=remaining.clone();
         async move {
         let ctx:Value=serde_json::from_str(v["messages"][1]["content"].as_str().unwrap()).unwrap();
+        if ctx["stage"].is_null() {
+            return axum::Json(json!({"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"delegate","type":"function","function":{"name":"delegate_codex","arguments":json!({"reason":"Use the test executor for this fixture"}).to_string()}}]}}]}));
+        }
         let body=ctx["extra"]["body"].as_str().unwrap_or("");
         assert_eq!(ctx["collaboration"]["executor_members"], json!(["b"]));
         let mut result=match ctx["stage"].as_str().unwrap(){
@@ -2507,5 +2510,176 @@ async fn manual_stop_interrupts_pending_model_and_cannot_be_overwritten() {
         ),
         0
     );
+    server.abort();
+}
+
+#[tokio::test]
+async fn supplements_have_distinct_delivery_and_run_read_receipts() {
+    let team = Team::new();
+    files(&team, "b");
+    let (i, id) = draft(&team, "@b 验证可追踪的补充输入");
+    let mut a = team.store("a");
+    let mut b = team.store("b");
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    transfer(&a, &mut b);
+    let mut cfg = b.member_config().unwrap();
+    cfg.executor.mode = "queue".into();
+    b.configure_member(&cfg).unwrap();
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    let ex = tasks::get(&b, &id).unwrap()["executions"][0]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let lease = b
+        .claim(&ex, false, &team.dir.path().join("b/work"), 120)
+        .unwrap();
+    b.read_task(&ex, &lease.run_id, &lease.token).unwrap();
+    let input = action(
+        &i,
+        &id,
+        "supplement_task",
+        1,
+        "正确输入在另一已授权子目录；保留这句原话。",
+    );
+    tasks::supplement(&a, &input).unwrap();
+    tasks::supplement(&a, &input).unwrap();
+    let v = tasks::get(&a, &id).unwrap();
+    assert_eq!(v["inputs"].as_array().unwrap().len(), 1);
+    assert!(v["inputs"][0]["receipts"][0]["received_at"].is_null());
+    transfer(&a, &mut b);
+    transfer(&a, &mut b);
+    transfer(&b, &mut a);
+    let v = tasks::get(&a, &id).unwrap();
+    assert!(v["inputs"][0]["receipts"][0]["received_at"].is_number());
+    assert!(v["inputs"][0]["receipts"][0]["read_at"].is_null());
+    let out = json!({"body":"只读结论","files":[]}).to_string();
+    assert!(
+        b.submit_result(&ex, &lease.run_id, &lease.token, "result", &out)
+            .unwrap_err()
+            .to_string()
+            .contains("新任务输入")
+    );
+    let ctx = b.read_task(&ex, &lease.run_id, &lease.token).unwrap();
+    assert!(ctx["input"].as_str().unwrap().contains(&input.body));
+    transfer(&b, &mut a);
+    let v = tasks::get(&a, &id).unwrap();
+    assert_eq!(v["inputs"][0]["receipts"][0]["run_id"], lease.run_id);
+    b.submit_result(&ex, &lease.run_id, &lease.token, "result", &out)
+        .unwrap();
+    assert_eq!(count(&b, "SELECT count(*) FROM task_input_reads"), 1);
+    let stale = action(&i, &id, "supplement_task", 0, "过期补充");
+    assert!(tasks::supplement(&a, &stale).is_err());
+    tasks::cancel(&a, &action(&i, &id, "stop_task", 1, "测试停止")).unwrap();
+    assert!(tasks::supplement(&a, &action(&i, &id, "supplement_task", 1, "不能解除取消")).is_err());
+}
+
+#[tokio::test]
+async fn explicit_budget_continuation_preserves_counters_and_is_finite() {
+    let team = Team::new();
+    files(&team, "b");
+    let (i, id) = draft(&team, "@b 有限预算继续");
+    let a = team.store("a");
+    let mut b = team.store("b");
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    transfer(&a, &mut b);
+    let mut cfg = b.member_config().unwrap();
+    cfg.executor.mode = "queue".into();
+    b.configure_member(&cfg).unwrap();
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    let c = rusqlite::Connection::open(&b.path).unwrap();
+    c.execute("UPDATE task_settings SET max_rounds=1", [])
+        .unwrap();
+    c.execute("UPDATE task_executions SET round=1", []).unwrap();
+    cfg.executor.mode = "auto".into();
+    b.configure_member(&cfg).unwrap();
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    assert_eq!(
+        tasks::get(&b, &id).unwrap()["blocker"]["reason"],
+        "budget_exhausted"
+    );
+    let input = action(
+        &i,
+        &id,
+        "supplement_task",
+        1,
+        "先保存补充，不能解除预算阻塞",
+    );
+    tasks::supplement(&a, &input).unwrap();
+    transfer(&a, &mut b);
+    assert_eq!(tasks::get(&b, &id).unwrap()["state"], "needs_attention");
+    tasks::recover(&b, &action(&i, &id, "retry_task", 1, "有限继续")).unwrap();
+    assert_eq!(count(&b, "SELECT SUM(round) FROM task_executions"), 1);
+    assert_eq!(
+        count(&b, "SELECT SUM(execution_rounds) FROM task_recovery_grants"),
+        1
+    );
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    assert_eq!(count(&b, "SELECT SUM(round) FROM task_executions"), 2);
+    // The next discovery/analysis turn exceeds this explicit finite grant.
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    assert_eq!(
+        tasks::get(&b, &id).unwrap()["blocker"]["reason"],
+        "budget_exhausted"
+    );
+    assert_eq!(count(&b, "SELECT count(*) FROM task_recovery_grants"), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn transient_model_retry_is_persisted_bounded_and_cancel_fenced() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    let count_calls = Arc::new(AtomicUsize::new(0));
+    let calls = count_calls.clone();
+    let router = axum::Router::new().route(
+        "/chat/completions",
+        axum::routing::post(move || {
+            let calls = calls.clone();
+            async move {
+                calls.fetch_add(1, Ordering::SeqCst);
+                axum::http::StatusCode::SERVICE_UNAVAILABLE
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let team = Team::new();
+    let (i, id) = draft(&team, "@b 网络退避回归");
+    let mut a = team.store("a");
+    let mut cfg = a.member_config().unwrap();
+    cfg.model =
+        json!({"provider":"compatible","base_url":url,"model":"fault-injection","api_key_env":""});
+    a.configure_member(&cfg).unwrap();
+    tasks::prepare_model(&a, &id).await.unwrap();
+    assert_eq!(count_calls.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM task_jobs WHERE retry_at IS NOT NULL AND attempts=1"
+        ),
+        1
+    );
+    drop(a);
+    let a = team.store("a");
+    tasks::tick(&a, Path::new(BIN)).await.unwrap();
+    assert_eq!(count_calls.load(Ordering::SeqCst), 1);
+    tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+    tasks::tick(&a, Path::new(BIN)).await.unwrap();
+    assert_eq!(count_calls.load(Ordering::SeqCst), 2);
+    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+    tasks::tick(&a, Path::new(BIN)).await.unwrap();
+    assert_eq!(
+        tasks::get(&a, &id).unwrap()["blocker"]["reason"],
+        "budget_exhausted"
+    );
+    assert_eq!(count_calls.load(Ordering::SeqCst), 3);
+    tasks::recover(&a, &action(&i, &id, "retry_task", 1, "修复后继续")).unwrap();
+    assert_eq!(count(&a, "SELECT attempts FROM task_jobs"), 3);
+    assert_eq!(count(&a, "SELECT attempt_limit FROM task_jobs"), 6);
+    tasks::cancel(&a, &action(&i, &id, "stop_task", 1, "取消优先")).unwrap();
+    tasks::tick(&a, Path::new(BIN)).await.unwrap();
+    assert_eq!(count_calls.load(Ordering::SeqCst), 3);
     server.abort();
 }

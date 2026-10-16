@@ -396,6 +396,7 @@ fn retry_uses_the_highlighted_task_instead_of_a_stale_chat_selection() {
         KeyEvent::new(KeyCode::Char('y'), KeyModifiers::CONTROL),
     )
     .unwrap();
+    key(&mut ui, &mut s, KeyCode::Enter);
     let conn = rusqlite::Connection::open(&s.path).unwrap();
     let task: String = conn
         .query_row(

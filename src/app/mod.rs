@@ -168,6 +168,7 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
                 | "confirm_task"
                 | "revise_task"
                 | "answer_task"
+                | "supplement_task"
                 | "reopen_task"
         ),
         "不支持的操作"
