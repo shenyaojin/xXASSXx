@@ -240,7 +240,7 @@ pub fn tick(c: &Connection, at: i64) -> Result<()> {
         [],
         |r| r.get::<_, String>(0),
     )?)?;
-    let tx = c.unchecked_transaction()?;
+    let tx = rusqlite::Transaction::new_unchecked(c, rusqlite::TransactionBehavior::Immediate)?;
     let tasks = {
         let mut q=tx.prepare("SELECT id,revision,initiator,participants,facts,state,next_meeting,updated_at FROM relay_tasks ORDER BY id")?;
         q.query_map([],|r|Ok(json!({"id":r.get::<_,String>(0)?,"revision":r.get::<_,i64>(1)?,"initiator":r.get::<_,String>(2)?,"participants":r.get::<_,String>(3)?,"facts":r.get::<_,String>(4)?,"state":r.get::<_,String>(5)?,"due":r.get::<_,i64>(6)?,"updated_at":r.get::<_,i64>(7)?})))?.collect::<rusqlite::Result<Vec<_>>>()?

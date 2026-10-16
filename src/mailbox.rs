@@ -7,7 +7,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     routing::{get, post},
 };
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -187,8 +187,11 @@ async fn send(
     }
     msg.validate()
         .map_err(|_| problem(StatusCode::BAD_REQUEST, "invalid message"))?;
+    // Reserve the WAL writer before reading recipient/idempotency state.
+    // Upgrading a deferred read transaction fails immediately under a
+    // concurrent heartbeat or delivery; busy_timeout cannot repair it.
     let tx = c
-        .transaction()
+        .transaction_with_behavior(TransactionBehavior::Immediate)
         .map_err(|_| problem(StatusCode::INTERNAL_SERVER_ERROR, "storage unavailable"))?;
     let recipient: bool = tx
         .query_row(
@@ -434,7 +437,7 @@ async fn local_task_facts(
         uuid::Uuid::parse_str(id)?;
         let w: crate::task_coordinator::Wire = serde_json::from_value(p["event"].clone())?;
         ensure!(p.to_string().len() <= 32768, "fact too large");
-        let tx = c.transaction()?;
+        let tx = c.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let raw = p["event"].to_string();
         let old: Option<(String, String)> = tx
             .query_row(

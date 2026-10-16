@@ -376,7 +376,7 @@ pub fn cached(store: &Store) -> Result<Vec<Value>> {
         .collect()
 }
 pub fn apply(store: &Store, page: &Value) -> Result<()> {
-    let tx = store.conn.unchecked_transaction()?;
+    let tx = store.write_transaction()?;
     let mut cursor = status(store)?["cursor"].as_i64().unwrap_or(0);
     let events = page["events"]
         .as_array()

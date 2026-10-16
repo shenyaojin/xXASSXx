@@ -2,6 +2,62 @@ mod common;
 use common::Team;
 use xxassxx::{knowledge::Content, team::Message};
 
+#[tokio::test]
+async fn relay_send_waits_for_concurrent_writer_without_losing_or_duplicating_message() {
+    use std::time::Duration;
+    let team = Team::new();
+    let message = team
+        .store("b")
+        .new_request(
+            "a",
+            "synthetic concurrent delivery",
+            "metadata",
+            (None, None),
+            None,
+            &uuid::Uuid::new_v4().to_string(),
+        )
+        .unwrap()
+        .message;
+    let writer = rusqlite::Connection::open(team.dir.path().join("relay.sqlite3")).unwrap();
+    writer.execute_batch("BEGIN IMMEDIATE").unwrap();
+    // WAL readers can proceed while this write lock is held. A deferred
+    // read-then-write transaction fails immediately when it tries to upgrade;
+    // the relay must instead reserve its writer slot before reading state.
+    let client = reqwest::Client::new();
+    let request = || {
+        client
+            .post(format!("{}/v1/messages", team.url))
+            .bearer_auth("local-test-credential-bbbbbbbb")
+            .json(&message)
+            .send()
+    };
+    let mut pending = Box::pin(request());
+    let early = tokio::time::timeout(Duration::from_millis(250), &mut pending).await;
+    assert!(
+        early.is_err(),
+        "send failed instead of waiting for the concurrent writer: {early:?}"
+    );
+    writer.execute_batch("COMMIT").unwrap();
+    assert!(pending.await.unwrap().status().is_success());
+    assert!(request().await.unwrap().status().is_success());
+    let count: i64 = writer
+        .query_row(
+            "SELECT count(*) FROM relay_messages WHERE id=?1",
+            [&message.message_id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(count, 1);
+    team.sync("a");
+    assert!(
+        team.store("a")
+            .messages(None)
+            .unwrap()
+            .iter()
+            .any(|r| r.message.message_id == message.message_id)
+    );
+}
+
 #[test]
 fn independent_databases_real_http_offline_restart_reply_followup_and_third_member() {
     let mut t = Team::new();
