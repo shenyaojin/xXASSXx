@@ -925,6 +925,21 @@ pub fn delivery_status(store: &Store, t: &Value, candidates: &Value) -> Result<V
                 "available_here":recipient == store.owner()?,"next_owner":null}]
         }));
     }
+    if ready
+        && t["draft"]["mode"] != "files"
+        && t["draft"]["deliver_files"] != true
+        && candidates.as_array().is_some_and(|items| {
+            items
+                .iter()
+                .all(|c| !c["result"]["attachment"]["transfer_id"].is_string())
+        })
+    {
+        // A normal answer returns in the task journal. No attachment was
+        // requested or prepared, so there is no missing-file sender action.
+        return Ok(
+            json!({"ready":true,"requires_attachments":false,"next_owner":null,"body":"","items":[]}),
+        );
+    }
     let mut items = vec![];
     for c in candidates.as_array().context("missing candidates")? {
         let result = c.get("result").unwrap_or(c);
