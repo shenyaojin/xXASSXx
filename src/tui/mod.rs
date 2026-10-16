@@ -86,6 +86,10 @@ enum Panel {
     Stop,
     Questions,
     Revise,
+    Supplement,
+    Roles,
+    Handoff,
+    Recovery,
     TaskAccess,
     AccessPath,
     AccessTimeout,
@@ -135,6 +139,7 @@ pub struct Ui {
     reconnect_monitor: bool,
     access_form: Option<AccessForm>,
     stop_form: Option<StopForm>,
+    recovery_form: Option<Value>,
     send_to: Option<String>,
     transfer_id: Option<String>,
     transfer_file: Option<String>,
@@ -144,6 +149,18 @@ pub struct Ui {
     codex: codex_entry::CodexEntry,
 }
 impl Ui {
+    fn open_recovery(&mut self) -> Result<()> {
+        let task = if self.panel == Panel::Tasks {
+            self.task_rows().get(self.index).cloned()
+        } else {
+            self.current_task().cloned()
+        }
+        .context("请先选择要恢复的任务")?;
+        self.selected_task = task["id"].as_str().map(str::to_owned);
+        self.recovery_form = Some(task);
+        self.panel = Panel::Recovery;
+        Ok(())
+    }
     pub fn new(store: &Store, project: Value) -> Result<Self> {
         let owner = store.owner()?;
         app::select_working_directory(store, project["id"].as_str().unwrap())?;
@@ -173,6 +190,7 @@ impl Ui {
             reconnect_monitor: false,
             access_form: None,
             stop_form: None,
+            recovery_form: None,
             send_to: None,
             transfer_id: None,
             transfer_file: None,
@@ -292,6 +310,22 @@ impl Ui {
                 Path::new(self.project["path"].as_str().context("工作目录不可用")?),
             )?,
             "/tasks" => self.open_tasks(0),
+            "/answer" => {
+                ensure!(self.current_task().is_some(), "请先选择任务");
+                self.panel = Panel::Questions;
+                self.index = 0;
+            }
+            "/supplement" => {
+                ensure!(self.current_task().is_some(), "请先选择任务");
+                self.selected_question = None;
+                self.panel = Panel::Supplement;
+            }
+            "/roles" | "/handoff" => {
+                ensure!(self.current_task().is_some(),"请先选择任务");
+                self.selected_question=None;
+                self.panel=if name=="/roles" {Panel::Roles}else{Panel::Handoff};
+            }
+            "/recover" => self.open_recovery()?,
             "/stop" => self.open_stop()?,
             "/archived" => self.open_tasks(2),
             "/archive" => {
@@ -1021,14 +1055,7 @@ impl Ui {
                     return Ok(false);
                 }
                 KeyCode::Char('y') => {
-                    let task = if self.panel == Panel::Tasks {
-                        self.task_rows().get(self.index).cloned()
-                    } else {
-                        self.current_task().cloned()
-                    }
-                    .context("请先选中任务，再按 CtrlY 重试")?;
-                    self.selected_task = task["id"].as_str().map(str::to_owned);
-                    self.enqueue(store, "retry_task", "重试原任务".into(), json!({}))?;
+                    self.open_recovery()?;
                     return Ok(false);
                 }
                 KeyCode::Char('n') => {
@@ -1042,6 +1069,25 @@ impl Ui {
             }
         }
         match self.panel {
+            Panel::Recovery => {
+                if key.code == KeyCode::Enter {
+                    let t = self.recovery_form.clone().context("请重新打开恢复页面")?;
+                    ensure!(
+                        self.current_task()
+                            .is_some_and(|current| current["revision"] == t["revision"]
+                                && current["blocker"] == t["blocker"]),
+                        "任务或失败步骤已变化，请重新打开恢复页面"
+                    );
+                    self.enqueue(
+                        store,
+                        "retry_task",
+                        "检查记录后允许有限继续".into(),
+                        json!({"block_id":t["blocker"]["id"]}),
+                    )?;
+                    self.panel = Panel::Chat;
+                }
+                return Ok(false);
+            }
             Panel::Questions => {
                 let questions = self
                     .current_task()
@@ -1432,6 +1478,14 @@ impl Ui {
                     )?;
                     self.panel = Panel::Chat;
                 }
+                Panel::Roles | Panel::Handoff => {
+                    self.enqueue(store,if self.panel==Panel::Roles {"roles_task"} else {"confirm_stop"},text,json!({}))?;
+                    self.panel=Panel::Chat;
+                }
+                Panel::Supplement => {
+                    self.enqueue(store, "supplement_task", text, json!({}))?;
+                    self.panel = Panel::Chat;
+                }
                 Panel::Revise => {
                     let action = if self.current_task().is_some_and(|t| t["archived"] == true) {
                         "reopen_task"
@@ -1737,7 +1791,10 @@ impl Ui {
             Panel::ProjectPath => "工作目录路径",
             Panel::RootPath => "允许只读访问的目录",
             Panel::NewTask => "任务目标 · @成员 指定执行人",
-            Panel::Revise => "修改要求 · 提交后重新确认",
+            Panel::Revise => "完整有效要求 · 替代旧要求 · 提交后重新确认",
+            Panel::Roles => "角色纠正 · 输入：执行 @成员 原因，或 接收 @成员 原因",
+            Panel::Handoff => "确认旧执行已停止 · 填写副作用、保留成果与安全边界核对依据",
+            Panel::Supplement => "补充或纠正当前任务 · 原话保存 · 不改变目标和权限",
             Panel::Stop => "停止原因 · Tab 切换方式 · Enter 确认 · Esc 返回",
             Panel::AccessPath => "任务文件夹的保存位置",
             Panel::AccessTimeout => "运行时限（分钟）",
@@ -1778,6 +1835,9 @@ impl Ui {
                 | Panel::RootPath
                 | Panel::NewTask
                 | Panel::Revise
+                | Panel::Supplement
+                | Panel::Roles
+                | Panel::Handoff
                 | Panel::AttachmentSave
                 | Panel::AttachmentAnalyze
                 | Panel::Stop
@@ -1843,7 +1903,14 @@ impl Ui {
         );
         if !matches!(
             self.panel,
-            Panel::Chat | Panel::ProjectPath | Panel::RootPath | Panel::NewTask | Panel::Revise
+            Panel::Chat
+                | Panel::ProjectPath
+                | Panel::RootPath
+                | Panel::NewTask
+                | Panel::Revise
+                | Panel::Supplement
+                | Panel::Roles
+                | Panel::Handoff
         ) {
             self.panel(f, body, store);
         }
@@ -2096,6 +2163,44 @@ impl Ui {
         }
         let mut lines = vec![];
         let title = match self.panel {
+            Panel::Recovery => {
+                if let Some(t) = &self.recovery_form {
+                    let b = &t["blocker"];
+                    let reason =
+                        serde_json::from_value::<crate::task_recovery::Reason>(b["reason"].clone())
+                            .ok();
+                    lines.push(format!("任务：{}", t["goal"].as_str().unwrap_or("")));
+                    lines.push(format!(
+                        "原因：{}",
+                        reason
+                            .map(|r| r.label())
+                            .or(b["detail"].as_str().or(t["error"].as_str()))
+                            .unwrap_or("请查看当前状态")
+                    ));
+                    lines.push(format!(
+                        "责任人：@{}",
+                        b["owner"]
+                            .as_str()
+                            .or(t["next_owner"].as_str())
+                            .unwrap_or(&self.owner)
+                    ));
+                    lines.push(format!(
+                        "恢复步骤：{}",
+                        match b["step_kind"].as_str() {
+                            Some("job") => "上次未完成的模型判断或结果检查",
+                            Some("execution") => "核对已有运行和产物，再继续未完成工作",
+                            _ => "检查历史中未完成的步骤",
+                        }
+                    ));
+                    lines.push("已有成果和累计次数保留；本次仅增加一份有限尝试额度。".into());
+                    if reason == Some(crate::task_recovery::Reason::ModelConfiguration) {
+                        lines.push("请先检查责任人的模型凭据、额度或配置，修复后再继续。".into());
+                    }
+                    lines.push("权限问题须在执行电脑处理；待答问题用 /answer。".into());
+                    lines.push("Enter 允许有限继续 · CtrlD 查看详细记录 · Esc 返回".into());
+                }
+                "查看并恢复失败步骤"
+            }
             Panel::AccessMode => {
                 lines.push(format!(
                     "本机 @{} 的访问模式 · 不改变其他成员的设置",
@@ -2793,7 +2898,7 @@ fn draw_lines(
         .collect::<Vec<_>>();
     draw_rich(f, area, title, &lines, scroll, bottom);
 }
-const HELP: &str = "输入 / 查看命令；↑↓ 选择，Enter 打开，Tab 补全。\n\n对话：Enter 发送 · CtrlJ / AltEnter 换行 · @成员 选择参与人\n任务：CtrlT 查看 · Tab 分类 · a 归档或恢复 · A 归档已结束任务\n团队动态：/activity · 查看全员共享的任务进展和结果\n收件箱：/inbox · n 留言 · r 回复 · m 标为已查看\n附件：CtrlF · n 发送 · Enter 查看\n历史对话：CtrlO · n 新对话\n手动 Codex：/codex · 选目录进入，退出后回到本会话\n工作目录：CtrlP · 可读取目录：CtrlR / /roots\n访问模式：/access · 手动重连：/reconnect\n\n任务确认：CtrlS · 修改：CtrlE · 回答问题：CtrlB\n执行授权：CtrlG · 详情和记录：CtrlD\n停止任务：CtrlX / /stop · 重试：CtrlY\n\n停止：填写原因，选择停止并归档或仅停止。\n归档只整理本机列表，保留历史，不会重新启动任务。\nAsk for approval 下，写入运行须执行方批准；Full access 按本机预授权自动执行。\n退出：CtrlQ（后台继续工作）";
+const HELP: &str = "输入 / 查看命令；↑↓ 选择，Enter 打开，Tab 补全。\n\n对话：Enter 发送 · CtrlJ / AltEnter 换行 · @成员 选择参与人\n任务：CtrlT 查看 · Tab 分类 · a 归档或恢复 · A 归档已结束任务\n团队动态：/activity · 查看全员共享的任务进展和结果\n收件箱：/inbox · n 留言 · r 回复 · m 标为已查看\n附件：CtrlF · n 发送 · Enter 查看\n历史对话：CtrlO · n 新对话\n手动 Codex：/codex · 选目录进入，退出后回到本会话\n工作目录：CtrlP · 可读取目录：CtrlR / /roots\n访问模式：/access · 手动重连：/reconnect\n\n任务确认：CtrlS · 修改：CtrlE · 回答问题：CtrlB\n执行授权：CtrlG · 详情和记录：CtrlD\n停止任务：CtrlX / /stop · 查看并恢复：CtrlY / /recover\n补充纠正：/supplement · 回答指定问题：/answer\n\n停止：填写原因，选择停止并归档或仅停止。\n归档只整理本机列表，保留历史，不会重新启动任务。\nAsk for approval 下，写入运行须执行方批准；Full access 按本机预授权自动执行。\n退出：CtrlQ（后台继续工作）";
 
 pub async fn open(args: OpenArgs) -> Result<()> {
     let default_directory = args.directory.is_none();
@@ -2999,6 +3104,9 @@ pub async fn open(args: OpenArgs) -> Result<()> {
                             | Panel::RootPath
                             | Panel::NewTask
                             | Panel::Revise
+                            | Panel::Supplement
+                | Panel::Roles
+                | Panel::Handoff
                             | Panel::AccessPath
                             | Panel::AccessTimeout
                             | Panel::AttachmentSave

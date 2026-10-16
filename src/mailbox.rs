@@ -319,7 +319,7 @@ async fn whoami(
         )
     })?;
     Ok(Json(
-        json!({"team_id":relay.team,"member_id":me,"task_protocol":2,"file_transfer_protocol":1,"member_inbox_protocol":1,"team_activity_protocol":1,
+        json!({"team_id":relay.team,"member_id":me,"task_protocol":2,"file_transfer_protocol":1,"member_inbox_protocol":1,"team_activity_protocol":1,"task_roles_protocol":1,
             "member_directory":{"protocol":1,"members":members}}),
     ))
 }
@@ -330,6 +330,8 @@ struct PresenceInput {
     activity: String,
     #[serde(default)]
     team_activity_protocol: u32,
+    #[serde(default)]
+    task_roles_protocol: u32,
 }
 async fn presence_post(
     State(relay): State<Arc<Relay>>,
@@ -343,6 +345,9 @@ async fn presence_post(
         return Err(problem(StatusCode::BAD_REQUEST, "invalid activity"));
     }
     c.execute("INSERT INTO relay_presence(member_id,busy,seen_at) VALUES(?1,?2,?3) ON CONFLICT(member_id) DO UPDATE SET busy=excluded.busy,seen_at=excluded.seen_at",params![me,input.activity=="busy",now()]).map_err(|_|problem(StatusCode::INTERNAL_SERVER_ERROR,"storage unavailable"))?;
+    if input.task_roles_protocol==1 {
+        c.execute("INSERT INTO relay_role_capabilities VALUES(?1,?2) ON CONFLICT(member_id) DO UPDATE SET seen_at=excluded.seen_at",params![me,now()]).map_err(request_error_from_sql)?;
+    } else {c.execute("DELETE FROM relay_role_capabilities WHERE member_id=?1",[&me]).map_err(request_error_from_sql)?;}
     if input.team_activity_protocol == 1 {
         c.execute("INSERT INTO relay_activity_capabilities VALUES(?1,?2) ON CONFLICT(member_id) DO UPDATE SET seen_at=excluded.seen_at",params![me,now()]).map_err(request_error_from_sql)?;
     } else {

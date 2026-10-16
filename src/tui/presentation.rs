@@ -232,14 +232,12 @@ pub(super) fn task_location(task: &Value, owner: &str) -> String {
         return format!("本机只读附件材料：{path}");
     }
     if task["protocol"] == 2 {
-        let initiator = task["initiator"].as_str().unwrap_or(owner);
-        let peers = task["participants"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(Value::as_str)
-            .filter(|m| *m != initiator)
-            .collect::<Vec<_>>();
+        let assigned=crate::task_roles::executors(task).unwrap_or_default();
+        let peers=assigned.iter().map(String::as_str).collect::<Vec<_>>();
+        let destination=task["roles"]["recipients"].as_array().map(|v|v.iter().filter_map(Value::as_str).collect::<Vec<_>>().join("、@"));
+        let suffix=destination.map(|to|format!(" · 成果接收：@{to}")).unwrap_or_default();
+        let stops=task["assignment_stops"].as_array().into_iter().flatten().filter(|v|v["state"]!="stopped").map(|v|format!("；旧 @{} {}，下一步由旧端 /handoff 核对",v["executor"].as_str().unwrap_or("?"),if v["state"]=="needs_check" {"进程已停止，副作用待核对"} else {"尚未确认停止（可能离线）"})).collect::<Vec<_>>().join("");
+        let suffix=format!("{suffix}{stops} · /roles 纠正安排");
         if !peers.is_empty() {
             if peers.contains(&owner) {
                 let path = task["execution_permission"]["directory"]
@@ -247,10 +245,10 @@ pub(super) fn task_location(task: &Value, owner: &str) -> String {
                     .or_else(|| task["execution_permission"]["parent"].as_str())
                     .or_else(|| task["project"].as_str())
                     .unwrap_or("");
-                return format!("执行成员：@{owner}（本机） · 目录：{path}");
+                return format!("执行成员：@{owner}（本机） · 目录：{path}{suffix}");
             }
             return format!(
-                "执行成员：@{} · 使用执行成员自己的工作目录",
+                "执行成员：@{} · 使用执行成员自己的工作目录{suffix}",
                 peers.join("、@")
             );
         }

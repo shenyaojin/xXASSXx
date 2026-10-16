@@ -531,7 +531,8 @@ pub async fn process_one(store: &mut Store) -> Result<bool> {
             match i.action.as_str() {
                 "confirm_task"=>crate::task_coordinator::confirm(store,&i)?,
                 "stop_task"=>crate::task_coordinator::cancel(store,&i)?,
-                "retry_task"=>{crate::task_coordinator::recover(store,&i)?;if crate::task_coordinator::get(store,id)?["state"]=="draft"{crate::task_coordinator::prepare_model(store,id).await?;}},
+                "retry_task"=>{crate::task_coordinator::recover(store,&i)?;},
+                "supplement_task"=>crate::task_coordinator::supplement(store,&i)?,
                 "answer_task"=>crate::task_coordinator::answer(store,&i)?,
                 "revise_task"|"reopen_task"=>{crate::task_coordinator::revise(store,&i)?;crate::task_coordinator::prepare_model(store,id).await?;},
                 "chat"|"create_task"=>{

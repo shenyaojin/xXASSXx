@@ -168,6 +168,9 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
                 | "confirm_task"
                 | "revise_task"
                 | "answer_task"
+                | "supplement_task"
+                | "roles_task"
+                | "confirm_stop"
                 | "reopen_task"
         ),
         "不支持的操作"
@@ -299,7 +302,20 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
         let target = peer.or_else(|| input.payload["peer"].as_str());
         crate::task_coordinator::create(&tx, input, &owner, target)?;
     }
+    if matches!(input.action.as_str(),"roles_task"|"confirm_stop") {tx.execute("UPDATE app_commands SET state='processing' WHERE id=?1",[&input.request_id])?;}
     tx.commit()?;
+    if matches!(input.action.as_str(),"roles_task"|"confirm_stop") {
+        let outcome=(||->Result<()> {
+            if input.action=="confirm_stop" {crate::task_roles::confirm_stop(store,input)?;}
+            else if crate::task_roles::change(store,input)? {
+                let t=crate::task_coordinator::get(store,input.task_id.as_deref().unwrap())?;
+                store.conn.execute("INSERT OR IGNORE INTO task_jobs(id,task_id,revision,kind,payload,created_at) VALUES(?1,?2,?3,'prepare','{}',?4)",params![stable_id(&input.request_id,"prepare-plan"),t["id"].as_str(),t["revision"].as_i64(),now()])?;
+            }
+            Ok(())
+        })();
+        store.conn.execute("UPDATE app_commands SET state=?2,error=?3 WHERE id=?1",params![input.request_id,if outcome.is_ok(){"done"}else{"failed"},outcome.as_ref().err().map(ToString::to_string)])?;
+        outcome?;
+    }
     command(store, &input.request_id)
 }
 pub fn event(

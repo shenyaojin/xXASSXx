@@ -9,7 +9,7 @@ use std::{
 };
 use uuid::Uuid;
 
-pub const SCHEMA_VERSION: u32 = 12;
+pub const SCHEMA_VERSION: u32 = 14;
 
 pub fn now() -> i64 {
     SystemTime::now()
@@ -138,6 +138,12 @@ impl Store {
         }
         if version < 12 {
             conn.execute_batch(include_str!("schema_v12.sql"))?;
+        }
+        if version < 13 {
+            conn.execute_batch(include_str!("schema_v13.sql"))?;
+        }
+        if version < 14 {
+            conn.execute_batch(include_str!("schema_v14.sql"))?;
         }
         Ok(())
     }
@@ -303,14 +309,15 @@ impl Store {
         tx.execute("UPDATE runs SET reads=reads+1 WHERE id=?1", [run])?;
         let input: String =
             tx.query_row("SELECT input FROM tasks WHERE id=?1", [task], |r| r.get(0))?;
-        tx.commit()?;
-        let input = if let Some(context) = crate::native_tasks::context(&self.conn, task)? {
+        let input = if let Some(context) = crate::native_tasks::context(&tx, task)? {
+            crate::task_inputs::read(&tx, task, run)?;
             context.to_string()
-        } else if let Some(context) = crate::workflow::context(&self.conn, task)? {
+        } else if let Some(context) = crate::workflow::context(&tx, task)? {
             context.to_string()
         } else {
             input
         };
+        tx.commit()?;
         Ok(json!({"task_id":task,"run_id":run,"input":input}))
     }
 
@@ -351,6 +358,10 @@ impl Store {
             if crate::workflow::for_task(&tx, task)?.is_some() {
                 crate::workflow::validate_turn(&tx, task, run, result)?;
             }
+            ensure!(
+                !crate::task_inputs::unread(&tx, task, run)?,
+                "有新任务输入尚未读取；请重新调用 get_task，核对补充后再提交结果"
+            );
             crate::native_tasks::validate(&tx, task, result)?;
             tx.execute(
                 "UPDATE runs SET result=?2,idempotency_key=?3 WHERE id=?1",

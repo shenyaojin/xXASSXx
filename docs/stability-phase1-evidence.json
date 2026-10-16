@@ -1,0 +1,400 @@
+{
+  "date": "2026-10-16",
+  "timezone": "America/Denver",
+  "status": "phase1_accepted_candidate_not_released",
+  "source_commit": "0d2f04f90c6c1dc29927cc3182fcb7f90a41d920",
+  "implementation_commit": "df2620363ff59baa5a379b92e52125808e35e60e",
+  "branch": "codex/stability-phase1",
+  "version": "0.9.0-alpha",
+  "personal_schema": 13,
+  "build_inputs": {
+    "count": 122,
+    "manifest": "smoke-output/stability-phase1-20261015/build-inputs.json",
+    "manifest_sha256": "d7d7f9dc1cee481f7afe953401a02a518a0592acbd8087036921cfbd9e6f0aaf",
+    "remote_mismatches": []
+  },
+  "real_acceptance_binary_sha256": "a4fa46785f3aabf2a926b32e6b99cdacc3d51babb657e2a7edfcb3d154f10567",
+  "environment": {
+    "initiator": "a@Lakota",
+    "executor": "b@Trader",
+    "mailbox": "isolated actual relay, localhost through SSH tunnels",
+    "interfaces": "two real PTYs, captured text and ANSI",
+    "local_agent": "DeepSeek deepseek-flash, thinking disabled; actual upstream through fault proxy",
+    "execution_agent": "official codex-cli 0.162.1",
+    "access_mode": "Ask for approval on both members; one explicit local approval per confirmed task",
+    "scope": "synthetic input/output only, no daily clients or user tasks modified"
+  },
+  "cases": {
+    "A": {
+      "task_id": "6ea01e03-88b8-5f50-854e-e97c3f322fa2",
+      "revision": 1,
+      "question_id": "60ff2971-6976-5064-95cd-a38cf3f9b8be",
+      "answer_input_id": "43269e83-a28c-48c5-906c-574010d8ea06",
+      "result": "状态询问保持等待；断线回答显示等待接收；重连后接收原话；同任务同会话交付。",
+      "evidence": [
+        "smoke-output/stability-phase1-20261015/lakota/screens-recovery-a/acd-status-still-waiting.txt",
+        "smoke-output/stability-phase1-20261015/lakota/screens-recovery-a/acd-answer-offline.txt",
+        "smoke-output/stability-phase1-20261015/lakota/acd-offline.json",
+        "smoke-output/stability-phase1-20261015/trader/acd-offline.json",
+        "smoke-output/stability-phase1-20261015/lakota/screens-recovery-a/abdf-final-a.txt"
+      ],
+      "status": "passed",
+      "runs": [
+        {
+          "id": "9d687602-be2f-45ea-ae73-95427eb33710",
+          "state": "succeeded",
+          "session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "resumed_session_id": null,
+          "reads": 1,
+          "submissions": 1,
+          "error_code": null
+        },
+        {
+          "id": "414b775b-8aee-4b96-8b2d-238d63903698",
+          "state": "succeeded",
+          "session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "resumed_session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "reads": 3,
+          "submissions": 1,
+          "error_code": null
+        }
+      ],
+      "consumption": {
+        "input_id": "43269e83-a28c-48c5-906c-574010d8ea06",
+        "member": "b",
+        "received_at": 1792131056,
+        "read_at": 1792131235,
+        "execution_id": "30244778-582d-5575-ac8f-b8bbbf2ea18a",
+        "run_id": "414b775b-8aee-4b96-8b2d-238d63903698"
+      }
+    },
+    "B": {
+      "task_id": "6ea01e03-88b8-5f50-854e-e97c3f322fa2",
+      "revision": 1,
+      "input_id": "9ccd90a2-c9fd-42f3-8b49-f9dda6fe298f",
+      "result": "补充在运行中接收；旧上下文提交被拒绝，get_task 读取新输入后采用 inputs/revised/values.json；101+7+11=119，乘3得357。旧249结果归档保留，未交付为最终结果。",
+      "evidence": [
+        "smoke-output/stability-phase1-20261015/lakota/screens-recovery-a/acd-correction-saved.txt",
+        "smoke-output/stability-phase1-20261015/lakota/screens-recovery-a/acd-input-receipt.txt",
+        "smoke-output/stability-phase1-20261015/trader/abdf-final-events.json",
+        "smoke-output/stability-phase1-20261015/trader/abdf-verified-b.json",
+        "smoke-output/stability-phase1-20261015/lakota/abdf-verified-a.json"
+      ],
+      "status": "passed",
+      "runs": [
+        {
+          "id": "9d687602-be2f-45ea-ae73-95427eb33710",
+          "state": "succeeded",
+          "session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "resumed_session_id": null,
+          "reads": 1,
+          "submissions": 1,
+          "error_code": null
+        },
+        {
+          "id": "414b775b-8aee-4b96-8b2d-238d63903698",
+          "state": "succeeded",
+          "session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "resumed_session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "reads": 3,
+          "submissions": 1,
+          "error_code": null
+        }
+      ],
+      "consumption": {
+        "input_id": "9ccd90a2-c9fd-42f3-8b49-f9dda6fe298f",
+        "member": "b",
+        "received_at": 1792131194,
+        "read_at": 1792131235,
+        "execution_id": "30244778-582d-5575-ac8f-b8bbbf2ea18a",
+        "run_id": "414b775b-8aee-4b96-8b2d-238d63903698"
+      }
+    },
+    "C": {
+      "task_id": "cbedbee7-a30a-5b8c-bc0d-a61afef9fd19",
+      "revision": 2,
+      "fault": "实际审核 HTTP 链路一次503；其余请求转发真实 DeepSeek，未模拟成功响应。",
+      "result": "持久化有限退避后自动重新调用真实模型；同任务交付，无人工恢复或新增计算。",
+      "evidence": [
+        "smoke-output/stability-phase1-20261015/lakota/a/proxy-events.jsonl",
+        "smoke-output/stability-phase1-20261015/lakota/c-final.json",
+        "smoke-output/stability-phase1-20261015/trader/c-final.json",
+        "smoke-output/stability-phase1-20261015/lakota/screens-recovery-a/c-final.txt",
+        "smoke-output/stability-phase1-20261015/trader/screens-recovery-b/c-final.txt"
+      ],
+      "status": "passed",
+      "runs": [
+        {
+          "id": "1ba7cdbe-48c7-4497-bca8-329d0345ad90",
+          "state": "succeeded",
+          "session_id": "01a1435c-bc06-7253-9d87-5fe4c8cc437a",
+          "resumed_session_id": null,
+          "reads": 1,
+          "submissions": 1,
+          "error_code": null
+        }
+      ],
+      "retry_record": {
+        "step_id": "2ad239ff-03b0-5f26-99af-346957579868",
+        "attempts": 2,
+        "automatic_limit": 3,
+        "retry_at": 1792131564,
+        "injected_503_at": 1792131562,
+        "real_200_at": 1792131567,
+        "execution_runs": 1
+      }
+    },
+    "D": {
+      "task_id": "6ea01e03-88b8-5f50-854e-e97c3f322fa2",
+      "revision": 1,
+      "automatic_execution_rounds": 1,
+      "explicit_extra_rounds": 1,
+      "cumulative_execution_rounds": 2,
+      "result": "产品 task-limits 设置小预算，真实达到上限；/recover Enter 新增一轮；原round保留并从1增至2，完成原任务。",
+      "evidence": [
+        "smoke-output/stability-phase1-20261015/trader/acd-after-reconnect.json",
+        "smoke-output/stability-phase1-20261015/lakota/screens-recovery-a/acd-budget-recovery.txt",
+        "smoke-output/stability-phase1-20261015/trader/abdf-final.json"
+      ],
+      "status": "passed",
+      "runs": [
+        {
+          "id": "9d687602-be2f-45ea-ae73-95427eb33710",
+          "state": "succeeded",
+          "session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "resumed_session_id": null,
+          "reads": 1,
+          "submissions": 1,
+          "error_code": null
+        },
+        {
+          "id": "414b775b-8aee-4b96-8b2d-238d63903698",
+          "state": "succeeded",
+          "session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "resumed_session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "reads": 3,
+          "submissions": 1,
+          "error_code": null
+        }
+      ]
+    },
+    "E": {
+      "task_id": "d537fcd4-8ab0-5d66-9345-38cfdef47ee0",
+      "revision": 1,
+      "fault": "部分成果落盘后对隔离 run-once 767418 发 SIGINT，再正常停止/重启隔离客户端。",
+      "session": "01a1434c-de4b-71c1-aa62-65e2da412366",
+      "result": "/recover 后同会话先检查和复用结果83，effects.log仍1行；partial与effects的SHA256不变；三份附件实际送达。",
+      "evidence": [
+        "smoke-output/stability-phase1-20261015/trader/e-fault.json",
+        "smoke-output/stability-phase1-20261015/trader/e-partial-before-interruption.json",
+        "smoke-output/stability-phase1-20261015/trader/e-final-events.json",
+        "smoke-output/stability-phase1-20261015/trader/e-verified-b.json",
+        "smoke-output/stability-phase1-20261015/lakota/e-verified-a.json",
+        "smoke-output/stability-phase1-20261015/lakota/screens-recovery-a/e-final.txt",
+        "smoke-output/stability-phase1-20261015/trader/screens-recovery-b/e-final-b.txt"
+      ],
+      "status": "passed",
+      "runs": [
+        {
+          "id": "475d7c5d-58ba-46b1-af52-eb3fd7808f3c",
+          "state": "failed",
+          "session_id": "01a1434c-de4b-71c1-aa62-65e2da412366",
+          "resumed_session_id": null,
+          "reads": 1,
+          "submissions": 0,
+          "error_code": "interrupted"
+        },
+        {
+          "id": "45719bb0-0f5f-4cec-8b06-866195eada62",
+          "state": "succeeded",
+          "session_id": "01a1434c-de4b-71c1-aa62-65e2da412366",
+          "resumed_session_id": "01a1434c-de4b-71c1-aa62-65e2da412366",
+          "reads": 1,
+          "submissions": 1,
+          "error_code": null
+        }
+      ],
+      "before_after": {
+        "side_effect_lines": [
+          1,
+          1
+        ],
+        "actual_computation_commands": 1,
+        "partial_sha256": "f90d9783b3300f38b016dc4c8fd225eb91dceaa4bf77c2288f6b398fecd38e94",
+        "effects_sha256": "261b56b860a193ae4f2455535c95697a7eaac0a62980c94f0b28a04b5e52a99a"
+      }
+    },
+    "F": {
+      "task_id": "6ea01e03-88b8-5f50-854e-e97c3f322fa2",
+      "revision": 1,
+      "fault": "计算完成后的结果审核注入401，形成model_configuration阻塞；修复代理后/recover只重试审核。",
+      "result": "审核恢复前后2个Codex运行不变（提问1轮、计算纠正1轮）；9份已有文件哈希不变。计算轮内因B纠正分别产生249和357，审核恢复未新增任何计算。",
+      "evidence": [
+        "smoke-output/stability-phase1-20261015/lakota/acd-review-fault.json",
+        "smoke-output/stability-phase1-20261015/lakota/screens-recovery-a/f-final-recovery-form.txt",
+        "smoke-output/stability-phase1-20261015/trader/acd-computed.json",
+        "smoke-output/stability-phase1-20261015/trader/abdf-verified-b.json",
+        "smoke-output/stability-phase1-20261015/trader/abdf-final-events.json",
+        "smoke-output/stability-phase1-20261015/lakota/screens-recovery-a/abdf-final-a.txt"
+      ],
+      "status": "passed",
+      "runs": [
+        {
+          "id": "9d687602-be2f-45ea-ae73-95427eb33710",
+          "state": "succeeded",
+          "session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "resumed_session_id": null,
+          "reads": 1,
+          "submissions": 1,
+          "error_code": null
+        },
+        {
+          "id": "414b775b-8aee-4b96-8b2d-238d63903698",
+          "state": "succeeded",
+          "session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "resumed_session_id": "01a14353-168d-7930-a345-f1ff81039545",
+          "reads": 3,
+          "submissions": 1,
+          "error_code": null
+        }
+      ],
+      "before_after": {
+        "codex_runs": [
+          2,
+          2
+        ],
+        "calculation_commands": [
+          2,
+          2
+        ],
+        "unchanged_file_hashes": 9
+      }
+    }
+  },
+  "ci": {
+    "url": "https://github.com/shenyaojin/xXASSXx/actions/runs/38858986476",
+    "commit": "0d2f04f90c6c1dc29927cc3182fcb7f90a41d920",
+    "mac_arm_passed": 199,
+    "linux_musl_passed": 200,
+    "failed": 0,
+    "ignored_each": 3,
+    "build_package_install": "passed",
+    "first_linux_attempt": "Existing concurrent app test failed with test-mailbox http_status_500; unchanged exact commit rerun passed. Initial log retained; underlying 500 cause not established.",
+    "first_failure_log": "smoke-output/stability-phase1-20261015/ci-38858986476-first-attempt.log",
+    "final_log": "smoke-output/stability-phase1-20261015/ci-38858986476.log",
+    "artifacts": [
+      {
+        "platform": "aarch64-apple-darwin",
+        "package_sha256": "8920dedc088ed99d30005bb617aaf84aa65e5fd3c3f6ff310fb60689c2d14ead",
+        "binary_sha256": "1f3be8d7a804d07f2f6416d0e4772640eb784c628fe43b57c46de42fa8ccdf6c",
+        "checksum_verified": true
+      },
+      {
+        "platform": "x86_64-unknown-linux-musl",
+        "package_sha256": "4ab135d47e8174f7d6a90caa667a7d7d7cfedccc59623d333e6c7f464ccc59b4",
+        "binary_sha256": "0c99049641d90b18b1981416e5b152d8a58c6b3c6184b0557ddf75a3bb9e42d3",
+        "checksum_verified": true
+      }
+    ]
+  },
+  "other_checks": {
+    "lakota": "fmt, clippy, targeted tests and release build passed; full suite before final refinements also passed. Final full-suite evidence is exact-commit CI.",
+    "clippy": "one existing Linux libc::time_t deprecation warning",
+    "local": "no target build; downloaded ARM binary ran --version; package checksums matched"
+  },
+  "history_and_limits": [
+    "E first run used df26203 / ea5670c7ea2c65626abecd4c22607e2246ebea0c6ff9c3805a7fbe3e55e1fe05; recovery used 0d2f04f. The intervening change only presents blocker reasons in user-facing language.",
+    "Early pilot A/D/C used binary 93d672f58f5ec088cf2b65aba52208d697bf0520b02bc4f3b02137146b0fa991; disk hash e815 in an early verification snapshot was not its running process hash. Pilot is historical, not final-source proof.",
+    "Earlier B/F task 697c8b70 used df26203; correct83 result and read receipt verified. Its final model prose included unsupported58-byte wording; retained as failure-quality evidence. Final B/F was reverified with accurate357 delivery.",
+    "A 503 rule armed too late in the combined A/B/D/F run was not consumed and is not counted as C. Dedicated C was fully run with the rule armed before execution.",
+    "C draft initially mislabeled directory ownership; corrected through existing draft revision before confirmation. It executed revision2 only on b.",
+    "Automatic transient retries cover persisted preparation, question resolution, result review and eligible read-only execution. Ordinary free chat classification is not a task retry job; deterministic answer/supplement/recover remain available.",
+    "Input-read receipts prove get_task consumption, not semantic adoption; final result, actual commands and file hashes supply adoption evidence.",
+    "Effects reuse is verified for the synthetic case; no universal exactly-once guarantee for arbitrary external systems.",
+    "Untracked duplicate files with space-number suffixes were preserved and excluded from build inputs. No release, daily upgrade or Full access enablement."
+  ],
+  "raw_root": "smoke-output/stability-phase1-20261015/",
+  "remote_raw_root": "~/xxassxx-tests/stability-phase1-20261015/",
+  "deliveries": {
+    "A_B_D_F": {
+      "transfer_id": "f31a3b80-e832-59bb-bd8c-9db698495898",
+      "sender_state": "delivered",
+      "recipient_state": "received",
+      "files": [
+        {
+          "name": "result.json",
+          "bytes": 96,
+          "sha256": "8397ebeb05f4858e37cca06950026407d9553b281a302bef64456847e3f42010"
+        },
+        {
+          "name": "report.txt",
+          "bytes": 529,
+          "sha256": "25f26525c2f02aa9fe86bbf7811de349b6a9a99e3b3622f8aa65f61feade0eb9"
+        }
+      ]
+    },
+    "C": {
+      "transfer_id": "087329d5-4e9c-50d0-a5df-cd5766f7b0cd",
+      "sender_state": "delivered",
+      "recipient_state": "received",
+      "files": [
+        {
+          "name": "result.json",
+          "bytes": 104,
+          "sha256": "d26bb12173607dd36e305216eafe85ec28398b8c202f1e2aabc3cf264112ea80"
+        },
+        {
+          "name": "report.txt",
+          "bytes": 313,
+          "sha256": "5bf4c25e8428eaa4ebbf9f0d5bc401934514a8b26e17c622f4a6619a43b4c98b"
+        }
+      ]
+    },
+    "E": {
+      "transfer_id": "ce1f43d0-a005-5e36-8ac3-a3b9e041f5b0",
+      "sender_state": "delivered",
+      "recipient_state": "received",
+      "files": [
+        {
+          "name": "e-partial.json",
+          "bytes": 185,
+          "sha256": "f90d9783b3300f38b016dc4c8fd225eb91dceaa4bf77c2288f6b398fecd38e94"
+        },
+        {
+          "name": "e-report.txt",
+          "bytes": 715,
+          "sha256": "01bc16471447548c3751b31b30b045db386eaa93b964efce0ec374dfde4e64a7"
+        },
+        {
+          "name": "effects.log",
+          "bytes": 16,
+          "sha256": "261b56b860a193ae4f2455535c95697a7eaac0a62980c94f0b28a04b5e52a99a"
+        }
+      ]
+    }
+  },
+  "automatic_regressions": {
+    "file": "tests/task_workflow.rs",
+    "coverage": {
+      "duplicate_and_stale_inputs": "supplements_have_distinct_delivery_and_run_read_receipts",
+      "multiple_questions_and_status": "chat_status_cannot_invent_resume_and_answers_do_not_clear_other_questions",
+      "cross_task_and_revision": "two_waiting_tasks_cannot_cross_answer_or_accept_late_revision",
+      "cancel_running": "cancelled_task_rejects_new_submissions_and_old_progress_is_historical",
+      "revocation": "revoking_write_access_stops_running_process_before_later_writes",
+      "finite_explicit_budget": "explicit_budget_continuation_preserves_counters_and_is_finite",
+      "retry_cap_restart_and_cancel": "transient_model_retry_is_persisted_bounded_and_cancel_fenced",
+      "review_only": "exhausted_review_preserves_candidates_and_recovers_without_restarting_execution"
+    },
+    "evidence_type": "automated tests with simulated responses; separate from A-F real-model PTYs"
+  },
+  "cleanup": {
+    "test_clients_stopped": true,
+    "isolated_mailbox_and_fault_proxies_stopped": true,
+    "test_tunnels_closed": true,
+    "evidence": [
+      "smoke-output/stability-phase1-20261015/lakota/cleanup-a.json",
+      "smoke-output/stability-phase1-20261015/trader/cleanup-b.json",
+      "smoke-output/stability-phase1-20261015/tunnels-closed.json"
+    ]
+  }
+}

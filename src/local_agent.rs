@@ -72,11 +72,21 @@ pub async fn attempt(store: &mut Store, lease: &Lease) -> Result<bool> {
     {
         return Ok(false);
     }
-    let cfg = ModelConfig::parse(&store.member_config()?.model)?;
+    let cfg = ModelConfig::parse(&store.member_config()?.model).map_err(|e| {
+        crate::task_recovery::failure(
+            crate::task_recovery::Reason::ModelConfiguration,
+            e.to_string(),
+        )
+    })?;
     if cfg.provider == "off" {
         return Ok(false);
     }
-    let model = HttpModel::new(cfg.clone())?;
+    let model = HttpModel::new(cfg.clone()).map_err(|e| {
+        crate::task_recovery::failure(
+            crate::task_recovery::Reason::ModelConfiguration,
+            e.to_string(),
+        )
+    })?;
     // This is an in-process task read, not an MCP initialization or a Codex session.
     let task = store.read_task(&lease.task_id, &lease.run_id, &lease.token)?;
     store.event(
@@ -98,6 +108,10 @@ pub async fn attempt(store: &mut Store, lease: &Lease) -> Result<bool> {
     let outcome: Result<bool> = async {
         for _ in 0..cfg.max_model_calls.min(cfg.max_tool_rounds) {
             crate::native_tasks::context(&store.conn,&lease.task_id)?;
+            if crate::task_inputs::unread(&store.conn,&lease.task_id,&lease.run_id)? {
+                let fresh=store.read_task(&lease.task_id,&lease.run_id,&lease.token)?;
+                messages.push(json!({"role":"user","content":fresh["input"]}));
+            }
             let response = model.complete_with_requirement(&messages,&tools,true).await?;
             let calls = response["tool_calls"].as_array().context("local model did not choose a tool")?.clone();
             ensure!(!calls.is_empty(),"local model returned no tool call");
@@ -138,6 +152,13 @@ pub async fn attempt(store: &mut Store, lease: &Lease) -> Result<bool> {
     match outcome {
         Ok(value) => Ok(value),
         Err(error) => {
+            if matches!(
+                crate::task_recovery::classify(&error),
+                crate::task_recovery::Reason::TransientModel
+                    | crate::task_recovery::Reason::ModelConfiguration
+            ) {
+                return Err(error);
+            }
             // Authorization/cancellation must stop instead of escalating scope.
             Store::authorize(
                 &store.conn,

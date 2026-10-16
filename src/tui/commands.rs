@@ -5,6 +5,20 @@ pub(super) struct Command {
 }
 
 pub(super) const COMMANDS: &[Command] = &[
+    Command {name:"/roles",description:"纠正执行成员或成果接收人"},
+    Command {name:"/handoff",description:"核对副作用后确认本机旧执行停止"},
+    Command {
+        name: "/answer",
+        description: "选择并回答当前任务的问题",
+    },
+    Command {
+        name: "/supplement",
+        description: "补充或纠正当前任务，保留原话",
+    },
+    Command {
+        name: "/recover",
+        description: "查看失败步骤，允许有限继续",
+    },
     Command {
         name: "/codex",
         description: "进入 Codex · 先选白名单目录，退出后返回",

@@ -740,6 +740,7 @@ async fn sync_inner(store: &mut Store) -> Result<Value> {
     );
     // Learn new senders before validating their pending inbox messages.
     store.sync_member_directory(&identity)?;
+    store.conn.execute("INSERT INTO app_preferences VALUES('task_roles_protocol',?1) ON CONFLICT(key) DO UPDATE SET value=excluded.value",[if identity["task_roles_protocol"]==1 {"1"}else{"0"}])?;
     let records = store.messages(None)?;
     let local_facts = {
         let mut q = store
@@ -765,6 +766,7 @@ async fn sync_inner(store: &mut Store) -> Result<Value> {
             [event["task_id"].as_str()],
             |r| r.get(0),
         )?;
+        if (!event["data"]["roles"].is_null() || event["data"]["roles_protocol"]==1) && identity["task_roles_protocol"]!=1 {continue;}
         if shared && identity["team_activity_protocol"] != 1 {
             continue;
         }
@@ -790,6 +792,12 @@ async fn sync_inner(store: &mut Store) -> Result<Value> {
         }
         if record.message.operation == "task_v2" {
             let wire = crate::task_coordinator::Wire::parse(&record.message)?;
+            if (!wire.data["roles"].is_null() || wire.data["roles_protocol"]==1) && identity["task_roles_protocol"]!=1 {
+                let reason="信箱不支持显式任务角色；请升级隔离信箱后继续，任务尚未派发";
+                store.conn.execute("UPDATE messages SET error=?2 WHERE id=?1",rusqlite::params![record.message.message_id,reason])?;
+                store.conn.execute("UPDATE app_tasks SET waiting_reason=?2,next_owner=initiator WHERE id=?1 AND revision=?3",rusqlite::params![wire.task_id,reason,wire.revision])?;
+                continue;
+            }
             if wire.event == "proposal"
                 && wire.data["team_activity"] == true
                 && identity["team_activity_protocol"] == 1
@@ -804,7 +812,7 @@ async fn sync_inner(store: &mut Store) -> Result<Value> {
                         .await?;
                     let value = response_json(response).await?;
                     if value["persisted"] == false {
-                        store.conn.execute("UPDATE messages SET state='withdrawn',error=NULL WHERE direction='out' AND state='pending' AND json_extract(payload,'$.recipient')=?1 AND json_extract(json_extract(payload,'$.body'),'$.task_id')=?2 AND json_extract(json_extract(payload,'$.body'),'$.revision')=?3",rusqlite::params![record.message.recipient,wire.task_id,wire.revision])?;
+                        store.conn.execute("UPDATE messages SET state='withdrawn',error=NULL WHERE direction='out' AND state='pending' AND json_extract(payload,'$.recipient')=?1 AND json_extract(json_extract(payload,'$.body'),'$.task_id')=?2 AND json_extract(json_extract(payload,'$.body'),'$.revision')=?3 AND json_extract(json_extract(payload,'$.body'),'$.event')='proposal'",rusqlite::params![record.message.recipient,wire.task_id,wire.revision])?;
                     } else {
                         store.conn.execute(
                             "UPDATE messages SET state='sent',error=NULL WHERE id=?1",
@@ -828,7 +836,7 @@ async fn sync_inner(store: &mut Store) -> Result<Value> {
                 continue;
             }
             let files: bool = store.conn.query_row("SELECT EXISTS(SELECT 1 FROM app_tasks WHERE id=?1 AND (json_extract(draft,'$.mode')='files' OR json_extract(draft,'$.deliver_files')=1))",[&wire.task_id],|r|r.get(0))?;
-            if files && !matches!(wire.event.as_str(), "cancel" | "suspend") {
+            if files && !matches!(wire.event.as_str(), "cancel" | "suspend" | "stop_assignment" | "assignment_stopped" | "delivery_plan") {
                 if attachment_peers.is_none() {
                     attachment_peers = Some(if identity["file_transfer_protocol"] == 1 {
                         response_json(
@@ -872,7 +880,7 @@ async fn sync_inner(store: &mut Store) -> Result<Value> {
             let value: Value = response.json().await?;
             if value["error"] == "task_peer_offline" {
                 let wire = crate::task_coordinator::Wire::parse(&record.message)?;
-                let reason = "等待执行成员上线并启用支持团队动态的新版客户端；尚未开始执行";
+                let reason = "等待执行成员上线并启用支持显式角色与团队动态的新版客户端；尚未开始执行";
                 store.conn.execute(
                     "UPDATE messages SET error=?2 WHERE id=?1",
                     rusqlite::params![record.message.message_id, reason],

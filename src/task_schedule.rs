@@ -72,6 +72,7 @@ pub fn accept(c: &Connection, m: &Message, at: i64) -> Result<()> {
         return Ok(());
     }
     let w = Wire::parse(m)?;
+    if crate::task_roles::relay_control(c,m,&w)? {return Ok(());}
     let existing: Option<(i64, String, String, i64, String)> = c
         .query_row(
             "SELECT revision,initiator,participants,sequence,state FROM relay_tasks WHERE id=?1",
@@ -80,6 +81,12 @@ pub fn accept(c: &Connection, m: &Message, at: i64) -> Result<()> {
         )
         .optional()?;
     if w.event == "proposal" {
+        if let Some(r)=crate::task_roles::roles(&w.data)? {
+            ensure!(r.members(&m.sender)==serde_json::from_value::<Vec<String>>(w.data["participants"].clone())?,"roles/participants mismatch");
+            let pending:bool=c.query_row("SELECT EXISTS(SELECT 1 FROM relay_assignment_stops WHERE task_id=?1 AND initiator=?2 AND stopped=0)",params![w.task_id,m.sender],|r|r.get(0))?;
+            ensure!(!pending,"old assignment has not acknowledged stopping");
+            c.execute("INSERT OR IGNORE INTO relay_task_roles VALUES(?1,?2,?3)",params![w.task_id,w.revision,serde_json::to_string(&r)?])?;
+        }
         ensure!(
             w.data["initiator"] == m.sender && w.data["confirmed"] == w.revision,
             "invalid task confirmation attestation"
