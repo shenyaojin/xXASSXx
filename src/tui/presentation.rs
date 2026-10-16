@@ -85,6 +85,18 @@ pub(super) fn task_state(value: &Value) -> &str {
     }
 }
 
+pub(super) fn stop_status(task: &Value) -> Option<String> {
+    let stop = task["assignment_stops"]
+        .as_array()?
+        .iter()
+        .find(|s| s["state"] != "stopped")?;
+    let member = stop["executor"].as_str().unwrap_or("旧执行成员");
+    Some(if stop["state"] == "needs_check" {
+        format!("旧执行已停止 · 等待 @{member} 在本机 /handoff 核对副作用")
+    } else {
+        format!("旧 @{member} 尚未确认停止 · 新分配等待停止确认")
+    })
+}
 pub(super) fn task_status(task: &Value, owner: &str) -> String {
     if task["automatic_confirmation"] == true {
         return "正在整理任务，之后自动开始".into();
@@ -95,6 +107,9 @@ pub(super) fn task_status(task: &Value, owner: &str) -> String {
         Some("completed" | "cancelled" | "stopped")
     ) {
         return state.into();
+    }
+    if let Some(message) = stop_status(task) {
+        return message;
     }
     if let Some(message) = local_delivery_status(task) {
         return message;
@@ -396,7 +411,10 @@ pub(super) fn activity(
             "自己的助手正在理解请求并准备答复".into()
         }
     } else if let Some(t) = task {
-        if t["state"] == "needs_attention" {
+        if let Some(message) = stop_status(t) {
+            busy = false;
+            message
+        } else if t["state"] == "needs_attention" {
             busy = false;
             format!(
                 "任务已暂停：{} · CtrlD 查看原因，处理后 CtrlY 恢复",

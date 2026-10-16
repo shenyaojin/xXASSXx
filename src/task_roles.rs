@@ -106,7 +106,7 @@ pub fn save(c: &Connection, id: &str, revision: i64, initiator: &str, roles: &Ro
     Ok(())
 }
 pub fn view(c: &Connection, id: &str) -> Result<Value> {
-    let mut q=c.prepare("SELECT json_object('id',id,'revision',revision,'executor',executor,'state',state,'reason',reason,'evidence',evidence,'confirmed_at',confirmed_at) FROM task_stops WHERE task_id=?1 ORDER BY revision,executor")?;
+    let mut q=c.prepare("SELECT json_object('id',s.id,'revision',s.revision,'executor',s.executor,'state',s.state,'reason',s.reason,'evidence',s.evidence,'confirmed_at',s.confirmed_at) FROM task_stops s JOIN app_tasks t ON t.id=s.task_id AND t.initiator=s.initiator WHERE s.task_id=?1 ORDER BY s.revision,s.executor")?;
     let rows = q
         .query_map([id], |r| r.get::<_, String>(0))?
         .collect::<rusqlite::Result<Vec<_>>>()?;

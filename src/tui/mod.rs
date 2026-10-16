@@ -1651,6 +1651,8 @@ impl Ui {
                 "整理好后自动开始 · CtrlX 停止"
             } else if task["state"] == "draft" {
                 "CtrlS 确认任务 · CtrlE 修改 · CtrlX 停止"
+            } else if presentation::stop_status(task).is_some() {
+                "旧执行端 /handoff 核对副作用 · CtrlD 查看记录"
             } else if task["execution_permission"]["can_allow"] == true {
                 "CtrlG 查看执行范围并授权 · CtrlX 停止"
             } else if task["state"] == "needs_attention" {

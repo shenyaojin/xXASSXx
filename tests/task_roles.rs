@@ -90,6 +90,7 @@ async fn replacement_waits_for_old_member_and_tombstone_defeats_reordered_propos
         "offline old member must block new dispatch"
     );
     assert_eq!(tasks::get(&a, &id).unwrap()["roles"]["executor"], "c");
+    assert_eq!(tasks::get(&a, &id).unwrap()["next_owner"], "b");
     let stop = messages(&a, "stop_assignment").pop().unwrap();
     let mut b = team.store("b");
     receive(&mut b, &stop);
@@ -158,6 +159,23 @@ async fn replacement_waits_for_old_member_and_tombstone_defeats_reordered_propos
     let _ = tasks::ingest(&a, &stale);
     assert_ne!(tasks::get(&a, &id).unwrap()["state"], "completed");
     assert_eq!(count(&a, "SELECT count(*) FROM task_candidates"), 0);
+}
+
+#[tokio::test]
+async fn queued_explicit_role_command_preserves_contract_without_model_preparation() {
+    let team = Team::new();
+    let (i, id) = create(&team, "b");
+    let mut a = team.store("a");
+    let before = tasks::get(&a, &id).unwrap()["draft"].clone();
+    let mut change = command(&i, &id, 1, "执行 @c 只更换执行成员");
+    change.action = "roles_task".into();
+    let actor = Actor::local(&a).unwrap();
+    app::submit(&mut a, &actor, &change).unwrap();
+    tasks::tick(&a, Path::new(BIN)).await.unwrap();
+    let t = tasks::get(&a, &id).unwrap();
+    assert_eq!(t["draft"], before);
+    assert_eq!(t["roles"]["executor"], "c");
+    assert_eq!(count(&a, "SELECT count(*) FROM task_model_attempts"), 0);
 }
 
 #[test]

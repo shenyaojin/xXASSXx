@@ -679,6 +679,9 @@ pub fn prepare(store: &Store, id: &str, draft: Value) -> Result<()> {
     if let Some(r) = crate::task_roles::roles(&t)? {
         body.push_str(&format!("\n成果接收人：@{}", r.recipients.join("、@")));
     }
+    if preserved_plan(&t).is_some() {
+        body.push_str("\n本次只纠正执行分配，原目标、交付物和其他约束保留。原复述里的执行归属已由上方当前执行成员替代，不构成对旧成员的继续执行要求。");
+    }
     if t["team_activity"] == true {
         body.push_str(
             "\n白名单任务的目标、进展和结果会出现在团队动态；新任务等待执行成员在线后派发。",
@@ -826,11 +829,12 @@ pub(crate) fn dispatch_confirmed(store: &Store, t: &Value) -> Result<()> {
         return Ok(());
     }
     if crate::task_roles::blocked(&store.conn, id)? {
+        let stop_owner:String=store.conn.query_row("SELECT s.executor FROM task_stops s JOIN app_tasks t ON t.id=s.task_id AND t.initiator=s.initiator WHERE s.task_id=?1 AND s.state!='stopped' ORDER BY s.revision LIMIT 1",[id],|r|r.get(0))?;
         state(
             &store.conn,
             t,
             "waiting",
-            Some(string(t, "initiator")?),
+            Some(&stop_owner),
             Some("旧执行状态尚未确认；等待原执行成员停止并核对副作用，新分配不会启动"),
         )?;
         return Ok(());
@@ -2436,11 +2440,7 @@ async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result
         "local agent 的{label}连续 {maximum} 次返回了无法识别的格式。任务和已有结果已保留，可重试该步骤。"
     )
 }
-pub async fn prepare_model(store: &Store, id: &str) -> Result<()> {
-    let t = get(store, id)?;
-    if t["confirmed"] == t["revision"] {
-        return Ok(());
-    }
+fn preserved_plan(t: &Value) -> Option<Value> {
     // A role-only correction must not ask a model to reinterpret the deliverables
     // or authorization. Reuse the previously confirmed contract verbatim.
     if t["role_changes"]
@@ -2452,8 +2452,18 @@ pub async fn prepare_model(store: &Store, id: &str) -> Result<()> {
         if let Some(previous) = t["revisions"].as_array().into_iter().flatten().find(|r| {
             r["revision"].as_i64() == Some(revision(&t) - 1) && r["draft"]["goal"].is_string()
         }) {
-            return prepare(store, id, previous["draft"].clone());
+            return Some(previous["draft"].clone());
         }
+    }
+    None
+}
+pub async fn prepare_model(store: &Store, id: &str) -> Result<()> {
+    let t = get(store, id)?;
+    if t["confirmed"] == t["revision"] {
+        return Ok(());
+    }
+    if let Some(draft) = preserved_plan(&t) {
+        return prepare(store, id, draft);
     }
     let outcome = async {
         let draft = decision(store, &t, "prepare", json!({})).await?;
@@ -2786,7 +2796,11 @@ async fn process_job(store: &Store, t: &Value, kind: &str, data: Value, key: &st
     }
     match kind {
         "prepare" => {
-            let draft = decision(store, t, "prepare", json!({})).await?;
+            let draft = if let Some(draft) = preserved_plan(t) {
+                draft
+            } else {
+                decision(store, t, "prepare", json!({})).await?
+            };
             let current = get(store, string(t, "id")?)?;
             ensure!(
                 current["revision"] == t["revision"] && current["state"] == "draft",
