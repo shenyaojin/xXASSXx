@@ -689,6 +689,7 @@ pub fn retarget_task_output(store: &Store, t: &Value) -> Result<()> {
             candidate["attachment"] = Value::Null;
         } else {
             let staged = tempfile::tempdir()?;
+            let staged_root = staged.path().canonicalize()?;
             let mut paths = vec![];
             for (index, file) in old.files.iter().enumerate() {
                 let source: String = store.conn.query_row(
@@ -700,7 +701,7 @@ pub fn retarget_task_output(store: &Store, t: &Value) -> Result<()> {
                     checksum(Path::new(&source))? == (file.bytes, file.sha256.clone()),
                     "已有成果副本已改变，不能重新发送"
                 );
-                let directory = staged.path().join(index.to_string());
+                let directory = staged_root.join(index.to_string());
                 fs::create_dir(&directory)?;
                 let target = directory.join(&file.name);
                 fs::copy(&source, &target)?;

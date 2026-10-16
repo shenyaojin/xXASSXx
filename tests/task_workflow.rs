@@ -2835,7 +2835,7 @@ async fn recipient_change_reuses_frozen_output_and_requires_sender_permission_wi
     xxassxx::task_roles::tick(&b).unwrap();
     transfer(&b, &mut a);
     let batches = xxassxx::transfers::list(&b).unwrap();
-    assert_eq!(batches.len(), 2);
+    assert_eq!(batches.len(), 2, "task={}", tasks::get(&b, &id).unwrap());
     let current = batches.iter().find(|v| v["id"] != old).unwrap();
     assert_eq!(current["state"], "draft");
     assert_eq!(current["authorized"], false);

@@ -180,6 +180,35 @@ async fn queued_explicit_role_command_preserves_contract_without_model_preparati
 }
 
 #[test]
+fn stop_confirmation_and_outbox_are_atomic_and_retry_after_storage_failure() {
+    let team = Team::new();
+    let (i, id) = create(&team, "b");
+    let a = team.store("a");
+    tasks::confirm(&a, &command(&i, &id, 1, "确认")).unwrap();
+    let mut change = command(&i, &id, 1, "执行 @c 旧成员尚未开始");
+    change.payload["executor"] = json!("c");
+    roles::change(&a, &change).unwrap();
+    let stop = messages(&a, "stop_assignment").pop().unwrap();
+    let mut b = team.store("b");
+    let db = Connection::open(&b.path).unwrap();
+    db.execute_batch("CREATE TRIGGER fail_stop_ack BEFORE INSERT ON messages WHEN NEW.direction='out' AND json_extract(json_extract(NEW.payload,'$.body'),'$.event')='assignment_stopped' BEGIN SELECT RAISE(ABORT,'simulated outbox failure'); END;").unwrap();
+    receive(&mut b, &stop);
+    assert_eq!(
+        count(&b, "SELECT count(*) FROM task_stops WHERE state='stopped'"),
+        0
+    );
+    assert!(messages(&b, "assignment_stopped").is_empty());
+    db.execute_batch("DROP TRIGGER fail_stop_ack").unwrap();
+    roles::tick(&b).unwrap();
+    roles::tick(&b).unwrap();
+    assert_eq!(
+        count(&b, "SELECT count(*) FROM task_stops WHERE state='stopped'"),
+        1
+    );
+    assert_eq!(messages(&b, "assignment_stopped").len(), 1);
+}
+
+#[test]
 fn delivery_recipient_is_not_executor_or_participant_and_old_grant_is_not_reused() {
     let team = Team::new();
     let (i, id) = create(&team, "a");

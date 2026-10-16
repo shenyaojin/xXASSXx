@@ -265,6 +265,9 @@ fn local_runs(
     Ok((started, locks))
 }
 fn acknowledge(store: &Store, id: &str, evidence: Option<&str>) -> Result<bool> {
+    // The local stopped state and its durable outbound acknowledgement are
+    // one fact. A crash or outbox write failure must leave it retryable.
+    let tx = store.write_transaction()?;
     let (task, rev, initiator, executor, status): (String, i64, String, String, String) =
         store.conn.query_row(
             "SELECT task_id,revision,initiator,executor,state FROM task_stops WHERE id=?1",
@@ -282,6 +285,7 @@ fn acknowledge(store: &Store, id: &str, evidence: Option<&str>) -> Result<bool> 
             [id],
         )?;
         store.conn.execute("UPDATE app_tasks SET state='waiting',next_owner=?3,waiting_reason='旧执行已停止；请在本机 /handoff 核对副作用与安全边界',error=NULL WHERE id=?1 AND revision=?2 AND state NOT IN ('completed','cancelled')",params![task,rev,executor])?;
+        tx.commit()?;
         return Ok(false);
     }
     let evidence = evidence.unwrap_or("本端没有启动记录；已保存不可撤销的旧分配停止标记");
@@ -303,6 +307,7 @@ fn acknowledge(store: &Store, id: &str, evidence: Option<&str>) -> Result<bool> 
         "assignment_stopped",
         json!({"roles_protocol":1,"stop_id":id,"initiator":initiator,"executor":executor,"evidence":evidence}),
     )?;
+    tx.commit()?;
     Ok(true)
 }
 pub fn confirm_stop(store: &Store, i: &Instruction) -> Result<()> {
