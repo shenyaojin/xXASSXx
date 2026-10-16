@@ -10,6 +10,9 @@ use serde_json::{Value, json};
 
 pub const RELAY_SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS relay_withdrawn_proposals(id TEXT NOT NULL,sender TEXT NOT NULL,payload_hash TEXT NOT NULL,PRIMARY KEY(id,sender));
+CREATE TABLE IF NOT EXISTS relay_role_capabilities(member_id TEXT PRIMARY KEY,seen_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS relay_assignment_stops(id TEXT PRIMARY KEY,task_id TEXT NOT NULL,revision INTEGER NOT NULL,initiator TEXT NOT NULL,executor TEXT NOT NULL,stopped INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS relay_task_roles(task_id TEXT NOT NULL,revision INTEGER NOT NULL,roles TEXT NOT NULL,PRIMARY KEY(task_id,revision));
 CREATE TABLE IF NOT EXISTS relay_activity_capabilities(member_id TEXT PRIMARY KEY,seen_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS relay_activity_tasks(task_id TEXT PRIMARY KEY,revision INTEGER NOT NULL,shared INTEGER NOT NULL DEFAULT 0,metadata TEXT NOT NULL,state TEXT NOT NULL DEFAULT 'queued');
 CREATE TABLE IF NOT EXISTS relay_activity_events(cursor INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT NOT NULL,revision INTEGER NOT NULL,member TEXT NOT NULL,sequence INTEGER NOT NULL,payload TEXT NOT NULL,UNIQUE(task_id,revision,member,sequence));
@@ -30,7 +33,7 @@ pub fn require_online(c: &Connection, m: &Message, at: i64) -> Result<bool> {
         return Ok(true);
     }
     let w = Wire::parse(m)?;
-    if w.event != "proposal" || w.data["team_activity"] != true {
+    if w.event != "proposal" || (w.data["team_activity"] != true && w.data["roles"].is_null()) {
         return Ok(true);
     }
     for peer in w.data["participants"]
@@ -42,7 +45,8 @@ pub fn require_online(c: &Connection, m: &Message, at: i64) -> Result<bool> {
             continue;
         }
         let recent: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM relay_presence WHERE member_id=?1 AND seen_at>=?2 AND seen_at<=?3 AND EXISTS(SELECT 1 FROM relay_activity_capabilities a WHERE a.member_id=?1 AND a.seen_at>=?2 AND a.seen_at<=?3))",params![peer,at-30,at],|r|r.get(0))?;
-        if !recent {
+        let roles_ready=w.data["roles"].is_null() || c.query_row("SELECT EXISTS(SELECT 1 FROM relay_role_capabilities WHERE member_id=?1 AND seen_at>=?2 AND seen_at<=?3)",params![peer,at-30,at],|r|r.get::<_,bool>(0))?;
+        if !recent || !roles_ready {
             return Ok(false);
         }
     }
@@ -95,6 +99,7 @@ pub fn project(c: &Connection, m: &Message, at: i64) -> Result<()> {
         return Ok(());
     }
     let w = Wire::parse(m)?;
+    if matches!(w.event.as_str(),"stop_assignment"|"assignment_stopped") {return Ok(());}
     let (current, initiator, people): (i64, String, String) = c.query_row(
         "SELECT revision,initiator,participants FROM relay_tasks WHERE id=?1",
         [&w.task_id],
@@ -112,11 +117,8 @@ pub fn project(c: &Connection, m: &Message, at: i64) -> Result<()> {
         if m.sender != initiator || w.data["team_activity"] != true {
             return Ok(());
         }
-        let executors: Vec<_> = people
-            .iter()
-            .filter(|p| **p != initiator || people.len() == 1)
-            .collect();
-        let metadata = json!({"task_id":w.task_id,"revision":w.revision,"title":text(&w.data,"title",160),"goal":text(&w.data["draft"],"goal",2000),"initiator":initiator,"executors":executors,"scope":"白名单任务 · 任务进展和结果对团队可见"});
+        let executors=crate::task_roles::executors(&w.data)?;
+        let metadata = json!({"task_id":w.task_id,"revision":w.revision,"title":text(&w.data,"title",160),"goal":text(&w.data["draft"],"goal",2000),"initiator":initiator,"executors":executors,"roles":w.data["roles"],"scope":"白名单任务 · 任务进展和结果对团队可见"});
         c.execute("INSERT INTO relay_activity_tasks(task_id,revision,metadata) VALUES(?1,?2,?3) ON CONFLICT(task_id) DO UPDATE SET revision=excluded.revision,metadata=excluded.metadata,shared=0,state='queued' WHERE excluded.revision>relay_activity_tasks.revision",params![w.task_id,w.revision,metadata.to_string()])?;
         return Ok(());
     }

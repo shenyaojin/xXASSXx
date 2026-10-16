@@ -87,6 +87,8 @@ enum Panel {
     Questions,
     Revise,
     Supplement,
+    Roles,
+    Handoff,
     Recovery,
     TaskAccess,
     AccessPath,
@@ -317,6 +319,11 @@ impl Ui {
                 ensure!(self.current_task().is_some(), "请先选择任务");
                 self.selected_question = None;
                 self.panel = Panel::Supplement;
+            }
+            "/roles" | "/handoff" => {
+                ensure!(self.current_task().is_some(),"请先选择任务");
+                self.selected_question=None;
+                self.panel=if name=="/roles" {Panel::Roles}else{Panel::Handoff};
             }
             "/recover" => self.open_recovery()?,
             "/stop" => self.open_stop()?,
@@ -1471,6 +1478,10 @@ impl Ui {
                     )?;
                     self.panel = Panel::Chat;
                 }
+                Panel::Roles | Panel::Handoff => {
+                    self.enqueue(store,if self.panel==Panel::Roles {"roles_task"} else {"confirm_stop"},text,json!({}))?;
+                    self.panel=Panel::Chat;
+                }
                 Panel::Supplement => {
                     self.enqueue(store, "supplement_task", text, json!({}))?;
                     self.panel = Panel::Chat;
@@ -1780,7 +1791,9 @@ impl Ui {
             Panel::ProjectPath => "工作目录路径",
             Panel::RootPath => "允许只读访问的目录",
             Panel::NewTask => "任务目标 · @成员 指定执行人",
-            Panel::Revise => "修改要求 · 提交后重新确认",
+            Panel::Revise => "完整有效要求 · 替代旧要求 · 提交后重新确认",
+            Panel::Roles => "角色纠正 · 输入：执行 @成员 原因，或 接收 @成员 原因",
+            Panel::Handoff => "确认旧执行已停止 · 填写副作用、保留成果与安全边界核对依据",
             Panel::Supplement => "补充或纠正当前任务 · 原话保存 · 不改变目标和权限",
             Panel::Stop => "停止原因 · Tab 切换方式 · Enter 确认 · Esc 返回",
             Panel::AccessPath => "任务文件夹的保存位置",
@@ -1823,6 +1836,8 @@ impl Ui {
                 | Panel::NewTask
                 | Panel::Revise
                 | Panel::Supplement
+                | Panel::Roles
+                | Panel::Handoff
                 | Panel::AttachmentSave
                 | Panel::AttachmentAnalyze
                 | Panel::Stop
@@ -1894,6 +1909,8 @@ impl Ui {
                 | Panel::NewTask
                 | Panel::Revise
                 | Panel::Supplement
+                | Panel::Roles
+                | Panel::Handoff
         ) {
             self.panel(f, body, store);
         }
@@ -3088,6 +3105,8 @@ pub async fn open(args: OpenArgs) -> Result<()> {
                             | Panel::NewTask
                             | Panel::Revise
                             | Panel::Supplement
+                | Panel::Roles
+                | Panel::Handoff
                             | Panel::AccessPath
                             | Panel::AccessTimeout
                             | Panel::AttachmentSave

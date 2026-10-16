@@ -29,6 +29,7 @@ pub mod task_files;
 pub mod task_inputs;
 pub mod task_materials;
 pub mod task_recovery;
+pub mod task_roles;
 pub mod task_schedule;
 pub mod task_skills;
 pub mod task_workspace;
