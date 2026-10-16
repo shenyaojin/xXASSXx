@@ -128,6 +128,19 @@ async fn replacement_waits_for_old_member_and_tombstone_defeats_reordered_propos
         1
     );
     assert_eq!(count(&c, "SELECT count(*) FROM task_workspaces"), 0);
+    let transition = tasks::get(&c, &id).unwrap()["assignment_change"].clone();
+    assert_eq!(transition["previous_executor"], "b");
+    assert_eq!(transition["reason"], change.body);
+    assert_eq!(transition["stops"][0]["state"], "stopped");
+    assert!(
+        transition["stops"][0].get("evidence").is_none(),
+        "private prior side-effect details are not forwarded"
+    );
+    assert_eq!(
+        messages(&c, "input_receipt").len(),
+        1,
+        "carried inputs have a new reception receipt"
+    );
     let mut stale = old.clone();
     let mut w = tasks::Wire::parse(&stale).unwrap();
     w.event = "candidate".into();
@@ -176,6 +189,33 @@ fn delivery_recipient_is_not_executor_or_participant_and_old_grant_is_not_reused
         1
     );
     assert_eq!(count(&team.store("c"), "SELECT count(*) FROM app_tasks"), 0);
+}
+
+#[test]
+fn text_result_is_a_separate_authorized_delivery_without_private_history() {
+    let team = Team::new();
+    let (i, id) = create(&team, "a");
+    let a = team.store("a");
+    tasks::prepare(&a,&id,json!({"goal":"回答合成问题并发给 b","deliverables":["文字答案"],"mode":"analysis","deliver_to":"b","questions":[]})).unwrap();
+    tasks::confirm(&a, &command(&i, &id, 1, "确认")).unwrap();
+    let t = tasks::get(&a, &id).unwrap();
+    let output = json!({"body":"合成结果：83","files":[],"deliveries":[],"run_id":uuid::Uuid::new_v4().to_string()});
+    let offered = xxassxx::transfers::task_offer(&a, &t, "test-execution", &output)
+        .unwrap()
+        .unwrap();
+    let same = xxassxx::transfers::task_offer(&a, &t, "test-execution", &output)
+        .unwrap()
+        .unwrap();
+    assert_eq!(offered, same);
+    assert_eq!(offered["state"], "draft");
+    let candidates = json!([{"member":"a","result":{"attachment":offered}}]);
+    assert!(!xxassxx::transfers::delivery_ready(&a, &t, &candidates).unwrap());
+    let transfer = xxassxx::transfers::get(&a, offered["transfer_id"].as_str().unwrap()).unwrap();
+    let path = transfer["local_files"][0]["path"].as_str().unwrap();
+    assert_eq!(std::fs::read_to_string(path).unwrap(), "合成结果：83");
+    assert_eq!(transfer["manifest"]["files"][0]["name"], "result.txt");
+    assert_eq!(count(&team.store("b"), "SELECT count(*) FROM app_tasks"), 0);
+    assert!(messages(&a, "proposal").is_empty());
 }
 
 #[test]

@@ -116,6 +116,55 @@ pub fn view(c: &Connection, id: &str) -> Result<Value> {
             .collect::<serde_json::Result<Vec<_>>>()?
     ))
 }
+/// A bounded explanation for a new assignee, never an imported stop authority.
+/// Private prior results, approval records and side-effect details stay on their devices.
+pub fn transition(t: &Value) -> Value {
+    if let Some(change) = t["role_changes"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .rev()
+        .find(|v| v["revision"] == t["revision"] && v["kind"] == "execution_plan")
+    {
+        let previous = &change["before"]["executor"];
+        let stops = t["assignment_stops"].as_array().into_iter().flatten()
+            .filter(|v| &v["executor"] == previous && v["revision"].as_i64().is_some_and(|r| r < t["revision"].as_i64().unwrap_or(0)))
+            .map(|v| json!({"id":v["id"],"revision":v["revision"],"executor":v["executor"],"state":v["state"],"confirmed_at":v["confirmed_at"]}))
+            .collect::<Vec<_>>();
+        return json!({"reason":change["body"],"previous_executor":previous,"stops":stops,"reported_by":t["initiator"]});
+    }
+    t["history"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .rev()
+        .find(|v| {
+            v["revision"] == t["revision"]
+                && v["sender"] == t["initiator"]
+                && v["kind"] == "proposal"
+        })
+        .map(|v| v["payload"]["assignment_change"].clone())
+        .unwrap_or(Value::Null)
+}
+pub fn transition_description(t: &Value) -> String {
+    let v = &t["assignment_change"];
+    let Some(reason) = v["reason"].as_str() else {
+        return String::new();
+    };
+    let stopped = v["stops"]
+        .as_array()
+        .is_some_and(|s| !s.is_empty() && s.iter().all(|v| v["state"] == "stopped"));
+    format!(
+        "{}；发起端记录：旧 @{} {}",
+        reason,
+        v["previous_executor"].as_str().unwrap_or("?"),
+        if stopped {
+            "已确认停止"
+        } else {
+            "停止仍待确认"
+        }
+    )
+}
 pub fn blocked(c: &Connection, id: &str) -> Result<bool> {
     Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM task_stops s JOIN app_tasks t ON t.id=s.task_id AND t.initiator=s.initiator WHERE s.task_id=?1 AND s.state!='stopped')",[id],|r|r.get(0))?)
 }
@@ -370,6 +419,10 @@ pub fn change(store: &Store, i: &Instruction) -> Result<bool> {
     let id = i.task_id.as_deref().context("请选择任务")?;
     let t = tasks::get(store, id)?;
     ensure!(t["initiator"] == store.owner()?, "只有发起人能更改任务安排");
+    ensure!(
+        t["state"] != "completed" && t["state"] != "cancelled",
+        "已结束任务保留原分配和送达记录；请新建任务或通过附件另行发送"
+    );
     ensure!(
         i.payload["revision"] == t["revision"],
         "安排页面已过期，请查看当前任务"

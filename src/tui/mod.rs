@@ -730,8 +730,8 @@ impl Ui {
                 .as_array()
                 .and_then(|v| v.last())
                 .and_then(|v| v["body"].as_str())
-                .unwrap_or("")
-                .into(),
+                .map(str::to_owned)
+                .unwrap_or_else(|| crate::task_roles::transition_description(t)),
             parent: permission["parent"].as_str().unwrap_or("").into(),
             roots: serde_json::from_value(permission["read_roots"].clone())?,
             timeout_secs: 1800,

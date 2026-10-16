@@ -145,6 +145,7 @@ pub fn get(store: &Store, id: &str) -> Result<Value> {
         "SELECT json_object('id',id,'revision',revision,'sender',sender,'sequence',sequence,'kind',kind,'payload',json(payload),'created_at',created_at) FROM task_journal WHERE task_id=?1 ORDER BY rowid",
         id,
     )?;
+    v["assignment_change"] = crate::task_roles::transition(&v);
     v["revisions"] = rows(
         &store.conn,
         "SELECT json_object('revision',revision,'original',original,'draft',json(draft),'confirmed_by',confirmed_by,'confirmed_at',confirmed_at,'confirmation_id',confirmation_id) FROM task_revisions WHERE task_id=?1 ORDER BY revision",
@@ -486,7 +487,10 @@ pub(crate) fn access_granted(store: &Store, t: &Value) -> Result<()> {
         t,
         &key,
         "task_progress",
-        "已允许本次任务，助手会自动开始。结果会返回发起方。",
+        &format!(
+            "已允许本次任务，助手会自动开始。成果接收人：@{}。",
+            crate::transfers::task_recipient(t)?
+        ),
     )?;
     Ok(())
 }
@@ -602,11 +606,6 @@ fn validate_onward_delivery(store: &Store, t: &Value, draft: &Value) -> Result<(
         );
         app::valid_recipient(store, recipient)
             .context("deliver_to must exactly match contacts.member_id, never display_name")?;
-        ensure!(
-            draft["mode"] == "files"
-                || (draft["mode"] == "execute" && draft["deliver_files"] == true),
-            "指定接收人必须对应实际文件交付任务"
-        );
     }
     Ok(())
 }
@@ -768,7 +767,7 @@ fn public_task(t: &Value) -> Value {
         .filter(|v| v["sender"] == t["initiator"])
         .map(|v| json!({"id":v["id"],"body":v["body"]}))
         .collect::<Vec<_>>();
-    json!({"inputs":inputs,"roles":t["roles"],"team_activity":t["team_activity"],"initiator":t["initiator"],"participants":t["participants"],"original":t["original"],"draft":t["draft"],"title":t["title"],"confirmed":t["confirmed"],"recovery_protocol":t["recovery_protocol"],"state":t["state"],"next_owner":t["next_owner"],"waiting_for":t["waiting_for"],"updated_at":t["updated_at"]})
+    json!({"assignment_change":t["assignment_change"],"inputs":inputs,"roles":t["roles"],"team_activity":t["team_activity"],"initiator":t["initiator"],"participants":t["participants"],"original":t["original"],"draft":t["draft"],"title":t["title"],"confirmed":t["confirmed"],"recovery_protocol":t["recovery_protocol"],"state":t["state"],"next_owner":t["next_owner"],"waiting_for":t["waiting_for"],"updated_at":t["updated_at"]})
 }
 pub fn confirm(store: &Store, i: &Instruction) -> Result<()> {
     let tx = store.write_transaction()?;
@@ -1240,6 +1239,15 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
                 string(input, "body")?,
                 &[store.owner()?],
                 true,
+            )?;
+            emit(
+                &tx,
+                &t,
+                &store.owner()?,
+                &stable_id(string(input, "id")?, "proposal-received"),
+                "input_receipt",
+                json!({"input_id":input["id"],"status":"received","at":now()}),
+                std::slice::from_ref(&m.sender),
             )?;
         }
     }

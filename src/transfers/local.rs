@@ -678,13 +678,7 @@ pub fn retarget_task_output(store: &Store, t: &Value) -> Result<()> {
     if candidate["delivery_generation"] == generation {
         return Ok(());
     }
-    if old_id.is_none() {
-        let execution = candidate["execution_id"]
-            .as_str()
-            .context("missing execution evidence")?;
-        candidate["attachment"] = json!(task_offer(store, t, execution, &candidate)?);
-    } else {
-        let old_id = old_id.unwrap();
+    if let Some(old_id) = old_id {
         let old = manifest(store, &old_id)?;
         let recipient = task_recipient(t)?;
         let previous = get(store, &old_id)?;
@@ -735,6 +729,11 @@ pub fn retarget_task_output(store: &Store, t: &Value) -> Result<()> {
             )?;
             candidate["attachment"] = json!({"transfer_id":id,"manifest":manifest(store,&id)?,"state":get(store,&id)?["state"]});
         }
+    } else {
+        let execution = candidate["execution_id"]
+            .as_str()
+            .context("missing execution evidence")?;
+        candidate["attachment"] = json!(task_offer(store, t, execution, &candidate)?);
     }
     candidate["delivery_generation"] = json!(generation);
     store.conn.execute(
@@ -775,6 +774,15 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
     }
     let delivering_files = t["draft"]["mode"] == "files";
     let refs = &out["deliveries"];
+    let text_delivery = refs.as_array().is_none_or(Vec::is_empty)
+        && !t["roles"].is_null()
+        && recipient != t["initiator"].as_str().unwrap_or("")
+        && !delivering_files
+        && t["draft"]["deliver_files"] != true
+        && out["outcome"] != "question";
+    if text_delivery {
+        return task_text_offer(store, t, execution, out);
+    }
     let Some(refs) = refs.as_array().filter(|r| !r.is_empty()) else {
         return Ok(None);
     };
@@ -829,6 +837,65 @@ pub fn task_offer(store: &Store, t: &Value, execution: &str, out: &Value) -> Res
     let task_approved = access.as_ref().is_some_and(|a| a.full_access)
         && crate::task_roles::delivery_approved(&store.conn, t)?;
     if (automatic || task_approved) && !delivering_files && result["state"] == "draft" {
+        allow(store, &id)?;
+    }
+    let current = get(store, &id)?;
+    crate::task_coordinator::attachment_progress(
+        store,
+        &manifest(store, &id)?,
+        current["state"].as_str().unwrap(),
+        None,
+    )?;
+    Ok(Some(
+        json!({"transfer_id":id,"manifest":manifest(store,&id)?,"state":current["state"]}),
+    ))
+}
+
+/// Only the current submitted answer is exported. Generating a kernel-owned
+/// text attachment grants no file access and no sending permission.
+fn task_text_offer(
+    store: &Store,
+    t: &Value,
+    execution: &str,
+    out: &Value,
+) -> Result<Option<Value>> {
+    let body = out["body"].as_str().context("missing result body")?;
+    let run = out["run_id"]
+        .as_str()
+        .map(str::to_owned)
+        .or_else(|| store.runs(execution).ok()?.last().map(|r| r.id.clone()))
+        .context("missing result run")?;
+    let id = stable_id(
+        &run,
+        &format!("text-result:{}", t["roles"]["delivery_generation"]),
+    );
+    if get(store, &id).is_err() {
+        let stage = tempfile::tempdir()?;
+        let path = stage.path().join("result.txt");
+        fs::write(&path, body)?;
+        prepare(
+            store,
+            Prepare {
+                id: id.clone(),
+                recipient: task_recipient(t)?.into(),
+                note: format!(
+                    "文字成果 · 执行 @{} · 版本 {}",
+                    store.owner()?,
+                    t["revision"]
+                ),
+                paths: vec![path],
+                session: Some(t["session_id"].as_str().unwrap().into()),
+                task: Some(TaskRef {
+                    id: t["id"].as_str().unwrap().into(),
+                    revision: t["revision"].as_i64().unwrap(),
+                }),
+                replaces: None,
+            },
+            true,
+        )?;
+    }
+    if crate::task_roles::delivery_approved(&store.conn, t)? && get(store, &id)?["state"] == "draft"
+    {
         allow(store, &id)?;
     }
     let current = get(store, &id)?;
@@ -950,7 +1017,10 @@ pub fn delivery_status(store: &Store, t: &Value, candidates: &Value) -> Result<V
     )
 }
 pub fn delivery_ready(store: &Store, t: &Value, candidates: &Value) -> Result<bool> {
-    if t["draft"]["mode"] != "files" && t["draft"]["deliver_files"] != true {
+    let separate_recipient = !t["roles"].is_null()
+        && task_recipient(t)? != t["initiator"].as_str().unwrap_or("")
+        && task_recipient(t)? != t["roles"]["executor"].as_str().unwrap_or("");
+    if t["draft"]["mode"] != "files" && t["draft"]["deliver_files"] != true && !separate_recipient {
         return Ok(true);
     }
     if t["initiator"] != store.owner()? {

@@ -275,7 +275,14 @@ pub(super) fn task_location(task: &Value, owner: &str) -> String {
             .and_then(|c| c.last())
             .and_then(|v| v["body"].as_str())
             .map(|s| format!("；变更：{}", s.chars().take(70).collect::<String>()))
-            .unwrap_or_default();
+            .unwrap_or_else(|| {
+                let description = crate::task_roles::transition_description(task);
+                if description.is_empty() {
+                    description
+                } else {
+                    format!("；变更：{description}")
+                }
+            });
         let suffix = format!("{suffix}{stops}{verified}{reason} · /roles 纠正安排");
         if !peers.is_empty() {
             if peers.contains(&owner) {
