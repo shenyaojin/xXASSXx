@@ -258,6 +258,18 @@ fn executor_may_keep_its_own_result_without_fictitious_transport() {
     );
     assert!(!xxassxx::transfers::delivery_ready(&a, &t, &json!([])).unwrap());
     assert!(!xxassxx::transfers::delivery_ready(&a, &t, &json!([{"member":"c"}])).unwrap());
+    let status = xxassxx::transfers::delivery_status(
+        &a,
+        &t,
+        &json!([{"member":"b","result":{"body":"已核对本机结果"}}]),
+    )
+    .unwrap();
+    assert_eq!(status["ready"], true);
+    assert_eq!(status["requires_network"], false);
+    assert!(status["next_owner"].is_null());
+    assert_eq!(status["items"][0]["state"], "local");
+    assert_eq!(status["items"][0]["available_here"], false);
+    assert!(status["body"].as_str().unwrap().contains("@b 本机"));
 }
 
 #[test]

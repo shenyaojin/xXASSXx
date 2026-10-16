@@ -914,6 +914,17 @@ fn task_text_offer(
 pub fn delivery_status(store: &Store, t: &Value, candidates: &Value) -> Result<Value> {
     let ready = delivery_ready(store, t, candidates)?;
     let recipient = task_recipient(t)?;
+    if ready && !t["roles"].is_null() && t["roles"]["executor"] == recipient {
+        // Keeping the result on its execution device is a completed delivery.
+        // There is intentionally no transfer ID: treating it as an unknown
+        // attachment invents a sender action and misleads the final review.
+        return Ok(json!({
+            "ready":true,"requires_network":false,"next_owner":null,
+            "body":format!("成果保存在执行成员 @{recipient} 本机，无需网络发送或下载。"),
+            "items":[{"sender":recipient,"recipient":recipient,"state":"local","received":true,
+                "available_here":recipient == store.owner()?,"next_owner":null}]
+        }));
+    }
     let mut items = vec![];
     for c in candidates.as_array().context("missing candidates")? {
         let result = c.get("result").unwrap_or(c);
