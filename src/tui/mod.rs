@@ -2149,12 +2149,15 @@ impl Ui {
             Panel::Recovery => {
                 if let Some(t) = &self.recovery_form {
                     let b = &t["blocker"];
+                    let reason =
+                        serde_json::from_value::<crate::task_recovery::Reason>(b["reason"].clone())
+                            .ok();
                     lines.push(format!("任务：{}", t["goal"].as_str().unwrap_or("")));
                     lines.push(format!(
                         "原因：{}",
-                        b["detail"]
-                            .as_str()
-                            .or(t["error"].as_str())
+                        reason
+                            .map(|r| r.label())
+                            .or(b["detail"].as_str().or(t["error"].as_str()))
                             .unwrap_or("请查看当前状态")
                     ));
                     lines.push(format!(
@@ -2173,6 +2176,9 @@ impl Ui {
                         }
                     ));
                     lines.push("已有成果和累计次数保留；本次仅增加一份有限尝试额度。".into());
+                    if reason == Some(crate::task_recovery::Reason::ModelConfiguration) {
+                        lines.push("请先检查责任人的模型凭据、额度或配置，修复后再继续。".into());
+                    }
                     lines.push("权限问题须在执行电脑处理；待答问题用 /answer。".into());
                     lines.push("Enter 允许有限继续 · CtrlD 查看详细记录 · Esc 返回".into());
                 }

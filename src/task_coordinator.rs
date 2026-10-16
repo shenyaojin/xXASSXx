@@ -2356,7 +2356,7 @@ fn blocked(
         &current,
         "needs_attention",
         Some(&store.owner()?),
-        Some(error),
+        Some(reason.label()),
     )?;
     tx.execute("UPDATE task_model_attempts SET state='uncertain',error=?3 WHERE task_id=?1 AND revision=?2 AND state='running'",params![t["id"].as_str(),revision(t),error])?;
     tx.execute(
@@ -2370,7 +2370,7 @@ fn blocked(
             &store.owner()?,
             &stable_id(key, "attention"),
             "progress",
-            json!({"state":"needs_attention","body":error,"blocker":block,"next_owner":store.owner()?,"updated_at":now()}),
+            json!({"state":"needs_attention","body":reason.label(),"blocker":block,"next_owner":store.owner()?,"updated_at":now()}),
             &members(&current)?,
         )?;
     }
@@ -2380,7 +2380,7 @@ fn blocked(
         &format!("attention:{key}"),
         "task_attention",
         &format!(
-            "{}：{error}\n责任人：@{}。用 /recover 查看失败步骤并允许有限继续；/supplement 可保存纠正，/answer 可回答指定问题。",
+            "{}。\n责任人：@{}。用 /recover 查看失败步骤并允许有限继续；/supplement 可保存纠正，/answer 可回答指定问题。详细记录保留了原始错误。",
             reason.label(),
             store.owner()?
         ),
