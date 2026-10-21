@@ -374,6 +374,12 @@ fn retry_uses_the_highlighted_task_instead_of_a_stale_chat_selection() {
     let (_team, mut s, mut ui) = fixture();
     let first = business_task(&mut s, &ui, "第一个任务");
     let second = business_task(&mut s, &ui, "第二个任务");
+    let conn = rusqlite::Connection::open(&s.path).unwrap();
+    conn.execute(
+        "UPDATE app_tasks SET state='needs_attention',error='准备任务失败' WHERE id=?1",
+        [&second],
+    )
+    .unwrap();
     ui.refresh(&s).unwrap();
     ui.selected_task = Some(first);
     ui.key(
@@ -396,8 +402,7 @@ fn retry_uses_the_highlighted_task_instead_of_a_stale_chat_selection() {
         KeyEvent::new(KeyCode::Char('y'), KeyModifiers::CONTROL),
     )
     .unwrap();
-    key(&mut ui, &mut s, KeyCode::Enter);
-    let conn = rusqlite::Connection::open(&s.path).unwrap();
+    key(&mut ui, &mut s, KeyCode::Char('r'));
     let task: String = conn
         .query_row(
             "SELECT task_id FROM app_commands WHERE action='retry_task'",
