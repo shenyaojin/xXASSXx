@@ -1,0 +1,208 @@
+{
+  "date": "2026-10-21",
+  "source_commit": "b3e1eb51a5066de3dc4b8582cdde115a331f6afc",
+  "ci": {
+    "id": 39668785996,
+    "head_sha": "b3e1eb51a5066de3dc4b8582cdde115a331f6afc",
+    "conclusion": "success",
+    "html_url": "https://github.com/shenyaojin/xXASSXx/actions/runs/39668785996",
+    "tests": {
+      "build (ubuntu-22.04, x86_64-unknown-linux-musl)/5_Build and test.txt": {
+        "passed": 245,
+        "failed": 0,
+        "ignored": 3
+      },
+      "build (macos-15, aarch64-apple-darwin)/5_Build and test.txt": {
+        "passed": 244,
+        "failed": 0,
+        "ignored": 3
+      }
+    }
+  },
+  "lakota": {
+    "commit": "b3e1eb51a5066de3dc4b8582cdde115a331f6afc",
+    "passed": 245,
+    "failed": 0,
+    "ignored": 3,
+    "clippy_completed": true,
+    "release_completed": true
+  },
+  "build_input_files": 152,
+  "deployments": {
+    "mba": {
+      "source_commit": "b3e1eb51a5066de3dc4b8582cdde115a331f6afc",
+      "backup": "/Users/shenyaojin/.local/share/xxassxx/backups/actionable-recovery-mba-20261021",
+      "version": "0.9.0-alpha",
+      "binary_sha256": "1b06bc3c000e47ece686e5964312a1e40acd6881549be62f5907b78ecf6b42b2",
+      "schema_before": 10,
+      "schema_after": 14,
+      "preserved_tables": 59,
+      "changed_old_columns": [],
+      "integrity": "ok",
+      "foreign_key_errors": [],
+      "service": {
+        "alive": true,
+        "error": null,
+        "instance": "bb99f3a2-1ebc-466b-acbe-f9a0690318ab",
+        "log_path": "/Users/shenyaojin/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+        "pid": 17052,
+        "state": "running",
+        "updated_at": 1792614300,
+        "version": "0.9.0-alpha"
+      }
+    },
+    "trader": {
+      "source_commit": "b3e1eb51a5066de3dc4b8582cdde115a331f6afc",
+      "backup": "/home/ubuntu/.local/share/xxassxx/backups/actionable-recovery-trader-20261021",
+      "version": "0.9.0-alpha",
+      "binary_sha256": "513e7952135c1ef254db98cae756bfa3050b1f0bf6c9252322b66d8aa79b1a12",
+      "schema_before": 14,
+      "schema_after": 14,
+      "preserved_tables": 70,
+      "changed_old_columns": [],
+      "integrity": "ok",
+      "foreign_key_errors": [],
+      "service": {
+        "alive": true,
+        "error": null,
+        "instance": "ed3e0c98-65e7-4891-81f4-b9077341bd87",
+        "log_path": "/home/ubuntu/.local/share/xxassxx/client/member.sqlite3.service/butler.log",
+        "pid": 2950651,
+        "state": "running",
+        "updated_at": 1792614034,
+        "version": "0.9.0-alpha"
+      }
+    }
+  },
+  "real_scenarios": [
+    {
+      "task": "96681d4d-3cd6-51fe-a01e-024850c62e86",
+      "kind": "review_failure_reuses_successful_execution",
+      "execution_candidate": "269a10e",
+      "recovery_candidate": "ec615be",
+      "failure_injected": "review HTTP 401",
+      "execution_run": "483c97d7-902d-4e90-9eea-4a20de33a29a",
+      "execution_run_count": 1,
+      "before_after_result_sha256": "634b120993b1ff6b0e4696c9838e1b48da5a19511bf4664c2970f8a4e2042ed5",
+      "both_tuis_final_verified": true
+    },
+    {
+      "task": "c31f11c1-e2d1-5b26-9681-9fd9ce570df9",
+      "kind": "real_model_corrects_invalid_material_submission",
+      "candidate": "ec615be",
+      "fault": "one nonexistent path added to four usable file references",
+      "discovery_run": "93526cc6-1671-423b-92eb-415922d6e0fa",
+      "same_run_correction": true,
+      "both_tuis_final_verified": true
+    },
+    {
+      "task": "69c40949-6914-5779-a2d5-0baee9714b88",
+      "kind": "executor_chat_save_then_explicit_resume",
+      "candidate": "71a6ec0",
+      "binary_sha256": "3c90655ef0ccd0fb16c5eb3b85a74f3b7e10a9929d805e1b5c973d6f750e169c",
+      "revision": 1,
+      "saved_without_resume": true,
+      "executor_private_inputs": 2,
+      "initiator_inputs": 0,
+      "private_input_on_wire": false,
+      "runs": [
+        {
+          "id": "44eeb851-f303-4690-a561-a21b9a88aaa9",
+          "state": "failed",
+          "submissions": 0
+        },
+        {
+          "id": "98f7c01a-1cbf-4336-8ad0-21fb9e99633f",
+          "state": "succeeded",
+          "submissions": 1
+        },
+        {
+          "id": "f863a3a9-8740-4376-9b26-574590e7b727",
+          "state": "succeeded",
+          "submissions": 1
+        }
+      ],
+      "both_tuis_final_verified": true
+    }
+  ],
+  "original_task": {
+    "id": "7a9528de-4fe1-5bc3-8c6e-0bea10cb638d",
+    "revision": 1,
+    "both_tuis_final_verified": true,
+    "states": {
+      "mba": "completed",
+      "trader": "completed"
+    },
+    "same_task_ids_as_before_upgrade": true,
+    "runs": [
+      {
+        "id": "1155c540-0706-4d9c-bae3-153ff7335cfa",
+        "state": "succeeded",
+        "session_id": "01a15fec-67e9-75e3-8046-efd3d3466cea",
+        "resumed_session_id": null,
+        "submissions": 1,
+        "phase": "discover"
+      },
+      {
+        "id": "e59f7e32-0e37-477a-88cf-31cad40f2df0",
+        "state": "succeeded",
+        "session_id": "01a15fec-67e9-75e3-8046-efd3d3466cea",
+        "resumed_session_id": "01a15fec-67e9-75e3-8046-efd3d3466cea",
+        "submissions": 1,
+        "phase": "discover"
+      },
+      {
+        "id": "fa0042ef-2a64-4598-a75f-a1360f822e4c",
+        "state": "succeeded",
+        "session_id": "01a16024-ce75-7a30-8b99-6d631291a266",
+        "resumed_session_id": null,
+        "submissions": 1,
+        "phase": "analyze"
+      },
+      {
+        "id": "9380a1f9-28ab-411c-a591-847ae42e83dc",
+        "state": "succeeded",
+        "session_id": "01a16024-ce75-7a30-8b99-6d631291a266",
+        "resumed_session_id": "01a16024-ce75-7a30-8b99-6d631291a266",
+        "submissions": 1,
+        "phase": "analyze"
+      }
+    ],
+    "verified_snapshot_files": [
+      {
+        "sha256": "8e41d0ced912b99b8b3a52f6109a8b3f7046e85f99b2e7b05973659811b2d3f7",
+        "bytes": 18386
+      },
+      {
+        "sha256": "fab536f4055a382c627211da0c2443091642c00d5d29694b2f7e3b71bcd9bd14",
+        "bytes": 11958
+      },
+      {
+        "sha256": "4cb7b53bba517458e696f4b40ca76ae97f66eb84706eb48e939cc80a4d6d80a1",
+        "bytes": 10193
+      }
+    ],
+    "executor_private_inputs": 2,
+    "initiator_inputs": 0,
+    "private_input_on_wire": false,
+    "pending_questions": {
+      "mba": 0,
+      "trader": 0
+    },
+    "result_scope": "Three ordinary reports summarized. External transfer provenance and newly added SSH connections explicitly remain unverified; protected material excluded."
+  },
+  "cleanup": {
+    "test_clients_stopped": true,
+    "test_proxies_stopped": true,
+    "test_relay_stopped": true,
+    "test_tunnels_stopped": true,
+    "daily_services_running": true,
+    "daily_access_modes": {
+      "mba": "ask_for_approval",
+      "trader": "full_access"
+    },
+    "public_release_changed": false,
+    "local_rust_build_performed": false
+  },
+  "private_evidence_root": "smoke-output/actionable-recovery-20261021/"
+}
