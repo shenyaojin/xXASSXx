@@ -47,7 +47,7 @@ fn incoming(team: &Team) -> String {
         r.direction == "out" && r.message.operation == "task_v2" && r.message.recipient == "b"
     }) {
         b.save_message(&message.message, true).unwrap();
-        tasks::ingest(&mut b, &message.message).unwrap();
+        tasks::ingest(&b, &message.message).unwrap();
     }
     id
 }
@@ -229,6 +229,74 @@ fn selected_task_corrections_cannot_start_another_task() {
     assert_eq!(app::command(&b, &i.request_id).unwrap()["task_id"], id);
 }
 
+#[test]
+fn owner_tools_expose_legacy_actions_only_for_the_selected_compatible_state() {
+    let team = Team::new();
+    let business = incoming(&team);
+    let mut b = team.store("b");
+    let mut i = input(&team, "b", "补充当前任务");
+    let names = |s: &Store, i: &Instruction| -> Vec<String> {
+        app::model::tools_for_instruction(s, i)
+            .unwrap()
+            .iter()
+            .map(|tool| tool["function"]["name"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    let available = names(&b, &i);
+    assert!(
+        !available
+            .iter()
+            .any(|name| name == "amend_task" || name == "answer_peer")
+    );
+    assert!(available.iter().any(|name| name == "continue_task"));
+    let current = tasks::get(&b, &business).unwrap();
+    i.task_id = Some(business);
+    i.session_id = current["session_id"].as_str().unwrap().into();
+    let available = names(&b, &i);
+    assert!(
+        !available
+            .iter()
+            .any(|name| name == "amend_task" || name == "answer_peer")
+    );
+    assert!(available.iter().any(|name| name == "continue_task"));
+
+    let mut legacy = input(&team, "b", "旧协议文件任务");
+    submit(&mut b, &legacy);
+    let task = app::tasks::create(&mut b, &legacy, "旧协议文件任务", "读取所选文件", None).unwrap();
+    legacy.task_id = task["id"].as_str().map(str::to_owned);
+    let available = names(&b, &legacy);
+    assert!(available.iter().any(|name| name == "amend_task"));
+    assert!(
+        !available
+            .iter()
+            .any(|name| name == "answer_peer" || name == "continue_task")
+    );
+    db(&b)
+        .execute(
+            "UPDATE app_tasks SET state='waiting_user' WHERE id=?1",
+            [legacy.task_id.as_deref().unwrap()],
+        )
+        .unwrap();
+    let available = names(&b, &legacy);
+    assert!(available.iter().any(|name| name == "answer_peer"));
+    assert!(
+        !available
+            .iter()
+            .any(|name| name == "amend_task" || name == "continue_task")
+    );
+    db(&b)
+        .execute(
+            "UPDATE app_tasks SET state='running' WHERE id=?1",
+            [legacy.task_id.as_deref().unwrap()],
+        )
+        .unwrap();
+    assert!(
+        !names(&b, &legacy)
+            .iter()
+            .any(|name| name == "amend_task" || name == "answer_peer")
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn ordinary_executor_chat_routes_to_original_task_and_keeps_constraints_local() {
     use std::sync::{Arc, Mutex};
@@ -245,7 +313,13 @@ async fn ordinary_executor_chat_routes_to_original_task_and_keeps_constraints_lo
             log.lock().unwrap().push(body.clone());
             let routing=body["tools"].as_array().unwrap().iter().any(|tool|tool["function"]["name"]=="continue_task");
             let (name,args)=if routing {
-                ("continue_task",json!({"task_id":selected}))
+                // Reproduce the real-model preference for the older, broadly
+                // described amendment tool whenever it is incorrectly offered.
+                if body["tools"].as_array().unwrap().iter().any(|tool|tool["function"]["name"]=="amend_task") {
+                    ("amend_task",json!({"requirement":"本机约束"}))
+                } else {
+                    ("continue_task",json!({"task_id":selected}))
+                }
             } else {
                 ("task_decision",json!({"action":"supplement","body":"本机约束","resume":false}))
             };
@@ -299,6 +373,17 @@ async fn ordinary_executor_chat_routes_to_original_task_and_keeps_constraints_lo
         requests.len(),
         2,
         "routing must lead to followup, never task preparation"
+    );
+    assert!(
+        !requests[0]["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|tool| matches!(
+                tool["function"]["name"].as_str(),
+                Some("amend_task" | "answer_peer")
+            )),
+        "ordinary cross-conversation followup must not expose legacy task actions"
     );
     assert!(requests[1]["messages"].to_string().contains("followup"));
     assert!(

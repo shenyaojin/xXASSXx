@@ -2972,7 +2972,7 @@ fn recover_in_transaction(c: &Connection, store: &Store, t: &Value, i: &Instruct
             &stable_id(&i.request_id, "recovered"),
             "accepted",
             json!({"body":"本端已显式恢复，继续原任务执行","recovered":true}),
-            &members(&t)?,
+            &members(t)?,
         )?;
     }
     c.execute(

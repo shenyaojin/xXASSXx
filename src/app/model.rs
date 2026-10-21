@@ -69,6 +69,37 @@ pub fn tools() -> Vec<Value> {
     result.extend(crate::local_files::tools());
     result
 }
+/// Do not advertise legacy actions that cannot act on this message. An inbound
+/// business task in another conversation must first use continue_task.
+pub fn tools_for_instruction(store: &Store, i: &Instruction) -> Result<Vec<Value>> {
+    let selected: Option<(i64, String)> = if let Some(id) = &i.task_id {
+        store
+            .conn
+            .query_row(
+                "SELECT protocol,state FROM app_tasks WHERE id=?1 AND session_id=?2",
+                params![id, i.session_id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .optional()?
+    } else {
+        None
+    };
+    let legacy_state = selected
+        .as_ref()
+        .filter(|(protocol, _)| *protocol == 1)
+        .map(|(_, state)| state.as_str());
+    let mut available = tools();
+    available.retain(
+        |tool| match tool["function"]["name"].as_str().unwrap_or("") {
+            "amend_task" => legacy_state == Some("awaiting_authorization"),
+            "answer_peer" => legacy_state == Some("waiting_user"),
+            "continue_task" => legacy_state.is_none(),
+            "send_peer" | "create_read_task" | "delegate_codex" => i.task_id.is_none(),
+            _ => true,
+        },
+    );
+    Ok(available)
+}
 pub fn context(store: &Store, i: &Instruction) -> Result<Value> {
     let tasks=tasks::list(store,Some(&i.session_id))?.iter().map(|t|json!({"id":t["id"],"title":t["title"],"state":t["state"],"goal":t["goal"],"peer":t["peer"],"waiting_for":t["waiting_for"],"next_owner":t["next_owner"],"delivery":t["delivery"]})).collect::<Vec<_>>();
     let submitted_task_context = match task_context::submitted(store, &i.request_id)? {
@@ -420,7 +451,7 @@ async fn cycle(store: &mut Store, i: &Instruction, id: &str, cfg: ModelConfig) -
             "UPDATE app_model_runs SET calls=?2 WHERE id=?1",
             params![id, call_index + 1],
         )?;
-        let mut available_tools = tools();
+        let mut available_tools = tools_for_instruction(store, i)?;
         if !effect
             && (call_index + 1 >= cfg.max_model_calls.min(cfg.max_tool_rounds)
                 || count + 1 >= cfg.max_tool_calls)
