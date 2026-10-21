@@ -64,6 +64,42 @@ fn count(s: &Store, sql: &str) -> i64 {
 }
 
 #[tokio::test]
+async fn replacing_unconfirmed_assignment_does_not_claim_a_pending_stop() {
+    let team = Team::new();
+    let (i, id) = create(&team, "b");
+    let a = team.store("a");
+    let mut change = command(&i, &id, 1, "执行 @c 更正尚未确认的成员");
+    change.payload["executor"] = json!("c");
+    roles::change(&a, &change).unwrap();
+    tasks::prepare_model(&a, &id).await.unwrap();
+    assert!(messages(&a, "stop_assignment").is_empty());
+    assert!(messages(&a, "proposal").is_empty());
+    tasks::confirm(&a, &command(&i, &id, 2, "确认新安排")).unwrap();
+    let sent = messages(&a, "proposal");
+    assert_eq!(sent.len(), 1);
+    assert_eq!(sent[0].recipient, "c");
+    let mut c = team.store("c");
+    receive(&mut c, &sent[0]);
+    let received = tasks::get(&c, &id).unwrap();
+    assert_eq!(
+        received["assignment_change"]["previous_assignment_confirmed"],
+        false
+    );
+    assert!(roles::transition_description(&received).contains("未确认、未派发，无需停止确认"));
+    assert_eq!(
+        count(&team.store("b"), "SELECT count(*) FROM task_executions"),
+        0
+    );
+    let mut old = received.clone();
+    old["assignment_change"]
+        .as_object_mut()
+        .unwrap()
+        .remove("previous_assignment_confirmed");
+    assert!(roles::transition_description(&old).contains("未提供旧分配的停止记录"));
+    assert!(!roles::transition_description(&old).contains("停止仍待确认"));
+}
+
+#[tokio::test]
 async fn replacement_waits_for_old_member_and_tombstone_defeats_reordered_proposal() {
     let team = Team::new();
     let (i, id) = create(&team, "b");
@@ -135,6 +171,7 @@ async fn replacement_waits_for_old_member_and_tombstone_defeats_reordered_propos
     assert_eq!(count(&c, "SELECT count(*) FROM task_workspaces"), 0);
     let transition = tasks::get(&c, &id).unwrap()["assignment_change"].clone();
     assert_eq!(transition["previous_executor"], "b");
+    assert_eq!(transition["previous_assignment_confirmed"], true);
     assert_eq!(transition["reason"], change.body);
     assert_eq!(transition["stops"][0]["state"], "stopped");
     assert_eq!(transition["stops"][0]["side_effects_checked"], true);

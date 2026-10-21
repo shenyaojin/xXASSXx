@@ -127,11 +127,22 @@ pub fn transition(t: &Value) -> Value {
         .find(|v| v["revision"] == t["revision"] && v["kind"] == "execution_plan")
     {
         let previous = &change["before"]["executor"];
+        let previous_confirmed = t["revisions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|r| {
+                r["revision"]
+                    .as_i64()
+                    .zip(change["revision"].as_i64())
+                    .is_some_and(|(old, new)| old + 1 == new)
+            })
+            .map(|r| !r["confirmed_at"].is_null());
         let stops = t["assignment_stops"].as_array().into_iter().flatten()
             .filter(|v| &v["executor"] == previous && v["revision"].as_i64().is_some_and(|r| r < t["revision"].as_i64().unwrap_or(0)))
             .map(|v| json!({"id":v["id"],"revision":v["revision"],"executor":v["executor"],"state":v["state"],"side_effects_checked":v["state"]=="stopped","confirmed_at":v["confirmed_at"]}))
             .collect::<Vec<_>>();
-        return json!({"reason":change["body"],"previous_executor":previous,"stops":stops,"reported_by":t["initiator"]});
+        return json!({"reason":change["body"],"previous_executor":previous,"previous_assignment_confirmed":previous_confirmed,"stops":stops,"reported_by":t["initiator"]});
     }
     t["history"]
         .as_array()
@@ -151,18 +162,25 @@ pub fn transition_description(t: &Value) -> String {
     let Some(reason) = v["reason"].as_str() else {
         return String::new();
     };
-    let stopped = v["stops"]
-        .as_array()
-        .is_some_and(|s| !s.is_empty() && s.iter().all(|v| v["state"] == "stopped"));
-    format!(
-        "{}；发起端记录：旧 @{} {}",
-        reason,
-        v["previous_executor"].as_str().unwrap_or("?"),
-        if stopped {
+    let stops = v["stops"].as_array();
+    let status = if stops.is_some_and(|s| !s.is_empty()) {
+        if stops.unwrap().iter().all(|v| v["state"] == "stopped") {
             "已确认停止并核对副作用"
         } else {
             "停止仍待确认"
         }
+    } else if v["previous_assignment_confirmed"] == false {
+        "原分配未确认、未派发，无需停止确认"
+    } else {
+        // Older proposals omit the confirmation fact. Missing evidence is not
+        // proof of either a completed stop or an outstanding stop request.
+        "本次安排未提供旧分配的停止记录"
+    };
+    format!(
+        "{}；发起端记录：旧 @{} {}",
+        reason,
+        v["previous_executor"].as_str().unwrap_or("?"),
+        status
     )
 }
 pub fn blocked(c: &Connection, id: &str) -> Result<bool> {
@@ -464,7 +482,11 @@ pub fn change(store: &Store, i: &Instruction) -> Result<bool> {
             store,
             i,
             "task_progress",
-            "已保存执行安排变更与原因。旧分配将停止；新安排需要确认，并在旧端确认安全边界后才启动。",
+            if t["confirmed"] == t["revision"] {
+                "已保存执行安排变更与原因。旧分配将停止；新安排需要确认，并在旧端确认安全边界后才启动。"
+            } else {
+                "已保存执行安排变更与原因。旧分配未确认、未派发；新安排等待你确认。"
+            },
         )?;
         return Ok(true);
     }

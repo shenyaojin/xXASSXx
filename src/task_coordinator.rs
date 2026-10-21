@@ -145,12 +145,12 @@ pub fn get(store: &Store, id: &str) -> Result<Value> {
         "SELECT json_object('id',id,'revision',revision,'sender',sender,'sequence',sequence,'kind',kind,'payload',json(payload),'created_at',created_at) FROM task_journal WHERE task_id=?1 ORDER BY rowid",
         id,
     )?;
-    v["assignment_change"] = crate::task_roles::transition(&v);
     v["revisions"] = rows(
         &store.conn,
         "SELECT json_object('revision',revision,'original',original,'draft',json(draft),'confirmed_by',confirmed_by,'confirmed_at',confirmed_at,'confirmation_id',confirmation_id) FROM task_revisions WHERE task_id=?1 ORDER BY revision",
         id,
     )?;
+    v["assignment_change"] = crate::task_roles::transition(&v);
     v["execution_permission"] = crate::task_workspace::view(store, &v)?;
     if v["blocker"].is_null() && !terminal(&v) {
         if v["questions"].as_array().unwrap().iter().any(|q|q["revision"]==v["revision"] && q["state"]=="user") {
