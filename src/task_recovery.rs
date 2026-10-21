@@ -15,6 +15,7 @@ pub enum Reason {
     ExecutionUncertain,
     BudgetExhausted,
     ExecutionError,
+    MaterialInput,
 }
 impl Reason {
     pub fn action(self) -> &'static str {
@@ -26,6 +27,7 @@ impl Reason {
             Self::ExecutionUncertain => "inspect_then_resume",
             Self::BudgetExhausted => "grant_limited_continuation",
             Self::ExecutionError => "inspect_then_resume",
+            Self::MaterialInput => "correct_materials",
         }
     }
     pub fn label(self) -> &'static str {
@@ -36,7 +38,8 @@ impl Reason {
             Self::LocalPermission => "等待执行电脑的本机授权",
             Self::ExecutionUncertain => "执行中断，已有成果需要核对",
             Self::BudgetExhausted => "本次自动尝试额度已用完",
-            Self::ExecutionError => "执行遇到无法自动修复的问题",
+            Self::ExecutionError => "执行已暂停，需要核对原因或调整后继续",
+            Self::MaterialInput => "材料清单需要调整，可在原任务继续",
         }
     }
 }
@@ -59,6 +62,12 @@ pub fn failure(reason: Reason, detail: impl Into<String>) -> anyhow::Error {
     .into()
 }
 pub fn classify(error: &anyhow::Error) -> Reason {
+    if error
+        .downcast_ref::<crate::task_materials::MaterialRejection>()
+        .is_some()
+    {
+        return Reason::MaterialInput;
+    }
     error
         .downcast_ref::<Failure>()
         .map_or(Reason::ExecutionError, |e| e.reason)

@@ -144,6 +144,16 @@ pub(super) fn task_status(task: &Value, owner: &str) -> String {
             format!("等待 @{who} 允许执行 · 你无需重试")
         };
     }
+    if task["state"] == "needs_attention" || task["blocker"]["id"].is_string() {
+        return format!(
+            "{state} · CtrlY 处理 · {}",
+            task["blocker"]["detail"]
+                .as_str()
+                .or(task["error"].as_str())
+                .or(task["waiting_for"].as_str())
+                .unwrap_or("未完成步骤需要处理")
+        );
+    }
     match task["waiting_for"]
         .as_str()
         .filter(|s| !s.trim().is_empty())

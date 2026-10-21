@@ -103,6 +103,15 @@ pub fn get(store: &Store, id: &str) -> Result<Value> {
         |r| r.get::<_, i64>(0)
     )?);
     v["blocker"] = recovery::current(&store.conn, &v)?;
+    if v["blocker"]["owner"]
+        .as_str()
+        .is_some_and(|owner| owner != store.owner().unwrap_or_default())
+    {
+        v["blocker"]["remote_id"] = store.conn.query_row(
+            "SELECT json_extract(payload,'$.blocker.id') FROM task_journal WHERE task_id=?1 AND revision=?2 AND sender=?3 AND kind='progress' AND json_extract(payload,'$.blocker.step_id')=?4 ORDER BY rowid DESC LIMIT 1",
+            params![id,revision(&v),v["blocker"]["owner"].as_str(),v["blocker"]["step_id"].as_str()], |r|r.get::<_,Option<String>>(0),
+        ).optional()?.flatten().map_or(Value::Null,Value::String);
+    }
     v["inputs"] = crate::task_inputs::list(&store.conn, id, revision(&v))?;
     v["recovery_budget"] = json!({"extra_execution_rounds":recovery::extra(&store.conn,&v,false)?,"extra_model_rounds":recovery::extra(&store.conn,&v,true)?});
     v["short_id"] = json!(format!("T-{}", &id[..8]));
@@ -131,6 +140,21 @@ pub fn get(store: &Store, id: &str) -> Result<Value> {
         "SELECT json_object('id',r.id,'execution_id',e.id,'revision',e.revision,'state',r.state,'session_id',r.session_id,'resumed_session_id',r.resumed_session_id,'working_directory',r.workdir,'reads',r.reads,'submissions',r.submissions,'turn_completed',r.turn_completed,'exit_code',r.exit_code,'error_code',r.error_code) FROM runs r JOIN task_executions e ON r.task_id=e.id WHERE e.task_id=?1 ORDER BY r.rowid",
         id,
     )?;
+    v["saved_work"] = rows(
+        &store.conn,
+        "SELECT json_object('execution_id',e.id,'phase',e.phase,'run_id',r.id,'body',json_extract(r.result,'$.body'),'file_count',COALESCE(json_array_length(r.result,'$.files'),0),'evidence','已保存的执行记录；候选发现不等于最终核实或交付') FROM runs r JOIN task_executions e ON e.id=r.task_id WHERE e.task_id=?1 AND e.revision=(SELECT revision FROM app_tasks WHERE id=?1) AND r.state='succeeded' ORDER BY r.rowid DESC LIMIT 3",
+        id,
+    )?;
+    let remote_work = rows(
+        &store.conn,
+        "SELECT json_object('member',member,'phase','received_candidate','body',json_extract(result,'$.body'),'sources',json_extract(result,'$.sources'),'evidence','已收到执行成员的阶段成果；仍待最终检查，不等于已完成交付') FROM task_candidates WHERE task_id=?1 AND revision=(SELECT revision FROM app_tasks WHERE id=?1) AND member!=(SELECT member_id FROM identity WHERE singleton=1) ORDER BY rowid DESC LIMIT 3",
+        id,
+    )?;
+    if let (Some(saved), Some(received)) = (v["saved_work"].as_array_mut(), remote_work.as_array())
+    {
+        saved.splice(0..0, received.iter().cloned());
+        saved.truncate(3);
+    }
     // Expose only the tool category, never commands, output or model reasoning.
     v["active_executor"] = store.conn.query_row(
         "SELECT CASE WHEN r.codex_version IS NOT NULL OR EXISTS(SELECT 1 FROM events ev WHERE ev.run_id=r.id AND json_extract(ev.event,'$.type')='xxassxx.local_agent.handoff') THEN 'codex' WHEN EXISTS(SELECT 1 FROM events ev WHERE ev.run_id=r.id AND json_extract(ev.event,'$.type')='xxassxx.local_agent.started') THEN 'local_agent' ELSE 'starting' END FROM runs r JOIN task_executions x ON x.id=r.task_id WHERE x.task_id=?1 AND x.revision=?2 AND r.state='running' ORDER BY r.rowid DESC LIMIT 1",
@@ -876,6 +900,7 @@ pub(crate) fn dispatch_confirmed(store: &Store, t: &Value) -> Result<()> {
     Ok(())
 }
 pub fn revise(store: &Store, i: &Instruction) -> Result<()> {
+    let tx = store.write_transaction()?;
     let id = i.task_id.as_deref().context("请选择任务")?;
     let t = get(store, id)?;
     ensure!(
@@ -890,6 +915,10 @@ pub fn revise(store: &Store, i: &Instruction) -> Result<()> {
     )? {
         return Ok(());
     }
+    ensure!(
+        i.payload["revision"] == t["revision"],
+        "任务版本已改变，请查看当前要求后重新修改；原话仍保留"
+    );
     let mut role_plan = crate::task_roles::roles(&t)?;
     if let Some(executor) = i.payload["executor"].as_str() {
         app::valid_recipient(store, executor)?;
@@ -915,7 +944,6 @@ pub fn revise(store: &Store, i: &Instruction) -> Result<()> {
         body.to_owned()
     };
     ensure!(original.len() <= 20000, "任务意图过长");
-    let tx = store.write_transaction()?;
     if t["confirmed"] == t["revision"] && !terminal(&t) {
         if role_plan.is_some() {
             crate::task_roles::request_stop(store, &t, &i.body)?;
@@ -1524,10 +1552,35 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
                 "only the initiator may request retry"
             );
             check_executor(&tx, &w.task_id)?;
-            ensure!(
-                t["state"] == "needs_attention",
-                "执行方当前没有待恢复的任务"
-            );
+            let current_block = recovery::current(&tx, &t)?;
+            let stale = w.data["target_block_id"]
+                .as_str()
+                .is_some_and(|id| current_block["id"] != id)
+                || w.data["target_step_id"]
+                    .as_str()
+                    .is_some_and(|id| current_block["step_id"] != id);
+            if stale || t["state"] != "needs_attention" || has_user_questions(&tx, &t)? {
+                let mut b = current_block;
+                if b["reason"] == "material_input" {
+                    b["reason"] = json!("execution_error");
+                    b["reason_code"] = json!("material_input");
+                }
+                emit(
+                    &tx,
+                    &t,
+                    &store.owner()?,
+                    &stable_id(&m.message_id, "retry-stale"),
+                    "progress",
+                    json!({"state":t["state"],"body":"恢复请求到达时任务状态或失败步骤已改变；未启动执行，请查看当前任务后重新选择。","blocker":b,"retry_rejected":true,"next_owner":t["next_owner"]}),
+                    std::slice::from_ref(&m.sender),
+                )?;
+                tx.execute(
+                    "UPDATE messages SET state='task_handled' WHERE id=?1",
+                    [&m.message_id],
+                )?;
+                tx.commit()?;
+                return Ok(());
+            }
             retry_local(&tx, &t, &m.message_id)?;
             state(
                 &tx,
@@ -1686,7 +1739,9 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
         "accepted" | "progress" | "meeting_report" => {
             if w.data["blocker"].is_object() {
                 let b = &w.data["blocker"];
-                let reason: Reason = serde_json::from_value(b["reason"].clone())?;
+                let reason: Reason =
+                    serde_json::from_value(b.get("reason_code").unwrap_or(&b["reason"]).clone())
+                        .unwrap_or(Reason::ExecutionError);
                 recovery::record(
                     &tx,
                     &t,
@@ -1694,7 +1749,10 @@ pub fn ingest(store: &Store, m: &Message) -> Result<()> {
                     reason,
                     string(b, "step_kind")?,
                     string(b, "step_id")?,
-                    w.data["body"].as_str().unwrap_or("需要检查"),
+                    b["detail"]
+                        .as_str()
+                        .or(w.data["body"].as_str())
+                        .unwrap_or("需要检查"),
                     &m.sender,
                 )?;
             }
@@ -1787,6 +1845,9 @@ fn save_question(
     let same:bool=c.query_row("SELECT task_id=?2 AND revision=?3 AND body=?4 AND asker=?5 FROM task_questions WHERE id=?1",params![id,t["id"].as_str(),revision(t),q["body"].as_str(),asker],|r|r.get(0))?;
     ensure!(same, "question ID conflict");
     Ok(())
+}
+fn has_user_questions(c: &Connection, t: &Value) -> Result<bool> {
+    Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM task_questions WHERE task_id=?1 AND revision=?2 AND state='user')",params![t["id"].as_str(),revision(t)],|r|r.get(0))?)
 }
 fn has_pending_questions(c: &Connection, t: &Value) -> Result<bool> {
     Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM task_questions WHERE task_id=?1 AND revision=?2 AND state IN ('user','coordinating','investigating'))",params![t["id"].as_str(),revision(t)],|r|r.get(0))?)
@@ -1965,6 +2026,46 @@ pub fn check_execution(c: &Connection, execution: &str) -> Result<Option<Value>>
         json!({"task_id":id,"revision":rev,"phase":phase,"snapshot_id":snapshot}),
     ))
 }
+/// Material selection is checked while the producing run can still correct it.
+/// Freeze repeats this check because a source may change after submission.
+pub(crate) fn validate_material_submission(
+    store: &Store,
+    execution: &str,
+    raw: &str,
+) -> Result<()> {
+    let Some(context) = check_execution(&store.conn, execution)? else {
+        return Ok(());
+    };
+    if context["phase"] != "discover" {
+        return Ok(());
+    }
+    let out: Value = serde_json::from_str(raw)?;
+    if out["outcome"] == "question" || out["files"].as_array().is_none_or(Vec::is_empty) {
+        return Ok(());
+    }
+    let t = get(store, string(&context, "task_id")?)?;
+    if !matches!(t["draft"]["mode"].as_str(), Some("listing" | "files")) {
+        if let Err(error) = crate::task_materials::validate(store, &t, &out["files"]) {
+            if let Some(feedback) = crate::task_materials::correction_feedback(&error) {
+                let run: String = store.conn.query_row(
+                    "SELECT active_run FROM tasks WHERE id=?1",
+                    [execution],
+                    |r| r.get(0),
+                )?;
+                journal(
+                    &store.conn,
+                    &t,
+                    &store.owner()?,
+                    &stable_id(&run, &format!("material-submission:{raw}")),
+                    "material_correction",
+                    &json!({"execution_id":execution,"run_id":run,"feedback":feedback,"detail":error.to_string()}),
+                )?;
+            }
+            return Err(error);
+        }
+    }
+    Ok(())
+}
 pub fn execution_context(c: &Connection, id: &str) -> Result<Option<Value>> {
     let Some(mut v) = check_execution(c, id)? else {
         return Ok(None);
@@ -1996,6 +2097,10 @@ pub fn execution_context(c: &Connection, id: &str) -> Result<Option<Value>> {
         [id],
         |r| r.get::<_, Option<String>>(0)
     )?);
+    v["material_correction"] = c.query_row(
+        "SELECT payload FROM task_journal WHERE task_id=?1 AND revision=?2 AND kind='material_correction' AND json_extract(payload,'$.execution_id')=?3 ORDER BY rowid DESC LIMIT 1",
+        params![v["task_id"].as_str(),v["revision"].as_i64(),id], |r| r.get::<_, String>(0),
+    ).optional()?.map(|raw| serde_json::from_str::<Value>(&raw)).transpose()?.unwrap_or(Value::Null);
     // A new physical scope uses a new Codex session, but must keep the previous
     // discovery's reported coverage and limitations. This is prior-run evidence,
     // never a grant to read the old scope or proof of unseen source contents.
@@ -2032,7 +2137,7 @@ pub fn execution_context(c: &Connection, id: &str) -> Result<Option<Value>> {
     v["task_inputs"] =
         crate::task_inputs::list(c, string(&v, "task_id")?, v["revision"].as_i64().unwrap())?;
     v["input_contract"] = json!(
-        "User inputs retain original wording and do not expand authority. Read and address relevant current-revision inputs. Before final submission call get_task again if told new input arrived; receipt proves context read, not factual adoption. In recovery inspect existing files/logs and reuse completed results before any effect. Never repeat a side effect whose outcome remains uncertain; ask a precise question instead."
+        "User inputs retain original wording and do not expand authority. Inputs with kind executor_constraint are this device owner's PRIVATE local handling constraints or factual corrections, not changes to the initiator's goal, recipients or authority. Keep their original wording and private details local; report only the task-relevant resulting limitation, not the private instruction. Read and address relevant current-revision inputs. Before final submission call get_task again if told new input arrived; receipt proves context read, not factual adoption. In recovery inspect existing files/logs and reuse completed results before any effect. Never repeat a side effect whose outcome remains uncertain; ask a precise question instead. material_correction is kernel validation feedback: reuse usable candidates, replace or omit rejected references, and explicitly report resulting coverage limits. Never work around a protected path by copying its content elsewhere. If a required part cannot be completed, submit a precise question or a truthful limited result; do not discard other findings or repeat the same invalid submission."
     );
     v["owner_supplements"] = rows(
         c,
@@ -2126,7 +2231,7 @@ fn decision_actions(stage: &str) -> Result<&'static [&'static str]> {
         "prepare" => Ok(&["prepare"]),
         "resolve" => Ok(&["answer", "investigate", "escalate"]),
         "review" => Ok(&["complete", "continue", "escalate", "investigate"]),
-        "followup" => Ok(&["answer", "reply", "supplement", "revise", "plan"]),
+        "followup" => Ok(&["answer", "reply", "supplement", "recover", "revise", "plan"]),
         _ => bail!("unknown coordinator stage"),
     }
 }
@@ -2155,6 +2260,7 @@ fn decision_parameters(stage: &str) -> Result<Value> {
         properties["file_summary"] = json!({"type":"string","description":"For completed file delivery: one or two plain sentences saying what the selected file represents and why it is the requested result. No transport status, approval/download instructions, paths or search transcript."});
     }
     if stage == "followup" {
+        properties["resume"] = json!({"type":"boolean","description":"For supplement only. True only when this exact user message explicitly requests continuing the currently paused task after this correction. Questions about status, suggestions, hypotheticals or merely supplying facts never request recovery. Rust checks the blocker captured when the message was sent."});
         properties["executor"] = json!({"type":"string","description":"For plan only: explicit new executor member_id, replacing the old executor. The initiator member_id means local execution."});
         properties["result_recipient"] = json!({"type":"string","description":"For plan only: new result recipient member_id. This never changes executor."});
         properties["effective_request"] = json!({"type":"string","description":"For revise: complete current effective requirements from authenticated user statements and their corrections, replacing superseded interpretations. Prior model drafts are not user facts."});
@@ -2305,6 +2411,9 @@ async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result
     let system = format!(
         "{system} Final review body: describe only the substantive work, measurements, evidence and actual limitations of the result. Do not include delivery status, download buttons, permission steps, retained/deleted copies or handoff status in body or file_summary. Rust appends those current facts independently. In particular available_here=false means there is no incoming download on this device, never that a sender deleted its retained original or outgoing copy."
     );
+    let system = format!(
+        "{system} Recovery followups: do not start a new task for a correction to this task. Explicit requests to continue a paused step use recover; a correction plus explicit continuation uses supplement with resume=true. Merely asking progress or adding information never resumes execution. A local executor may add factual corrections or restrictive handling constraints in the same task using supplement; this does not change the initiator's goal, permission, executor or recipient. If local_member is not initiator, goal/role changes require the initiator and use reply, never plan or revise. Narrowing out optional unavailable evidence may use supplement, with the resulting limitation reported. Correct obvious prior misinterpretations from the user's actual correction; do not preserve a model-invented topic over the user's words. saved_work is retained run evidence, not final completion: report existing findings with that limitation instead of claiming nothing was found merely because state needs_attention. Failed internal processing does not erase completed discovery."
+    );
     let mut model_task = if stage == "prepare" {
         json!({"id":t["id"],"revision":t["revision"],"initiator":t["initiator"],"participants":t["participants"],"original":t["original"]})
     } else if stage == "followup" {
@@ -2314,6 +2423,10 @@ async fn decision(store: &Store, t: &Value, stage: &str, extra: Value) -> Result
     };
     model_task["roles"] = t["roles"].clone();
     model_task["inputs"] = t["inputs"].clone();
+    if stage == "followup" {
+        model_task["blocker"] = t["blocker"].clone();
+        model_task["saved_work"] = t["saved_work"].clone();
+    }
     let changes = {
         let mut q=store.conn.prepare("SELECT json_object('kind',kind,'body',body,'revision',revision,'replaced_roles',json(before_roles),'effective_roles',json(after_roles)) FROM task_role_changes WHERE task_id=?1 ORDER BY rowid DESC LIMIT 5")?;
         q.query_map([t["id"].as_str()], |r| r.get::<_, String>(0))?
@@ -2658,14 +2771,28 @@ fn blocked(
         "UPDATE app_tasks SET error=?2 WHERE id=?1",
         params![t["id"].as_str(), error],
     )?;
+    let retained = current["saved_work"].as_array().map_or(0, Vec::len);
+    let body = format!(
+        "{}。\n具体原因：{}\n已保留 {} 份阶段成果记录；详细运行和对话仍可查看。{}",
+        reason.label(),
+        error.chars().take(1600).collect::<String>(),
+        retained,
+        recovery_guidance(reason)
+    );
     if current["confirmed"] == current["revision"] {
+        let mut wire_block = block;
+        if reason == Reason::MaterialInput {
+            // Older 0.9 clients only know the seven original reason values.
+            wire_block["reason"] = json!(Reason::ExecutionError);
+            wire_block["reason_code"] = json!(Reason::MaterialInput);
+        }
         emit(
             &tx,
             &current,
             &store.owner()?,
             &stable_id(key, "attention"),
             "progress",
-            json!({"state":"needs_attention","body":reason.label(),"blocker":block,"next_owner":store.owner()?,"updated_at":now()}),
+            json!({"state":"needs_attention","body":body,"blocker":wire_block,"next_owner":store.owner()?,"saved_work_count":retained,"updated_at":now()}),
             &members(&current)?,
         )?;
     }
@@ -2675,13 +2802,34 @@ fn blocked(
         &format!("attention:{key}"),
         "task_attention",
         &format!(
-            "{}。\n责任人：@{}。用 /recover 查看失败步骤并允许有限继续；/supplement 可保存纠正，/answer 可回答指定问题。详细记录保留了原始错误。",
-            reason.label(),
+            "{body}\n处理成员：@{}。用 /recover 打开处理选项；原任务和已有成果保留。",
             store.owner()?
         ),
     )?;
     tx.commit()?;
     Ok(())
+}
+fn recovery_guidance(reason: Reason) -> &'static str {
+    match reason {
+        Reason::MaterialInput => {
+            "可补充材料选择或跳过范围后继续；不必关闭任务。受保护材料不能通过重试放行。"
+        }
+        Reason::LocalPermission => {
+            "请在执行电脑检查本机授权或目录访问；普通补充和增加次数不会代替授权。"
+        }
+        Reason::UserInput => "请回答当前具体问题；也可先补充说明。",
+        Reason::ModelConfiguration => {
+            "请在处理成员的设备检查模型配置、登录或额度，再重试失败步骤。"
+        }
+        Reason::ExecutionUncertain => {
+            "请核对已有文件和外部操作后继续；恢复时先复用已有成果，不能盲目重复执行。"
+        }
+        Reason::BudgetExhausted => "可先补充纠正，再允许有限继续；历史次数与成果保留。",
+        Reason::TransientModel => "连接恢复后可重试失败步骤，已有结果保留。",
+        Reason::ExecutionError => {
+            "可查看具体记录、补充处理要求后继续，或由发起人调整任务；仅再次重试不一定能消除原因。"
+        }
+    }
 }
 fn retry_local(c: &Connection, t: &Value, key: &str) -> Result<()> {
     let block = recovery::current(c, t)?;
@@ -2706,15 +2854,30 @@ fn retry_local(c: &Connection, t: &Value, key: &str) -> Result<()> {
     )?;
     Ok(())
 }
-pub fn recover(store: &Store, i: &Instruction) -> Result<()> {
-    let t = get(store, i.task_id.as_deref().context("请选择任务")?)?;
+fn validate_recovery(store: &Store, t: &Value, i: &Instruction) -> Result<()> {
+    let owner = store.owner()?;
     ensure!(
-        !crate::task_roles::fenced(&store.conn, string(&t, "id")?, revision(&t))?,
+        t["initiator"] == owner || executors(t)?.contains(&owner),
+        "本机不是此任务的发起或执行成员"
+    );
+    ensure!(
+        !has_user_questions(&store.conn, t)?,
+        "任务仍有待回答的问题；请先用 /answer 处理，恢复不能清除待答问题"
+    );
+    if let Some(responsible) = t["blocker"]["owner"].as_str() {
+        ensure!(
+            responsible == owner || t["initiator"] == owner,
+            "此失败步骤由 @{} 处理；本机可保存约束，但不能恢复另一成员的步骤",
+            responsible
+        );
+    }
+    ensure!(
+        !crate::task_roles::fenced(&store.conn, string(t, "id")?, revision(t))?,
         "旧执行分配已撤销；请用 /handoff 核对停止与副作用，不能恢复旧执行"
     );
     ensure!(
         (t["state"] == "needs_attention" || (t["state"] == "waiting" && t["initiator"] == store.owner()?
-            && store.conn.query_row("SELECT EXISTS(SELECT 1 FROM task_journal WHERE task_id=?1 AND revision=?2 AND kind='progress' AND json_extract(payload,'$.state')='needs_attention')",params![t["id"].as_str(),revision(&t)], |r| r.get::<_,bool>(0))?)) && i.payload["revision"] == t["revision"],
+            && store.conn.query_row("SELECT EXISTS(SELECT 1 FROM task_journal WHERE task_id=?1 AND revision=?2 AND kind='progress' AND json_extract(payload,'$.state')='needs_attention')",params![t["id"].as_str(),revision(t)], |r| r.get::<_,bool>(0))?)) && i.payload["revision"] == t["revision"],
         "只有当前修订的需要处理任务可重试"
     );
     if let Some(block) = i.payload["block_id"].as_str() {
@@ -2723,16 +2886,46 @@ pub fn recover(store: &Store, i: &Instruction) -> Result<()> {
             "失败步骤已变化，请重新查看后恢复"
         );
     }
-    let withdrawn: bool = store.conn.query_row("SELECT EXISTS(SELECT 1 FROM task_journal WHERE task_id=?1 AND revision=?2 AND sender!=?3 AND kind='progress' AND json_extract(payload,'$.stage')='member_stopped')",params![t["id"].as_str(),revision(&t),store.owner()?],|r|r.get(0))?;
+    let withdrawn: bool = store.conn.query_row("SELECT EXISTS(SELECT 1 FROM task_journal WHERE task_id=?1 AND revision=?2 AND sender!=?3 AND kind='progress' AND json_extract(payload,'$.stage')='member_stopped')",params![t["id"].as_str(),revision(t),store.owner()?],|r|r.get(0))?;
     ensure!(
         !withdrawn,
         "参与方已停止本次任务；可停止并归档，或修改要求后重新确认"
     );
-    // User-triggered retry is explicit; a meeting can never invoke this action.
+    Ok(())
+}
+
+pub fn recover(store: &Store, i: &Instruction) -> Result<()> {
     let tx = store.write_transaction()?;
+    let t = get(store, i.task_id.as_deref().context("请选择任务")?)?;
+    if store.conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM task_journal WHERE id=?1 AND task_id=?2 AND revision=?3)",
+        params![
+            stable_id(&i.request_id, "recovery-applied"),
+            t["id"].as_str(),
+            revision(&t)
+        ],
+        |r| r.get::<_, bool>(0),
+    )? {
+        return Ok(());
+    }
+    validate_recovery(store, &t, i)?;
+    recover_in_transaction(&tx, store, &t, i)?;
+    tx.commit()?;
+    Ok(())
+}
+
+fn recover_in_transaction(c: &Connection, store: &Store, t: &Value, i: &Instruction) -> Result<()> {
+    journal(
+        c,
+        t,
+        &store.owner()?,
+        &stable_id(&i.request_id, "recovery-applied"),
+        "recovery_requested",
+        &json!({"block_id":t["blocker"]["id"],"with_supplement":i.payload["resume"] == true}),
+    )?;
     state(
-        &tx,
-        &t,
+        c,
+        t,
         if t["confirmed"].is_null() {
             "draft"
         } else {
@@ -2746,42 +2939,35 @@ pub fn recover(store: &Store, i: &Instruction) -> Result<()> {
             .as_str()
             .is_some_and(|m| m != store.owner().unwrap_or_default())
     {
-        let executor = string(&t, "next_owner")?;
+        let executor = string(t, "next_owner")?;
         ensure!(
-            executors(&t)?.iter().any(|m| m == executor),
+            executors(t)?.iter().any(|m| m == executor),
             "原执行方不在此任务内"
         );
         emit(
-            &tx,
-            &t,
+            c,
+            t,
             &store.owner()?,
             &stable_id(&i.request_id, "retry-peer"),
             "progress",
-            json!({"retry":true}),
+            json!({"retry":true,"target_block_id":t["blocker"]["remote_id"],"target_step_id":t["blocker"]["step_id"]}),
             &[executor.into()],
         )?;
-        state(
-            &tx,
-            &t,
-            "processing",
-            Some(executor),
-            Some("已请原执行方重试"),
-        )?;
+        state(c, t, "processing", Some(executor), Some("已请原执行方重试"))?;
         notify(
-            &tx,
-            &t,
+            c,
+            t,
             &format!("retry:{}", i.request_id),
             "task_progress",
             "已请原执行方从上次停下的地方继续。",
         )?;
-        tx.commit()?;
         return Ok(());
     }
-    retry_local(&tx, &t, &i.request_id)?;
+    retry_local(c, t, &i.request_id)?;
     if t["confirmed"] == t["revision"] {
         emit(
-            &tx,
-            &t,
+            c,
+            t,
             &store.owner()?,
             &stable_id(&i.request_id, "recovered"),
             "accepted",
@@ -2789,11 +2975,10 @@ pub fn recover(store: &Store, i: &Instruction) -> Result<()> {
             &members(&t)?,
         )?;
     }
-    tx.execute(
+    c.execute(
         "UPDATE app_tasks SET error=NULL WHERE id=?1",
         [t["id"].as_str()],
     )?;
-    tx.commit()?;
     Ok(())
 }
 async fn process_job(store: &Store, t: &Value, kind: &str, data: Value, key: &str) -> Result<()> {
@@ -3609,6 +3794,29 @@ pub async fn tick(store: &Store, exe: &Path) -> Result<()> {
                 [&id],
             )?;
             let reason = recovery::classify(&e);
+            if reason == Reason::MaterialInput
+                && (t["recovery_protocol"] == 1 || recovery::extra(&store.conn, &t, false)? > 0)
+            {
+                let (attempts,limit):(i64,i64)=store.conn.query_row("SELECT e.retry_attempts,MAX(e.retry_limit,s.max_retries) FROM task_executions e,task_settings s WHERE e.id=?1 AND s.singleton=1",[&id],|r|Ok((r.get(0)?,r.get(1)?)))?;
+                store.conn.execute(
+                    "UPDATE task_executions SET retry_attempts=retry_attempts+1 WHERE id=?1",
+                    [&id],
+                )?;
+                if attempts + 1 < limit {
+                    store.conn.execute(
+                        "UPDATE task_executions SET state='pending',retry_at=NULL WHERE id=?1",
+                        [&id],
+                    )?;
+                    notify(
+                        &store.conn,
+                        &t,
+                        &format!("material-correction:{id}:{}", attempts + 1),
+                        "task_progress",
+                        "材料清单需要调整，已将具体原因交回执行助手在原任务中更正；已有发现保留，权限不变。",
+                    )?;
+                    return Ok(());
+                }
+            }
             if t["recovery_protocol"] == 1 && reason == Reason::TransientModel {
                 let (attempts,limit):(i64,i64)=store.conn.query_row("SELECT e.retry_attempts,MAX(e.retry_limit,s.max_retries) FROM task_executions e,task_settings s WHERE e.id=?1 AND s.singleton=1",[&id],|r|Ok((r.get(0)?,r.get(1)?)))?;
                 store.conn.execute(
@@ -3676,7 +3884,21 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
             "UPDATE task_executions SET state='running',round=round+1 WHERE id=?1",
             [id],
         )?;
-        crate::native_tasks::execute(store, id, exe).await?;
+        if let Err(error) = crate::native_tasks::execute(store, id, exe).await {
+            let runs = store.runs(id)?;
+            if let Some(run) = runs.last().filter(|run| {
+                run.error_code.as_deref() == Some("missing_result") && run.result.is_none()
+            }) {
+                let detail:Option<String>=store.conn.query_row("SELECT json_extract(payload,'$.detail') FROM task_journal WHERE task_id=?1 AND revision=?2 AND kind='material_correction' AND json_extract(payload,'$.run_id')=?3 ORDER BY rowid DESC LIMIT 1",params![t["id"].as_str(),revision(t),run.id],|r|r.get(0)).optional()?.flatten();
+                if let Some(detail) = detail {
+                    return Err(recovery::failure(
+                        Reason::MaterialInput,
+                        format!("本轮未提交有效材料；原发现与校验反馈保留。{detail}"),
+                    ));
+                }
+            }
+            return Err(error);
+        }
     }
     let raw = store
         .task(id)?
@@ -3767,9 +3989,20 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
         let snapshot = match crate::task_materials::freeze(store, t, id, &out["files"]) {
             Ok(snapshot) => snapshot,
             Err(error) => {
-                store
-                    .conn
-                    .execute("UPDATE tasks SET state='pending' WHERE id=?1", [id])?;
+                if let Some(feedback) = crate::task_materials::correction_feedback(&error) {
+                    let tx = store.write_transaction()?;
+                    journal(
+                        &tx,
+                        t,
+                        &store.owner()?,
+                        &stable_id(&run, "material-correction"),
+                        "material_correction",
+                        &json!({"execution_id":id,"run_id":run,"feedback":feedback}),
+                    )?;
+                    tx.execute("UPDATE task_executions SET recovery_reason=?2 WHERE id=?1", params![id,format!("材料提交未通过校验；原发现保留。请读取 material_correction，调整候选后重提并说明未覆盖范围。{}",error)])?;
+                    tx.execute("UPDATE tasks SET state='pending' WHERE id=?1", [id])?;
+                    tx.commit()?;
+                }
                 return Err(error);
             }
         };
@@ -3858,6 +4091,7 @@ async fn run_execution(store: &Store, t: &Value, id: &str, exe: &Path) -> Result
         .as_array()
         .unwrap()
         .iter()
+        .filter(|v| v["kind"] != "executor_constraint")
         .map(|v| v["id"].clone())
         .collect::<Vec<_>>();
     let candidate = json!({"deliveries":out["deliveries"],"delivery_generation":t["roles"]["delivery_generation"],"input_ids":input_ids,"body":out["body"],"files":out["files"],"sources":sources,"execution_id":id,"run_id":run,"attachment":attachment});
@@ -3987,49 +4221,115 @@ fn chat_status(t: &Value) -> String {
             Some("needs_attention") => "任务需要处理",
             _ => "等待后续处理",
         });
-    match t["next_owner"].as_str().filter(|s| !s.is_empty()) {
+    let mut body = match t["next_owner"].as_str().filter(|s| !s.is_empty()) {
         Some(owner) => format!("当前状态：{reason}。下一步由 @{owner} 处理。"),
         None => format!("当前状态：{reason}。"),
+    };
+    if let Some(detail) = t["blocker"]["detail"]
+        .as_str()
+        .or(t["error"].as_str())
+        .filter(|s| !s.is_empty() && *s != reason)
+    {
+        body.push_str(&format!(
+            "\n具体原因：{}",
+            detail.chars().take(1000).collect::<String>()
+        ));
     }
+    if let Some(work) = t["saved_work"].as_array().and_then(|v| v.first()) {
+        body.push_str("\n已有执行记录保留，尚未完成最终核对：\n");
+        body.push_str(
+            &work["body"]
+                .as_str()
+                .unwrap_or("已保存本轮执行结果")
+                .chars()
+                .take(1600)
+                .collect::<String>(),
+        );
+    }
+    if t["state"] == "needs_attention" {
+        body.push_str(
+            "\n可用 /recover 查看处理选项；可先补充纠正，再明确选择继续，无需关闭原任务。",
+        );
+    }
+    body
 }
 
 pub fn supplement(store: &Store, i: &Instruction) -> Result<()> {
+    let tx = store.write_transaction()?;
     let t = get(store, i.task_id.as_deref().context("请选择任务")?)?;
     active(&t)?;
+    let owner = store.owner()?;
+    let local_constraint = t["initiator"] != owner;
     ensure!(
-        t["initiator"] == store.owner()?
+        (t["initiator"] == owner || executors(&t)?.contains(&owner))
             && i.payload["revision"] == t["revision"]
             && t["confirmed"] == t["revision"],
-        "补充只能用于本人发起的当前已确认任务；目标或执行成员变化请修改要求"
+        "补充只能用于本机发起或执行的当前已确认任务；目标或执行成员变化请由发起人修改要求"
     );
-    let tx = store.write_transaction()?;
-    let targets = executors(&t)?;
+    ensure!(
+        !crate::task_roles::fenced(&store.conn, string(&t, "id")?, revision(&t))?,
+        "旧执行分配已撤销；请用 /handoff 核对，不能补充或恢复旧执行"
+    );
+    let resume = i.payload["resume"] == true;
+    if resume {
+        let applied: bool = store.conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM task_journal WHERE id=?1 AND task_id=?2 AND revision=?3)",
+            params![
+                stable_id(&i.request_id, "recovery-applied"),
+                t["id"].as_str(),
+                revision(&t)
+            ],
+            |r| r.get(0),
+        )?;
+        if !applied {
+            ensure!(
+                i.payload["block_id"] == t["blocker"]["id"],
+                "失败步骤已变化，请重新打开处理页面"
+            );
+            validate_recovery(store, &t, i)?;
+        }
+    }
+    let targets = if local_constraint {
+        vec![owner.clone()]
+    } else {
+        executors(&t)?
+    };
     crate::task_inputs::save(
         &tx,
         &t,
         &i.request_id,
         &store.owner()?,
-        "supplement",
+        if local_constraint {
+            "executor_constraint"
+        } else {
+            "supplement"
+        },
         None,
         &i.body,
         &targets,
         false,
     )?;
-    emit(
-        &tx,
-        &t,
-        &store.owner()?,
-        &stable_id(&i.request_id, "input"),
-        "input",
-        json!({"input_id":i.request_id,"kind":"supplement","body":i.body}),
-        &targets,
-    )?;
+    if !local_constraint {
+        emit(
+            &tx,
+            &t,
+            &store.owner()?,
+            &stable_id(&i.request_id, "input"),
+            "input",
+            json!({"input_id":i.request_id,"kind":"supplement","body":i.body}),
+            &targets,
+        )?;
+    }
     journal(
         &tx,
         &t,
         &store.owner()?,
         &i.request_id,
-        "owner_supplement",
+        if local_constraint {
+            "executor_constraint"
+        } else {
+            "owner_supplement"
+        },
         &json!({"body":i.body,"input_id":i.request_id}),
     )?;
     notify(
@@ -4037,10 +4337,11 @@ pub fn supplement(store: &Store, i: &Instruction) -> Result<()> {
         &t,
         &format!("supplement:{}", i.request_id),
         "task_progress",
-        &format!(
-            "补充 {} 已在本机保存，等待执行方接收和读取。当前暂停或待答问题仍需按提示处理。",
-            i.request_id
-        ),
+        if local_constraint {
+            "本机处理约束已保存在原任务，等待执行读取；原目标与授权不变。仅保存不会解除当前暂停。"
+        } else {
+            "补充已在原任务保存，等待执行方接收和读取；仅保存不会解除当前暂停或待答问题。"
+        },
     )?;
     if targets.contains(&store.owner()?)
         && !has_pending_questions(&tx, &t)?
@@ -4055,6 +4356,15 @@ pub fn supplement(store: &Store, i: &Instruction) -> Result<()> {
             tx.execute("UPDATE tasks SET state='pending' WHERE id=?1", [&ex])?;
         }
     }
+    if resume
+        && !tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM task_journal WHERE id=?1)",
+            [stable_id(&i.request_id, "recovery-applied")],
+            |r| r.get::<_, bool>(0),
+        )?
+    {
+        recover_in_transaction(&tx, store, &t, i)?;
+    }
     tx.commit()?;
     Ok(())
 }
@@ -4063,8 +4373,8 @@ pub async fn task_chat(store: &Store, i: &Instruction) -> Result<()> {
     let id = i.task_id.as_deref().context("请选择任务")?;
     let t = get(store, id)?;
     ensure!(
-        t["initiator"] == store.owner()?,
-        "请由发起人修改意图；本端可查看执行、问题和状态"
+        t["initiator"] == store.owner()? || executors(&t)?.contains(&store.owner()?),
+        "本机不是此任务的发起或执行成员"
     );
     if is_confirmation(&i.body) && t["state"] == "draft" {
         let bound: Option<String> = store.conn.query_row(
@@ -4088,6 +4398,10 @@ pub async fn task_chat(store: &Store, i: &Instruction) -> Result<()> {
         .map(|raw| serde_json::from_str(&raw))
         .transpose()?
         .unwrap_or(Value::Null);
+    ensure!(
+        captured["revision"] == t["revision"],
+        "任务版本已改变，请在当前任务中重新提交纠正；原消息仍保留"
+    );
     let answerable: Vec<_> = t["questions"]
         .as_array()
         .into_iter()
@@ -4102,13 +4416,30 @@ pub async fn task_chat(store: &Store, i: &Instruction) -> Result<()> {
         })
         .cloned()
         .collect();
-    let answer = decision(
+    let answer = match decision(
         store,
         &t,
         "followup",
         json!({"owner_message":i.body,"answerable_questions":answerable}),
     )
-    .await?;
+    .await
+    {
+        Ok(answer) => answer,
+        Err(error) => {
+            let fresh = get(store, id)?;
+            app::respond(
+                store,
+                i,
+                "task_attention",
+                &format!(
+                    "{}\n本次聊天处理未成功：{}。这条新指令尚未应用，原话已保留；可用 /supplement 保存纠正，或 /recover 选择下一步，这些入口不依赖模型理解。",
+                    chat_status(&fresh),
+                    error.to_string().chars().take(400).collect::<String>()
+                ),
+            )?;
+            return Ok(());
+        }
+    };
     let fresh = get(store, id)?;
     ensure!(
         fresh["revision"] == t["revision"],
@@ -4134,6 +4465,10 @@ pub async fn task_chat(store: &Store, i: &Instruction) -> Result<()> {
         }
         Some("plan") => {
             ensure!(
+                fresh["initiator"] == store.owner()?,
+                "本机已保留你的说明；执行成员或接收人调整需由发起人使用 /roles"
+            );
+            ensure!(
                 answer["executor"].is_string() ^ answer["result_recipient"].is_string(),
                 "请选择只纠正执行成员或成果接收人，可使用 /roles"
             );
@@ -4144,6 +4479,10 @@ pub async fn task_chat(store: &Store, i: &Instruction) -> Result<()> {
             }
         }
         Some("revise") => {
+            ensure!(
+                fresh["initiator"] == store.owner()?,
+                "任务目标需由发起人调整；本机可用 /supplement 保存处理约束"
+            );
             let mut revised = i.clone();
             revised.payload = json!({"revision":fresh["revision"],"effective_request":string(&answer,"effective_request")?});
             revise(store, &revised)?;
@@ -4159,9 +4498,28 @@ pub async fn task_chat(store: &Store, i: &Instruction) -> Result<()> {
             app::respond(store, i, "task_progress", &body)?;
         }
         Some("supplement") => {
+            ensure!(
+                answer["resume"] != true || captured["captured_before_creation"] != true,
+                "这条消息早于任务创建，不能用于恢复后来出现的暂停；请重新核对后继续"
+            );
             let mut input = i.clone();
-            input.payload = json!({"revision":fresh["revision"]});
+            input.payload = json!({"revision":captured["revision"],"resume":answer["resume"] == true,"block_id":captured["block_id"]});
             supplement(store, &input)?;
+        }
+        Some("recover") => {
+            ensure!(
+                captured["captured_before_creation"] != true,
+                "这条消息早于任务创建，不能用于恢复后来出现的暂停；请重新核对后继续"
+            );
+            ensure!(
+                captured["block_id"] == fresh["blocker"]["id"]
+                    && fresh["state"] == "needs_attention",
+                "发送消息后任务的暂停原因已改变，请重新打开 /recover 核对后继续"
+            );
+            let mut input = i.clone();
+            input.payload =
+                json!({"revision":captured["revision"],"block_id":captured["block_id"]});
+            recover(store, &input)?;
         }
         _ => bail!("invalid followup decision"),
     }

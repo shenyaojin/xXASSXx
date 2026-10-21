@@ -347,6 +347,26 @@ impl Store {
             !key.is_empty() && key.len() <= 128,
             "invalid idempotency key"
         );
+        // Return correctable discovery errors to the live assistant, before it
+        // finishes a successful run. Authentication precedes filesystem reads;
+        // the transaction below rechecks state, inputs and immutable submission.
+        Self::authorize(&self.conn, task, run, token, true)?;
+        let already_submitted: bool = self.conn.query_row(
+            "SELECT result IS NOT NULL FROM runs WHERE id=?1",
+            [run],
+            |r| r.get(0),
+        )?;
+        if !already_submitted {
+            let reads: i64 =
+                self.conn
+                    .query_row("SELECT reads FROM runs WHERE id=?1", [run], |r| r.get(0))?;
+            ensure!(reads > 0, "must read this task before submitting");
+            ensure!(
+                !crate::task_inputs::unread(&self.conn, task, run)?,
+                "有新任务输入尚未读取；请重新调用 get_task，核对补充后再提交结果"
+            );
+            crate::task_coordinator::validate_material_submission(self, task, result)?;
+        }
         let tx = self
             .conn
             .transaction_with_behavior(TransactionBehavior::Immediate)?;

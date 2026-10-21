@@ -75,7 +75,9 @@ pub fn read(c: &Connection, execution: &str, run: &str) -> Result<()> {
             params![id, run, execution, now()],
         )?;
         c.execute("UPDATE task_input_receipts SET received_at=COALESCE(received_at,?3),read_at=?3,execution_id=?4,run_id=?5 WHERE input_id=?1 AND member=?2",params![id,owner,now(),execution,run])?;
-        if added > 0 {
+        // The executing owner's private constraints stay on this device. Even
+        // a read receipt must not export their input identifier to the sender.
+        if added > 0 && input["kind"] != "executor_constraint" {
             task_coordinator::emit(
                 c,
                 &t,

@@ -3,6 +3,7 @@ pub mod bridge;
 pub mod daemon;
 pub mod model;
 pub mod task_archive;
+pub mod task_context;
 pub mod tasks;
 pub mod timeline;
 use crate::{
@@ -237,6 +238,14 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
         };
     let tx = store.conn.unchecked_transaction()?;
     if input.action == "chat" {
+        event(
+            &tx,
+            &stable_id(&input.request_id, "chat-task-context"),
+            &input.session_id,
+            input.task_id.as_deref(),
+            "task_chat_context",
+            task_context::capture(store, input)?,
+        )?;
         if let Some(task) = &input.task_id {
             if crate::task_coordinator::is_task(&tx, task)? {
                 let t = crate::task_coordinator::get(store, task)?;
@@ -253,7 +262,7 @@ pub fn submit(store: &mut Store, actor: &Actor, input: &Instruction) -> Result<V
                     &input.session_id,
                     Some(task),
                     "task_chat_questions",
-                    json!({"revision":t["revision"],"question_ids":questions}),
+                    json!({"revision":t["revision"],"block_id":t["blocker"]["id"],"question_ids":questions}),
                 )?;
             }
         }

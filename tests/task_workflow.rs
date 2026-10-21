@@ -226,9 +226,12 @@ async fn chat_status_cannot_invent_resume_and_answers_do_not_clear_other_questio
         [],
     )
     .unwrap();
+    tasks::task_chat(&a, &stale).await.unwrap();
+    let history = app::history(&a, &i.session_id).unwrap();
+    let last = history.last().unwrap()["body"].as_str().unwrap();
     assert!(
-        tasks::task_chat(&a, &stale).await.is_err(),
-        "a queued answer cannot bind to a replacement question"
+        last.contains("新指令尚未应用"),
+        "a queued answer must be explicitly held when its question disappears: {last}"
     );
     assert_eq!(
         count(
@@ -686,6 +689,9 @@ async fn exhausted_review_preserves_candidates_and_recovers_without_restarting_e
         0
     );
     assert_eq!(count(&a, "SELECT count(*) FROM task_candidates"), 1);
+    assert_eq!(task["saved_work"][0]["member"], "b");
+    assert_eq!(task["saved_work"][0]["phase"], "received_candidate");
+    assert!(!task["saved_work"][0]["body"].as_str().unwrap().is_empty());
     assert_eq!(
         count(
             &a,
@@ -1526,7 +1532,7 @@ async fn material_budget_rejects_before_acceptance_and_recovery_keeps_run_histor
         .unwrap()
         .to_owned();
     let c = rusqlite::Connection::open(&s.path).unwrap();
-    c.execute("UPDATE task_settings SET max_bytes=50", [])
+    c.execute("UPDATE task_settings SET max_bytes=50,max_retries=1", [])
         .unwrap();
     let lease = s
         .claim(&ex, false, &t.dir.path().join("a/work"), 30)
@@ -1686,7 +1692,7 @@ async fn rejected_participant_commands_do_not_pause_or_revoke_running_task() {
         .claim(ex, false, &team.dir.path().join("b/work"), 30)
         .unwrap();
     b.initialized(ex, &lease.run_id, &lease.token).unwrap();
-    for kind in ["chat", "revise_task", "reopen_task"] {
+    for kind in ["revise_task", "reopen_task"] {
         let mut command = action(&i, &id, kind, 1, "补充一些图件");
         command.session_id = before["session_id"].as_str().unwrap().into();
         command.recipient = "b".into();
@@ -2861,4 +2867,415 @@ async fn recipient_change_reuses_frozen_output_and_requires_sender_permission_wi
             .any(|r| r.message.recipient == "c" && r.message.operation == "task_v2")
     );
     assert_eq!(count(&team.store("c"), "SELECT count(*) FROM app_tasks"), 0);
+}
+
+#[tokio::test]
+async fn material_freeze_correction_keeps_history_and_has_a_finite_automatic_budget() {
+    for corrected in [true, false] {
+        let team = Team::new();
+        files(&team, "a");
+        let mut s = team.store("a");
+        let work = team.dir.path().join("a/work");
+        std::fs::write(work.join("stable.txt"), "stable evidence").unwrap();
+        let mut i = input(&team, "核对材料并如实说明未覆盖范围");
+        i.action = "create_task".into();
+        let id = submit(&mut s, &i)["task_id"].as_str().unwrap().to_owned();
+        tasks::prepare(&s, &id, json!({"goal":"核对已有材料","mode":"analysis","deliverables":["依据和缺口"],"questions":[]})).unwrap();
+        let mut cfg = s.member_config().unwrap();
+        cfg.executor.mode = "queue".into();
+        s.configure_member(&cfg).unwrap();
+        tasks::confirm(&s, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+        tasks::tick(&s, Path::new(BIN)).await.unwrap();
+        let ex = tasks::get(&s, &id).unwrap()["executions"][0]["id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        let c = rusqlite::Connection::open(&s.path).unwrap();
+        c.execute("UPDATE task_settings SET max_bytes=50,max_retries=2", [])
+            .unwrap();
+        let session = uuid::Uuid::new_v4().to_string();
+        let mut original_result = String::new();
+        for attempt in 0..2 {
+            std::fs::write(work.join("fast.py"), "iterations=10").unwrap();
+            let lease = s.claim(&ex, attempt > 0, &work, 30).unwrap();
+            s.initialized(&ex, &lease.run_id, &lease.token).unwrap();
+            let read = s.read_task(&ex, &lease.run_id, &lease.token).unwrap();
+            let context: Value = serde_json::from_str(read["input"].as_str().unwrap()).unwrap();
+            if attempt > 0 {
+                let feedback = &context["business_task"]["material_correction"]["feedback"];
+                assert_eq!(feedback["rejected"][0]["path"], "fast.py");
+                assert_eq!(feedback["rejected"][0]["code"], "byte_budget");
+                assert_eq!(feedback["usable_files"][0]["path"], "stable.txt");
+            }
+            let mut references = vec![json!({"root":0,"path":"stable.txt","reason":"稳定证据"})];
+            if attempt == 0 || !corrected {
+                references.push(json!({"root":0,"path":"fast.py","reason":"当前候选"}));
+            }
+            let result =
+                json!({"body":"当前候选；尚未完成分析，变动部分需说明缺口。","files":references})
+                    .to_string();
+            if attempt == 0 {
+                original_result = result.clone();
+            }
+            s.submit_result(&ex, &lease.run_id, &lease.token, &lease.run_id, &result)
+                .unwrap();
+            s.event(
+                &lease,
+                &json!({"type":"thread.started","thread_id":session}),
+            )
+            .unwrap();
+            s.event(&lease, &json!({"type":"turn.completed"})).unwrap();
+            s.finish(&lease, Some(0), None).unwrap();
+            // Deterministic freeze-time race: accepted source changes before the
+            // coordinator handles it. The next run receives exact feedback.
+            std::fs::write(work.join("fast.py"), "x".repeat(51)).unwrap();
+            cfg.executor.mode = "auto".into();
+            s.configure_member(&cfg).unwrap();
+            tasks::tick(&s, Path::new(BIN)).await.unwrap();
+            if attempt == 0 {
+                assert_eq!(
+                    count(
+                        &s,
+                        "SELECT retry_attempts FROM task_executions WHERE phase='discover'"
+                    ),
+                    1
+                );
+                assert_eq!(s.task(&ex).unwrap().state, "pending");
+                assert_ne!(tasks::get(&s, &id).unwrap()["state"], "needs_attention");
+                assert_eq!(count(&s, "SELECT count(*) FROM task_snapshots"), 0);
+            }
+        }
+        assert_eq!(s.runs(&ex).unwrap().len(), 2);
+        assert_eq!(
+            s.runs(&ex).unwrap()[0].result.as_deref(),
+            Some(original_result.as_str())
+        );
+        assert_eq!(
+            s.task(&ex).unwrap().session_id.as_deref(),
+            Some(session.as_str())
+        );
+        assert_eq!(count(&s, "SELECT count(*) FROM task_recovery_grants"), 0);
+        let t = tasks::get(&s, &id).unwrap();
+        assert_eq!(t["revision"], 1);
+        if corrected {
+            assert_eq!(count(&s, "SELECT count(*) FROM task_snapshots"), 1);
+            assert_eq!(
+                count(
+                    &s,
+                    "SELECT count(*) FROM task_executions WHERE phase='analyze' AND state='pending'"
+                ),
+                1
+            );
+            let snapshot: String = c
+                .query_row("SELECT id FROM task_snapshots", [], |r| r.get(0))
+                .unwrap();
+            let (_, manifest) = task_materials::verify(&s, &snapshot).unwrap();
+            assert_eq!(manifest.as_array().unwrap().len(), 1);
+            assert_eq!(manifest[0]["path"], "stable.txt");
+        } else {
+            assert_eq!(t["state"], "needs_attention");
+            assert_eq!(t["blocker"]["reason"], "material_input");
+            assert_eq!(
+                count(
+                    &s,
+                    "SELECT retry_attempts FROM task_executions WHERE phase='discover'"
+                ),
+                2
+            );
+            assert_eq!(count(&s, "SELECT count(*) FROM task_snapshots"), 0);
+            tasks::tick(&s, Path::new(BIN)).await.unwrap();
+            assert_eq!(s.runs(&ex).unwrap().len(), 2);
+        }
+    }
+}
+
+#[tokio::test]
+async fn executor_constraints_stay_on_the_same_local_task_without_external_text_or_receipts() {
+    let team = Team::new();
+    files(&team, "b");
+    let (i, id) = draft(&team, "@b 核对本机可提供的项目证据");
+    let mut a = team.store("a");
+    let mut b = team.store("b");
+    let mut cfg = b.member_config().unwrap();
+    cfg.executor.mode = "queue".into();
+    b.configure_member(&cfg).unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    transfer(&a, &mut b);
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    let before = tasks::get(&b, &id).unwrap();
+    let ex = before["executions"][0]["id"].as_str().unwrap();
+    let lease = b
+        .claim(ex, false, &team.dir.path().join("b/work"), 120)
+        .unwrap();
+    b.read_task(ex, &lease.run_id, &lease.token).unwrap();
+    let outgoing = count(&b, "SELECT count(*) FROM messages WHERE direction='out'");
+    let mut input = action(
+        &i,
+        &id,
+        "supplement_task",
+        1,
+        "本机私有处理约束：跳过无法读取的资料，保留已发现的普通材料线索。",
+    );
+    input.session_id = before["session_id"].as_str().unwrap().to_owned();
+    input.recipient = "b".into();
+    tasks::supplement(&b, &input).unwrap();
+    tasks::supplement(&b, &input).unwrap();
+    let current = tasks::get(&b, &id).unwrap();
+    for field in ["id", "revision", "confirmed", "draft", "state"] {
+        assert_eq!(
+            current[field], before[field],
+            "local supplement changed {field}"
+        );
+    }
+    assert_eq!(count(&b, "SELECT count(*) FROM app_tasks"), 1);
+    assert_eq!(current["inputs"].as_array().unwrap().len(), 1);
+    let saved = &current["inputs"][0];
+    assert_eq!(saved["id"], input.request_id);
+    assert_eq!(saved["kind"], "executor_constraint");
+    assert_eq!(saved["sender"], "b");
+    assert_eq!(saved["body"], input.body);
+    assert_eq!(saved["receipts"].as_array().unwrap().len(), 1);
+    assert_eq!(saved["receipts"][0]["member"], "b");
+    assert!(saved["receipts"][0]["read_at"].is_null());
+    let result = json!({"body":"尚未读取新约束","files":[]}).to_string();
+    assert!(
+        b.submit_result(ex, &lease.run_id, &lease.token, "result", &result)
+            .is_err()
+    );
+    let context = b.read_task(ex, &lease.run_id, &lease.token).unwrap();
+    assert!(context["input"].as_str().unwrap().contains(&input.body));
+    b.read_task(ex, &lease.run_id, &lease.token).unwrap();
+    assert_eq!(count(&b, "SELECT count(*) FROM task_input_reads"), 1);
+    assert_eq!(
+        count(&b, "SELECT count(*) FROM messages WHERE direction='out'"),
+        outgoing
+    );
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM task_journal WHERE kind='input_receipt'"
+        ),
+        0
+    );
+    let current = tasks::get(&b, &id).unwrap();
+    assert_eq!(current["inputs"][0]["receipts"][0]["run_id"], lease.run_id);
+    let mut conflict = input.clone();
+    conflict.body = "不能覆盖已有原话".into();
+    assert!(tasks::supplement(&b, &conflict).is_err());
+    transfer(&b, &mut a);
+    assert!(
+        tasks::get(&a, &id).unwrap()["inputs"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert!(!a.messages(None).unwrap().iter().any(
+        |m| m.message.body.contains(&input.body) || m.message.body.contains(&input.request_id)
+    ));
+}
+
+#[tokio::test]
+async fn supplement_and_resume_are_atomic_bound_and_permission_checked() {
+    let team = Team::new();
+    files(&team, "b");
+    let (i, id) = draft(&team, "@b 读取现有材料并解释结果");
+    let a = team.store("a");
+    let mut b = team.store("b");
+    let mut cfg = b.member_config().unwrap();
+    cfg.executor.mode = "queue".into();
+    b.configure_member(&cfg).unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    transfer(&a, &mut b);
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    let work = team.dir.path().join("b/work");
+    b.remove_directory(&work).unwrap();
+    cfg.executor.mode = "auto".into();
+    b.configure_member(&cfg).unwrap();
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    let blocked = tasks::get(&b, &id).unwrap();
+    assert_eq!(blocked["state"], "needs_attention");
+    assert_eq!(blocked["blocker"]["reason"], "local_permission");
+    let mut valid = action(
+        &i,
+        &id,
+        "supplement_task",
+        1,
+        "保留现有线索，在原允许目录恢复读取。",
+    );
+    valid.payload = json!({"revision":1,"resume":true,"block_id":blocked["blocker"]["id"]});
+    for fault in ["revision", "block", "permission"] {
+        let mut attempt = valid.clone();
+        attempt.request_id = uuid::Uuid::new_v4().to_string();
+        if fault == "revision" {
+            attempt.payload["revision"] = json!(0);
+        }
+        if fault == "block" {
+            attempt.payload["block_id"] = json!("obsolete-block");
+        }
+        assert!(tasks::supplement(&b, &attempt).is_err(), "accepted {fault}");
+        assert_eq!(
+            count(&b, "SELECT count(*) FROM task_inputs"),
+            0,
+            "saved rejected {fault} input"
+        );
+        assert_eq!(count(&b, "SELECT count(*) FROM task_recovery_grants"), 0);
+        assert_eq!(
+            count(
+                &b,
+                "SELECT count(*) FROM task_journal WHERE kind='recovery_requested'"
+            ),
+            0
+        );
+        let current = tasks::get(&b, &id).unwrap();
+        assert_eq!(current["state"], "needs_attention");
+        assert_eq!(current["blocker"]["id"], blocked["blocker"]["id"]);
+        assert_eq!(count(&b, "SELECT count(*) FROM runs"), 0);
+    }
+    b.allow_directory(&work).unwrap();
+    tasks::supplement(&b, &valid).unwrap();
+    tasks::supplement(&b, &valid).unwrap();
+    let resumed = tasks::get(&b, &id).unwrap();
+    assert_eq!(resumed["revision"], 1);
+    assert_eq!(resumed["id"], id);
+    assert_eq!(resumed["state"], "processing");
+    assert!(resumed["blocker"].is_null());
+    assert_eq!(resumed["inputs"][0]["body"], valid.body);
+    assert_eq!(count(&b, "SELECT count(*) FROM task_inputs"), 1);
+    assert_eq!(count(&b, "SELECT count(*) FROM task_recovery_grants"), 1);
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM task_journal WHERE kind='recovery_requested'"
+        ),
+        1
+    );
+    let mut obsolete = valid.clone();
+    obsolete.request_id = uuid::Uuid::new_v4().to_string();
+    assert!(tasks::supplement(&b, &obsolete).is_err());
+    assert_eq!(count(&b, "SELECT count(*) FROM task_inputs"), 1);
+    assert_eq!(count(&b, "SELECT count(*) FROM task_recovery_grants"), 1);
+}
+
+#[tokio::test]
+async fn failed_question_coordination_can_resume_but_real_user_questions_stay_pending() {
+    let team = Team::new();
+    files(&team, "b");
+    let (i, id) = draft(&team, "@b 解释材料中尚未确定的基准版本");
+    let a = team.store("a");
+    let mut b = team.store("b");
+    let mut cfg = b.member_config().unwrap();
+    cfg.executor.mode = "queue".into();
+    b.configure_member(&cfg).unwrap();
+    tasks::confirm(&a, &action(&i, &id, "confirm_task", 1, "确认")).unwrap();
+    transfer(&a, &mut b);
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    let ex = tasks::get(&b, &id).unwrap()["executions"][0]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let lease = b
+        .claim(&ex, false, &team.dir.path().join("b/work"), 120)
+        .unwrap();
+    b.initialized(&ex, &lease.run_id, &lease.token).unwrap();
+    b.read_task(&ex, &lease.run_id, &lease.token).unwrap();
+    b.submit_result(&ex, &lease.run_id, &lease.token, &lease.run_id, &json!({"outcome":"question","body":"需要核对哪一版基准？","reason":"当前说明未指明基准版本","known":"已有两份候选脚本，尚未猜测版本"}).to_string()).unwrap();
+    b.event(
+        &lease,
+        &json!({"type":"thread.started","thread_id":uuid::Uuid::new_v4().to_string()}),
+    )
+    .unwrap();
+    b.event(&lease, &json!({"type":"turn.completed"})).unwrap();
+    b.finish(&lease, Some(0), None).unwrap();
+    cfg.executor.mode = "auto".into();
+    b.configure_member(&cfg).unwrap();
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM task_questions WHERE state='coordinating'"
+        ),
+        1
+    );
+    // No model is configured: coordination itself fails before the question has
+    // reached a human. The question must not prohibit repairing that failed job.
+    tasks::tick(&b, Path::new(BIN)).await.unwrap();
+    let blocked = tasks::get(&b, &id).unwrap();
+    assert_eq!(blocked["state"], "needs_attention");
+    assert_eq!(blocked["blocker"]["step_kind"], "job");
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM task_questions WHERE state='coordinating'"
+        ),
+        1
+    );
+    tasks::recover(
+        &b,
+        &action(&i, &id, "retry_task", 1, "修好配置后继续核对问题"),
+    )
+    .unwrap();
+    assert_eq!(tasks::get(&b, &id).unwrap()["state"], "processing");
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM task_jobs WHERE kind='resolve' AND state='pending'"
+        ),
+        1
+    );
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM task_questions WHERE state='coordinating' AND answer IS NULL"
+        ),
+        1
+    );
+    assert_eq!(b.runs(&ex).unwrap().len(), 1);
+    // Once an actual human decision is pending, neither plain recovery nor a
+    // combined supplement/recovery may silently clear it or grant more work.
+    let c = rusqlite::Connection::open(&b.path).unwrap();
+    c.execute(
+        "UPDATE task_questions SET state='user' WHERE task_id=?1",
+        [&id],
+    )
+    .unwrap();
+    c.execute(
+        "UPDATE app_tasks SET state='needs_attention' WHERE id=?1",
+        [&id],
+    )
+    .unwrap();
+    let grants = count(&b, "SELECT count(*) FROM task_recovery_grants");
+    let retry = action(&i, &id, "retry_task", 1, "不能替代回答");
+    assert!(
+        tasks::recover(&b, &retry)
+            .unwrap_err()
+            .to_string()
+            .contains("/answer")
+    );
+    let mut supplement = action(
+        &i,
+        &id,
+        "supplement_task",
+        1,
+        "这只是补充，不是该问题的答案",
+    );
+    supplement.payload = json!({"revision":1,"resume":true,"block_id":Value::Null});
+    assert!(
+        tasks::supplement(&b, &supplement)
+            .unwrap_err()
+            .to_string()
+            .contains("/answer")
+    );
+    assert_eq!(
+        count(
+            &b,
+            "SELECT count(*) FROM task_questions WHERE state='user' AND answer IS NULL"
+        ),
+        1
+    );
+    assert_eq!(
+        count(&b, "SELECT count(*) FROM task_recovery_grants"),
+        grants
+    );
+    assert_eq!(count(&b, "SELECT count(*) FROM task_inputs"), 0);
+    assert_eq!(b.runs(&ex).unwrap().len(), 1);
 }

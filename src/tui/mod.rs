@@ -6,6 +6,7 @@ mod commands;
 pub mod editor;
 mod inbox;
 mod presentation;
+mod recovery;
 mod startup;
 mod theme;
 mod update;
@@ -117,6 +118,11 @@ struct StopForm {
     previous_panel: Panel,
     archive: bool,
 }
+struct SupplementForm {
+    task: Value,
+    resume: bool,
+    from_recovery: bool,
+}
 pub struct Ui {
     pub input: Editor,
     pub view: usize,
@@ -142,6 +148,8 @@ pub struct Ui {
     access_form: Option<AccessForm>,
     stop_form: Option<StopForm>,
     recovery_form: Option<Value>,
+    supplement_form: Option<SupplementForm>,
+    revise_form: Option<Value>,
     send_to: Option<String>,
     transfer_id: Option<String>,
     transfer_file: Option<String>,
@@ -159,8 +167,113 @@ impl Ui {
         }
         .context("请先选择要恢复的任务")?;
         self.selected_task = task["id"].as_str().map(str::to_owned);
+        if let Some(session) = task["session_id"].as_str() {
+            self.session = session.into();
+        }
+        if let Some(path) = task["project"].as_str() {
+            self.project = json!({"id":task["project_id"],"path":path,"name":Path::new(path).file_name().unwrap_or_default().to_string_lossy()});
+        }
         self.recovery_form = Some(task);
         self.panel = Panel::Recovery;
+        self.index = 0;
+        self.scroll = 0;
+        Ok(())
+    }
+    fn open_revision(&mut self) -> Result<()> {
+        let task = self.current_task().cloned().context("请先选择任务")?;
+        ensure!(
+            task["protocol"] == 2 && task["initiator"] == self.owner,
+            "只有发起人可以修改任务目标；执行成员可补充本机约束"
+        );
+        if self.panel == Panel::Recovery {
+            self.check_recovery_snapshot(
+                self.recovery_form.as_ref().context("请重新打开处理页面")?,
+            )?;
+        }
+        self.revise_form = Some(task);
+        self.panel = Panel::Revise;
+        self.selected_question = None;
+        self.input.clear();
+        Ok(())
+    }
+    fn open_supplement(&mut self, from_recovery: bool) -> Result<()> {
+        let task = self.current_task().cloned().context("请先选择任务")?;
+        ensure!(
+            recovery::can_supplement(&task, &self.owner),
+            "只有发起人或当前执行成员可补充已确认的有效任务；尚未确认时请修改要求，旧执行已撤销时请核对交接"
+        );
+        self.supplement_form = Some(SupplementForm {
+            task,
+            resume: false,
+            from_recovery,
+        });
+        self.selected_question = None;
+        self.input.clear();
+        self.panel = Panel::Supplement;
+        self.notice = if self
+            .supplement_form
+            .as_ref()
+            .is_some_and(|f| f.task["initiator"] != self.owner)
+        {
+            "补充只作为本机执行约束；修改任务目标请由发起人修订。仅保存不会解除错误、问题或授权等待。".into()
+        } else {
+            "保留任务目标与权限。仅保存不会解除错误、问题或授权等待；改变目标或范围请用修改要求。"
+                .into()
+        };
+        Ok(())
+    }
+    fn check_recovery_snapshot(&self, task: &Value) -> Result<()> {
+        ensure!(
+            self.current_task().is_some_and(|current| {
+                current["id"] == task["id"]
+                    && current["revision"] == task["revision"]
+                    && current["blocker"] == task["blocker"]
+                    && current["state"] == task["state"]
+            }),
+            "任务或失败步骤已变化，请重新打开处理页面；输入内容尚未发送"
+        );
+        Ok(())
+    }
+    fn recovery_action(&mut self, store: &mut Store, action: recovery::Action) -> Result<()> {
+        let task = self.recovery_form.clone().context("请重新打开处理页面")?;
+        match action {
+            recovery::Action::Retry => {
+                self.check_recovery_snapshot(&task)?;
+                self.enqueue(
+                    store,
+                    "retry_task",
+                    "先核对已有成果与副作用，再有限继续失败步骤".into(),
+                    json!({"block_id":task["blocker"]["id"]}),
+                )?;
+                self.recovery_form = None;
+                self.panel = Panel::Chat;
+            }
+            recovery::Action::Supplement => {
+                self.check_recovery_snapshot(&task)?;
+                self.open_supplement(true)?;
+            }
+            recovery::Action::Answer => {
+                self.panel = Panel::Questions;
+                self.index = 0;
+            }
+            recovery::Action::Approve => self.open_task_access()?,
+            recovery::Action::Handoff => {
+                self.panel = Panel::Handoff;
+                self.input.clear();
+            }
+            recovery::Action::Revise => {
+                self.open_revision()?;
+            }
+            recovery::Action::Detail => {
+                self.panel = Panel::Detail;
+                self.scroll = 0;
+            }
+            recovery::Action::Stop => self.open_stop()?,
+            recovery::Action::Back => {
+                self.panel = Panel::Chat;
+                self.recovery_form = None;
+            }
+        }
         Ok(())
     }
     pub fn new(store: &Store, project: Value) -> Result<Self> {
@@ -193,6 +306,8 @@ impl Ui {
             access_form: None,
             stop_form: None,
             recovery_form: None,
+            supplement_form: None,
+            revise_form: None,
             send_to: None,
             transfer_id: None,
             transfer_file: None,
@@ -318,9 +433,7 @@ impl Ui {
                 self.index = 0;
             }
             "/supplement" => {
-                ensure!(self.current_task().is_some(), "请先选择任务");
-                self.selected_question = None;
-                self.panel = Panel::Supplement;
+                self.open_supplement(false)?;
             }
             "/roles" | "/handoff" => {
                 ensure!(self.current_task().is_some(), "请先选择任务");
@@ -489,6 +602,20 @@ impl Ui {
                     self.selected_question = None;
                     self.scroll = 0;
                 }
+                // A continuation chosen from another conversation is bound to
+                // the task's canonical conversation before its reply arrives.
+                let context: Option<(String, String)> = store.conn.query_row(
+                    "SELECT t.session_id,p.path FROM app_tasks t JOIN app_projects p ON p.id=t.project_id WHERE t.id=?1",
+                    [task],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                ).ok();
+                if let Some((session, path)) =
+                    context.filter(|(session, _)| session != &self.session)
+                {
+                    self.session = session;
+                    self.project = app::project(store, Path::new(&path))?;
+                    self.data = app::snapshot(store, &self.session)?;
+                }
             }
             if c["state"] != "pending" && c["state"] != "processing" {
                 self.pending_command = None;
@@ -585,6 +712,9 @@ impl Ui {
         }
         self.selected_question = None;
         self.pending_command = Some(i.request_id);
+        self.recovery_form = None;
+        self.supplement_form = None;
+        self.revise_form = None;
         self.input.clear();
         self.notice.clear();
         self.scroll = 0;
@@ -749,6 +879,9 @@ impl Ui {
                 self.panel = Panel::Chat;
                 self.access_form = None;
                 self.notice = "暂未允许，任务会保留在这里；准备好后按 CtrlG。".into();
+                if self.recovery_form.is_some() {
+                    self.open_recovery()?;
+                }
             } else {
                 self.panel = Panel::TaskAccess;
             }
@@ -773,9 +906,24 @@ impl Ui {
                             Some(&form.roles),
                         )?;
                         self.access_form = None;
+                        self.recovery_form = None;
                         self.panel = Panel::Chat;
-                        self.notice = "已允许并排队，助手会自动开始；发起方无需重试。".into();
                         self.refresh(store)?;
+                        if self.current_task().is_some_and(|task| {
+                            task["state"] == "needs_attention" || !task["blocker"].is_null()
+                        }) {
+                            let failed = self
+                                .current_task()
+                                .is_some_and(|task| task["state"] == "needs_attention");
+                            self.open_recovery()?;
+                            self.notice = if failed {
+                                "权限已更新；原失败步骤仍暂停。请选择处理方式，续接会先核对已有成果。"
+                            } else {
+                                "权限已更新；任务仍有待处理事项，请按当前原因选择下一步。"
+                            }.into();
+                        } else {
+                            self.notice = "已允许本次任务；请查看当前进展。".into();
+                        }
                     }
                     1 => {
                         self.panel = Panel::Chat;
@@ -974,6 +1122,33 @@ impl Ui {
                 self.scroll = 0;
                 return Ok(false);
             }
+            if self.panel == Panel::Recovery {
+                self.panel = Panel::Chat;
+                self.recovery_form = None;
+                self.scroll = 0;
+                return Ok(false);
+            }
+            if self.panel == Panel::Supplement {
+                let from_recovery = self.supplement_form.take().is_some_and(|f| f.from_recovery);
+                self.input.clear();
+                self.panel = Panel::Chat;
+                if from_recovery {
+                    self.open_recovery()?;
+                }
+                return Ok(false);
+            }
+            if matches!(
+                self.panel,
+                Panel::Detail | Panel::Questions | Panel::Revise | Panel::Handoff
+            ) && self.recovery_form.is_some()
+            {
+                self.input.clear();
+                self.notice.clear();
+                self.selected_question = None;
+                self.revise_form = None;
+                self.open_recovery()?;
+                return Ok(false);
+            }
             self.panel = Panel::Chat;
             self.input.clear();
             self.notice.clear();
@@ -981,6 +1156,9 @@ impl Ui {
             self.selected_task = None;
             self.selected_question = None;
             self.pending_command = None;
+            self.recovery_form = None;
+            self.supplement_form = None;
+            self.revise_form = None;
             self.scroll = 0;
             return Ok(false);
         }
@@ -1006,12 +1184,7 @@ impl Ui {
                     return Ok(false);
                 }
                 KeyCode::Char('e') => {
-                    ensure!(
-                        self.current_task().is_some_and(|t| t["protocol"] == 2),
-                        "请先选择任务"
-                    );
-                    self.panel = Panel::Revise;
-                    self.input.clear();
+                    self.open_revision()?;
                     return Ok(false);
                 }
                 KeyCode::Char('b') => {
@@ -1084,31 +1257,44 @@ impl Ui {
         }
         match self.panel {
             Panel::Recovery => {
-                if key.code == KeyCode::Enter {
-                    let t = self.recovery_form.clone().context("请重新打开恢复页面")?;
-                    ensure!(
-                        self.current_task()
-                            .is_some_and(|current| current["revision"] == t["revision"]
-                                && current["blocker"] == t["blocker"]),
-                        "任务或失败步骤已变化，请重新打开恢复页面"
-                    );
-                    self.enqueue(
-                        store,
-                        "retry_task",
-                        "检查记录后允许有限继续".into(),
-                        json!({"block_id":t["blocker"]["id"]}),
-                    )?;
-                    self.panel = Panel::Chat;
+                let task = self.recovery_form.as_ref().context("请重新打开处理页面")?;
+                let actions = recovery::actions(task, &self.owner);
+                match key.code {
+                    KeyCode::Up | KeyCode::BackTab => self.index = self.index.saturating_sub(1),
+                    KeyCode::Down | KeyCode::Tab => self.index = (self.index + 1) % actions.len(),
+                    KeyCode::PageUp => self.scroll = self.scroll.saturating_sub(5),
+                    KeyCode::PageDown => self.scroll = self.scroll.saturating_add(5),
+                    KeyCode::Enter => {
+                        self.recovery_action(store, actions[self.index.min(actions.len() - 1)])?
+                    }
+                    KeyCode::Char(c) if !ctrl => {
+                        if let Some(action) = actions.iter().find(|a| a.shortcut() == c) {
+                            self.recovery_action(store, *action)?;
+                        }
+                    }
+                    _ => {}
+                }
+                return Ok(false);
+            }
+            Panel::Supplement if key.code == KeyCode::Tab => {
+                let owner = self.owner.clone();
+                if let Some(form) = &mut self.supplement_form {
+                    if form.task["state"] == "needs_attention"
+                        && recovery::can_retry(&form.task, &owner)
+                    {
+                        form.resume = !form.resume;
+                    }
                 }
                 return Ok(false);
             }
             Panel::Questions => {
+                let revision = self.current_task().map(|t| &t["revision"]);
                 let questions = self
                     .current_task()
                     .and_then(|t| t["questions"].as_array())
                     .map(|qs| {
                         qs.iter()
-                            .filter(|q| q["state"] == "user")
+                            .filter(|q| q["state"] == "user" && Some(&q["revision"]) == revision)
                             .cloned()
                             .collect::<Vec<_>>()
                     })
@@ -1506,16 +1692,45 @@ impl Ui {
                     self.panel = Panel::Chat;
                 }
                 Panel::Supplement => {
-                    self.enqueue(store, "supplement_task", text, json!({}))?;
+                    let form = self
+                        .supplement_form
+                        .as_ref()
+                        .context("请重新打开补充页面")?;
+                    ensure!(
+                        self.current_task()
+                            .is_some_and(|t| t["id"] == form.task["id"]
+                                && t["revision"] == form.task["revision"]),
+                        "任务版本已变化，请重新打开补充页面；输入内容尚未发送"
+                    );
+                    let payload = if form.resume {
+                        self.check_recovery_snapshot(&form.task)?;
+                        json!({"resume":true,"block_id":form.task["blocker"]["id"]})
+                    } else {
+                        json!({})
+                    };
+                    self.enqueue(store, "supplement_task", text, payload)?;
+                    self.supplement_form = None;
+                    self.recovery_form = None;
                     self.panel = Panel::Chat;
                 }
                 Panel::Revise => {
+                    let form = self
+                        .revise_form
+                        .as_ref()
+                        .context("请重新打开修改要求页面")?;
+                    ensure!(
+                        self.current_task()
+                            .is_some_and(|task| task["id"] == form["id"]
+                                && task["revision"] == form["revision"]),
+                        "任务版本已变化，请重新查看当前要求；输入内容尚未发送"
+                    );
+                    let revision = form["revision"].clone();
                     let action = if self.current_task().is_some_and(|t| t["archived"] == true) {
                         "reopen_task"
                     } else {
                         "revise_task"
                     };
-                    self.enqueue(store, action, text, json!({}))?;
+                    self.enqueue(store, action, text, json!({"revision":revision}))?;
                     self.panel = Panel::Chat;
                 }
                 Panel::NewTask => {
@@ -1582,6 +1797,7 @@ impl Ui {
                 | Panel::Attachments
                 | Panel::AttachmentDetail
                 | Panel::AttachmentInfo
+                | Panel::Recovery
         );
         let parts = Layout::vertical([
             Constraint::Length(1),
@@ -1656,7 +1872,7 @@ impl Ui {
             } else if task["execution_permission"]["can_allow"] == true {
                 "CtrlG 查看执行范围并授权 · CtrlX 停止"
             } else if task["state"] == "needs_attention" {
-                "CtrlD 查看原因 · CtrlY 重试 · CtrlX 停止"
+                "CtrlD 查看原因 · CtrlY 处理 · CtrlX 停止"
             } else {
                 "CtrlB 回答问题 · CtrlD 详情 · CtrlX 停止"
             };
@@ -1833,7 +2049,18 @@ impl Ui {
             Panel::Revise => "完整有效要求 · 替代旧要求 · 提交后重新确认",
             Panel::Roles => "角色纠正 · 输入：执行 @成员 原因，或 接收 @成员 原因",
             Panel::Handoff => "确认旧执行已停止 · 填写副作用、保留成果与安全边界核对依据",
-            Panel::Supplement => "补充或纠正当前任务 · 原话保存 · 不改变目标和权限",
+            Panel::Supplement if self.supplement_form.as_ref().is_some_and(|f| f.resume) => {
+                "补充后继续 · Enter 保存并续接 · Tab 改为仅保存 · Esc 返回"
+            }
+            Panel::Supplement
+                if self.supplement_form.as_ref().is_some_and(|f| {
+                    f.task["state"] == "needs_attention"
+                        && recovery::can_retry(&f.task, &self.owner)
+                }) =>
+            {
+                "补充纠正 · Enter 仅保存 · Tab 改为保存并续接 · Esc 返回"
+            }
+            Panel::Supplement => "补充纠正 · Enter 保存 · 保留原话，不改变目标和权限",
             Panel::Stop => "停止原因 · Tab 切换方式 · Enter 确认 · Esc 返回",
             Panel::AccessPath => "任务文件夹的保存位置",
             Panel::AccessTimeout => "运行时限（分钟）",
@@ -2200,46 +2427,15 @@ impl Ui {
             self.render_tasks(f, area);
             return;
         }
+        if self.panel == Panel::Recovery {
+            if let Some(task) = &self.recovery_form {
+                recovery::render(f, area, task, &self.owner, self.index, self.scroll);
+            }
+            return;
+        }
         let mut lines = vec![];
         let title = match self.panel {
-            Panel::Recovery => {
-                if let Some(t) = &self.recovery_form {
-                    let b = &t["blocker"];
-                    let reason =
-                        serde_json::from_value::<crate::task_recovery::Reason>(b["reason"].clone())
-                            .ok();
-                    lines.push(format!("任务：{}", t["goal"].as_str().unwrap_or("")));
-                    lines.push(format!(
-                        "原因：{}",
-                        reason
-                            .map(|r| r.label())
-                            .or(b["detail"].as_str().or(t["error"].as_str()))
-                            .unwrap_or("请查看当前状态")
-                    ));
-                    lines.push(format!(
-                        "责任人：@{}",
-                        b["owner"]
-                            .as_str()
-                            .or(t["next_owner"].as_str())
-                            .unwrap_or(&self.owner)
-                    ));
-                    lines.push(format!(
-                        "恢复步骤：{}",
-                        match b["step_kind"].as_str() {
-                            Some("job") => "上次未完成的模型判断或结果检查",
-                            Some("execution") => "核对已有运行和产物，再继续未完成工作",
-                            _ => "检查历史中未完成的步骤",
-                        }
-                    ));
-                    lines.push("已有成果和累计次数保留；本次仅增加一份有限尝试额度。".into());
-                    if reason == Some(crate::task_recovery::Reason::ModelConfiguration) {
-                        lines.push("请先检查责任人的模型凭据、额度或配置，修复后再继续。".into());
-                    }
-                    lines.push("权限问题须在执行电脑处理；待答问题用 /answer。".into());
-                    lines.push("Enter 允许有限继续 · CtrlD 查看详细记录 · Esc 返回".into());
-                }
-                "查看并恢复失败步骤"
-            }
+            Panel::Recovery => unreachable!(),
             Panel::AccessMode => {
                 lines.push(format!(
                     "本机 @{} 的访问模式 · 不改变其他成员的设置",
@@ -2337,12 +2533,13 @@ impl Ui {
             }
             Panel::Questions => {
                 lines.push("↑↓ 选择问题 · Enter 回答 · Esc 返回".into());
+                let revision = self.current_task().map(|t| &t["revision"]);
                 for (n, q) in self
                     .current_task()
                     .and_then(|t| t["questions"].as_array())
                     .into_iter()
                     .flatten()
-                    .filter(|q| q["state"] == "user")
+                    .filter(|q| q["state"] == "user" && Some(&q["revision"]) == revision)
                     .enumerate()
                 {
                     lines.push(format!(
@@ -2677,6 +2874,9 @@ impl Ui {
                             t["original"].as_str().unwrap_or(""),
                             t["goal"].as_str().unwrap_or("")
                         ));
+                        if !t["blocker"].is_null() || t["error"].is_string() {
+                            lines.extend(recovery::lines(t, &self.owner));
+                        }
                         if let Some(body) = t["result"]["body"].as_str() {
                             lines.push(format!("结果：\n{body}"));
                         }
@@ -2946,7 +3146,7 @@ fn draw_lines(
         .collect::<Vec<_>>();
     draw_rich(f, area, title, &lines, scroll, bottom);
 }
-const HELP: &str = "输入 / 查看命令；↑↓ 选择，Enter 打开，Tab 补全。\n\n对话：Enter 发送 · CtrlJ / AltEnter 换行 · @成员 选择参与人\n任务：CtrlT 查看 · Tab 分类 · a 归档或恢复 · A 归档已结束任务\n团队动态：/activity · 查看全员共享的任务进展和结果\n收件箱：/inbox · n 留言 · r 回复 · m 标为已查看\n附件：CtrlF · n 发送 · Enter 查看\n历史对话：CtrlO · n 新对话\n手动 Codex：/codex · 选目录进入，退出后回到本会话\n工作目录：CtrlP · 可读取目录：CtrlR / /roots\n访问模式：/access · 手动重连：/reconnect\n\n任务确认：CtrlS · 修改：CtrlE · 回答问题：CtrlB\n执行授权：CtrlG · 详情和记录：CtrlD\n停止任务：CtrlX / /stop · 查看并恢复：CtrlY / /recover\n补充纠正：/supplement · 回答指定问题：/answer\n\n停止：填写原因，选择停止并归档或仅停止。\n归档只整理本机列表，保留历史，不会重新启动任务。\nAsk for approval 下，写入运行须执行方批准；Full access 按本机预授权自动执行。\n退出：CtrlQ（后台继续工作）";
+const HELP: &str = "输入 / 查看命令；↑↓ 选择，Enter 打开，Tab 补全。\n\n对话：Enter 发送 · CtrlJ / AltEnter 换行 · @成员 选择参与人\n任务：CtrlT 查看 · Tab 分类 · a 归档或恢复 · A 归档已结束任务\n团队动态：/activity · 查看全员共享的任务进展和结果\n收件箱：/inbox · n 留言 · r 回复 · m 标为已查看\n附件：CtrlF · n 发送 · Enter 查看\n历史对话：CtrlO · n 新对话\n手动 Codex：/codex · 选目录进入，退出后回到本会话\n工作目录：CtrlP · 可读取目录：CtrlR / /roots\n访问模式：/access · 手动重连：/reconnect\n\n任务确认：CtrlS · 修改：CtrlE · 回答问题：CtrlB\n执行授权：CtrlG · 详情和记录：CtrlD\n停止任务：CtrlX / /stop · 处理卡住的任务：CtrlY / /recover\n补充纠正：/supplement · 回答指定问题：/answer\n处理页面可查看具体原因、补充纠正、有限续接或停止。\n补充默认仅保存；可续接时按 Tab 明确选择保存并续接。\n\n停止：填写原因，选择停止并归档或仅停止。\n归档只整理本机列表，保留历史，不会重新启动任务。\nAsk for approval 下，写入运行须执行方批准；Full access 按本机预授权自动执行。\n退出：CtrlQ（后台继续工作）";
 
 pub async fn open(args: OpenArgs) -> Result<()> {
     let default_directory = args.directory.is_none();

@@ -239,7 +239,11 @@ async fn serve_scope(mut store: Store, binding: Option<Binding>) -> Result<()> {
                         json!({"content":[{"type":"text","text":data.to_string()}],"structuredContent":data,"isError":false}),
                     ),
                     Err(e) => {
-                        Ok(json!({"content":[{"type":"text","text":e.to_string()}],"isError":true}))
+                        let mut content = vec![json!({"type":"text","text":e.to_string()})];
+                        if let Some(feedback) = crate::task_materials::correction_feedback(&e) {
+                            content.push(json!({"type":"text","text":json!({"correction_feedback":feedback}).to_string()}));
+                        }
+                        Ok(json!({"content":content,"isError":true}))
                     }
                 },
                 _ => Err((-32601, "method not found")),

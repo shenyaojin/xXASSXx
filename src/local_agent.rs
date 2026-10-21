@@ -137,7 +137,10 @@ pub async fn attempt(store: &mut Store, lease: &Lease) -> Result<bool> {
                     store.submit_result(&lease.task_id,&lease.run_id,&lease.token,&lease.run_id,result)
                 } else { local_files::call(store,local_files::Scope::Execution(&lease.task_id),name,args.clone()) };
                 let success = result.is_ok();
-                let result = match result {Ok(value)=>json!({"ok":true,"value":value}),Err(e)=>json!({"ok":false,"error":e.to_string()})};
+                let result = match result {
+                    Ok(value) => json!({"ok":true,"value":value}),
+                    Err(e) => json!({"ok":false,"error":e.to_string(),"correction_feedback":crate::task_materials::correction_feedback(&e)}),
+                };
                 let receipt=json!({"type":"xxassxx.local_agent.tool","name":name,"arguments":args,"result":result});
                 store.event(lease,&receipt)?; trace.push(receipt);
                 if name=="submit_task_result" && success {

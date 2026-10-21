@@ -15,7 +15,7 @@ pub(super) const COMMANDS: &[Command] = &[
     },
     Command {
         name: "/recover",
-        description: "查看失败步骤，允许有限继续",
+        description: "处理卡住的任务 · 查看原因、纠正或续接",
     },
     Command {
         name: "/codex",
