@@ -1,0 +1,982 @@
+{
+  "date": "2026-10-20 America/Denver",
+  "raw_evidence_directory": "smoke-output/deployment-real-tasks-20261020",
+  "real_environment": {
+    "mailbox": "https://xxassxx.shenyaojin.com",
+    "team": "xxassxx",
+    "model": "DeepSeek deepseek-flash",
+    "terminal": "interactive system PTY, saved ANSI and 150x40 frames"
+  },
+  "cases": [
+    {
+      "label": "T1",
+      "task_id": "6ddd50f4-54e0-5b12-982a-016cfc678fe1",
+      "execution_source_by_revision": {
+        "1": "404a460",
+        "2": "4eecaf2"
+      },
+      "members": [
+        {
+          "member": "owner",
+          "host": "Mac-mini.local",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "test",
+            "recipients": [
+              "owner"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "runs": [],
+          "stops": [],
+          "delivery_approvals": [],
+          "workspace_grants": [],
+          "transfers": [],
+          "files": [],
+          "result_sha256": "08b86b795ecf066cb1ae8f7083cacb27e1faab4fbd59578a4c27ffdf007f09c1"
+        },
+        {
+          "member": "test",
+          "host": "lakota.mines.edu",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "test",
+            "recipients": [
+              "owner"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "runs": [
+            {
+              "id": "9814b262-170f-4a78-b091-3650316f6502",
+              "state": "succeeded",
+              "session_id": "01a15cd0-dd1c-7a31-8d3c-fab5959992d2",
+              "resumed_session_id": null,
+              "workdir": "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner",
+              "sandbox": "read-only",
+              "codex_version": "codex-cli 0.162.1",
+              "error_code": null,
+              "reads": 2,
+              "submissions": 1,
+              "revision": 1,
+              "phase": "discover"
+            },
+            {
+              "id": "7469233c-cc7b-446b-ab0e-5fd54f66d209",
+              "state": "succeeded",
+              "session_id": "01a15cd2-14ab-7a30-a60e-0cb783ed8510",
+              "resumed_session_id": null,
+              "workdir": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.task-materials/08d52602-adbf-5ded-950c-fd9d30d9e09a",
+              "sandbox": "read-only",
+              "codex_version": "codex-cli 0.162.1",
+              "error_code": null,
+              "reads": 3,
+              "submissions": 1,
+              "revision": 1,
+              "phase": "analyze"
+            },
+            {
+              "id": "f003cdc2-1f49-4001-b04d-398c176aa4dd",
+              "state": "succeeded",
+              "session_id": "01a15cda-a0a0-7601-b7fa-5c546f4b1ad9",
+              "resumed_session_id": null,
+              "workdir": "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner",
+              "sandbox": "read-only",
+              "codex_version": "codex-cli 0.162.1",
+              "error_code": null,
+              "reads": 3,
+              "submissions": 1,
+              "revision": 2,
+              "phase": "discover"
+            },
+            {
+              "id": "42a3d767-125a-4090-be6b-0d3002538027",
+              "state": "succeeded",
+              "session_id": "01a15cdb-50f8-7d43-b564-77f44f52796c",
+              "resumed_session_id": null,
+              "workdir": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.task-materials/e056745a-354e-51b0-a015-98c593679b22",
+              "sandbox": "read-only",
+              "codex_version": "codex-cli 0.162.1",
+              "error_code": null,
+              "reads": 3,
+              "submissions": 1,
+              "revision": 2,
+              "phase": "analyze"
+            }
+          ],
+          "stops": [],
+          "delivery_approvals": [],
+          "workspace_grants": [],
+          "transfers": [],
+          "files": [],
+          "result_sha256": "08b86b795ecf066cb1ae8f7083cacb27e1faab4fbd59578a4c27ffdf007f09c1"
+        }
+      ]
+    },
+    {
+      "label": "T2",
+      "task_id": "5ad734e8-f4d7-55fb-9412-64335b7af48a",
+      "execution_source_by_revision": {
+        "2": "4eecaf2"
+      },
+      "members": [
+        {
+          "member": "owner",
+          "host": "Mac-mini.local",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "test",
+            "recipients": [
+              "owner"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "runs": [],
+          "stops": [
+            {
+              "id": "b116d861-446d-59a5-a256-4fbe6651ce15",
+              "revision": 1,
+              "executor": "test",
+              "state": "stopped",
+              "created_at": 1792559126,
+              "confirmed_at": 1792559128
+            }
+          ],
+          "delivery_approvals": [],
+          "workspace_grants": [],
+          "transfers": [
+            {
+              "id": "03b8cb1f-6f96-5120-b0c5-18699acb25e0",
+              "state": "received",
+              "direction": "in",
+              "recipient": "owner"
+            }
+          ],
+          "files": [
+            {
+              "name": "01_final_history_match.png",
+              "bytes": 258255,
+              "sha256": "792071a95e00935ba04a1fe739a55593acd832b67cb3ec395bc0d19a3e237c9f"
+            }
+          ],
+          "result_sha256": "46c011337d67fcd230dd50cc27ef8fbe57f44c6dc68ad99249afb45c6a875b34"
+        },
+        {
+          "member": "test",
+          "host": "lakota.mines.edu",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "test",
+            "recipients": [
+              "owner"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "runs": [
+            {
+              "id": "31260c2a-df91-41aa-89ed-3659ed5d6419",
+              "state": "succeeded",
+              "session_id": "01a15cdc-d28c-72f1-acb2-d13b6db2fca7",
+              "resumed_session_id": null,
+              "workdir": "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner",
+              "sandbox": "read-only",
+              "codex_version": "codex-cli 0.162.1",
+              "error_code": null,
+              "reads": 2,
+              "submissions": 1,
+              "revision": 2,
+              "phase": "discover"
+            }
+          ],
+          "stops": [],
+          "delivery_approvals": [],
+          "workspace_grants": [],
+          "transfers": [
+            {
+              "id": "03b8cb1f-6f96-5120-b0c5-18699acb25e0",
+              "state": "delivered",
+              "direction": "out",
+              "recipient": "owner"
+            }
+          ],
+          "files": [
+            {
+              "name": "01_final_history_match.png",
+              "bytes": 258255,
+              "sha256": "792071a95e00935ba04a1fe739a55593acd832b67cb3ec395bc0d19a3e237c9f"
+            }
+          ],
+          "result_sha256": "46c011337d67fcd230dd50cc27ef8fbe57f44c6dc68ad99249afb45c6a875b34"
+        }
+      ]
+    },
+    {
+      "label": "T3",
+      "task_id": "cd272e74-308b-5b21-8435-2df0b3eacee1",
+      "execution_source_by_revision": {
+        "2": "4eecaf2"
+      },
+      "members": [
+        {
+          "member": "owner",
+          "host": "Mac-mini.local",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "test",
+            "recipients": [
+              "owner"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "runs": [],
+          "stops": [],
+          "delivery_approvals": [],
+          "workspace_grants": [],
+          "transfers": [],
+          "files": [],
+          "result_sha256": "d60d60e74cdbff4d881f4dcfba9d65c53c36f35c0015c77315885bdeb22156b9"
+        },
+        {
+          "member": "test",
+          "host": "lakota.mines.edu",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "test",
+            "recipients": [
+              "owner"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "runs": [
+            {
+              "id": "15dda534-8db3-4e28-acff-3de4ee090884",
+              "state": "succeeded",
+              "session_id": "01a15cdc-36c1-7861-bf61-dd161f7e63c5",
+              "resumed_session_id": null,
+              "workdir": "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner",
+              "sandbox": "read-only",
+              "codex_version": "codex-cli 0.162.1",
+              "error_code": null,
+              "reads": 2,
+              "submissions": 1,
+              "revision": 2,
+              "phase": "discover"
+            },
+            {
+              "id": "39cdfa7b-0daa-4263-9cf9-208dc3b94f57",
+              "state": "succeeded",
+              "session_id": "01a15cdd-566d-79b1-b2fa-a642e3949d60",
+              "resumed_session_id": null,
+              "workdir": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.task-materials/2d7a1668-abb1-5281-ba1a-e3b1abe31c04",
+              "sandbox": "read-only",
+              "codex_version": "codex-cli 0.162.1",
+              "error_code": null,
+              "reads": 2,
+              "submissions": 1,
+              "revision": 2,
+              "phase": "analyze"
+            }
+          ],
+          "stops": [],
+          "delivery_approvals": [],
+          "workspace_grants": [],
+          "transfers": [],
+          "files": [],
+          "result_sha256": "d60d60e74cdbff4d881f4dcfba9d65c53c36f35c0015c77315885bdeb22156b9"
+        }
+      ]
+    },
+    {
+      "label": "T4",
+      "task_id": "6fce014b-e82c-56e8-8670-27e2fc12e047",
+      "execution_source_by_revision": {
+        "1": "404a460"
+      },
+      "members": [
+        {
+          "member": "owner",
+          "host": "Mac-mini.local",
+          "revision": 1,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "owner",
+            "recipients": [
+              "test"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "runs": [
+            {
+              "id": "2a48cd90-0015-48f7-9cdb-d5f7a6521a4f",
+              "state": "succeeded",
+              "session_id": "01a15cd2-7469-71d2-902e-0ad35679d952",
+              "resumed_session_id": null,
+              "workdir": "/Users/shenyaojin/Documents/gitproject/xXASSXx/xxassxx-task-6fce014b-e82c-56e8-8670-27e2fc12e047-r1",
+              "sandbox": "task-full-access",
+              "codex_version": "codex-cli 0.163.0",
+              "error_code": null,
+              "reads": 1,
+              "submissions": 1,
+              "revision": 1,
+              "phase": "execute"
+            }
+          ],
+          "stops": [],
+          "delivery_approvals": [
+            {
+              "task_id": "6fce014b-e82c-56e8-8670-27e2fc12e047",
+              "revision": 1,
+              "generation": 1
+            }
+          ],
+          "workspace_grants": [
+            {
+              "task_id": "6fce014b-e82c-56e8-8670-27e2fc12e047",
+              "revision": 1,
+              "directory": "/Users/shenyaojin/Documents/gitproject/xXASSXx/xxassxx-task-6fce014b-e82c-56e8-8670-27e2fc12e047-r1",
+              "read_roots": "[\"/Users/shenyaojin\"]",
+              "timeout_secs": 1800,
+              "created_at": 1792558657,
+              "full_access": 1
+            }
+          ],
+          "transfers": [
+            {
+              "id": "5b3f343c-4139-5624-ab59-c2fad9181818",
+              "state": "delivered",
+              "direction": "out",
+              "recipient": "test"
+            }
+          ],
+          "files": [
+            {
+              "name": "final-ci.csv",
+              "bytes": 184,
+              "sha256": "42a73bedfba4aa9edf3a07f6c45a47d19b6c6d0239ccbe8208bfebc20d25dd7b"
+            },
+            {
+              "name": "说明.txt",
+              "bytes": 1099,
+              "sha256": "cb2df6a9a5b35a4a7afd1d2ccce67e487ca80485c6161e62a2ca7954eb8b0711"
+            }
+          ],
+          "result_sha256": "642d929119dd19e1e3ecf3d1c4685882bab51288d90ca497406fb1a2445983cd"
+        }
+      ]
+    },
+    {
+      "label": "T5",
+      "task_id": "2874fe62-397b-502f-b2c2-3f6d8a4a4561",
+      "execution_source_by_revision": {
+        "1": "404a460"
+      },
+      "members": [
+        {
+          "member": "owner",
+          "host": "Mac-mini.local",
+          "revision": 1,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "owner",
+            "recipients": [
+              "trader"
+            ],
+            "others": [],
+            "delivery_generation": 2
+          },
+          "runs": [
+            {
+              "id": "2baf2d2e-bdd0-4387-a8ec-9dd88aae4973",
+              "state": "succeeded",
+              "session_id": null,
+              "resumed_session_id": null,
+              "workdir": "/Users/shenyaojin/Documents/gitproject/xXASSXx",
+              "sandbox": "read-only",
+              "codex_version": null,
+              "error_code": null,
+              "reads": 1,
+              "submissions": 1,
+              "revision": 1,
+              "phase": "discover"
+            }
+          ],
+          "stops": [],
+          "delivery_approvals": [],
+          "workspace_grants": [],
+          "transfers": [
+            {
+              "id": "c9386e88-8b19-5ed3-a59f-1f84fe69f0ac",
+              "state": "revoked",
+              "direction": "out",
+              "recipient": "test"
+            },
+            {
+              "id": "9d039903-e3a1-5728-ab1b-744a087be01b",
+              "state": "delivered",
+              "direction": "out",
+              "recipient": "trader"
+            }
+          ],
+          "files": [
+            {
+              "name": "verified-packages.json",
+              "bytes": 799,
+              "sha256": "55daf561445b333c383b466e169f53fbafcd6a28dcf612899c60729315d3f3ef"
+            },
+            {
+              "name": "verified-packages.json",
+              "bytes": 799,
+              "sha256": "55daf561445b333c383b466e169f53fbafcd6a28dcf612899c60729315d3f3ef"
+            }
+          ],
+          "result_sha256": "7eb5c8b6a301c573a9a71e82629ce0c3b2810cfa348269842fdd85e3b6e0eafe"
+        }
+      ]
+    },
+    {
+      "label": "T6",
+      "task_id": "f81b3252-7ab2-55d7-bf16-0686ac827419",
+      "execution_source_by_revision": {
+        "1": "404a460",
+        "2": "404a460"
+      },
+      "members": [
+        {
+          "member": "owner",
+          "host": "Mac-mini.local",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "trader",
+            "recipients": [
+              "owner"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "runs": [],
+          "stops": [
+            {
+              "id": "73119df4-861c-5e00-93f8-be917bcb3908",
+              "revision": 1,
+              "executor": "trader",
+              "state": "stopped",
+              "created_at": 1792558118,
+              "confirmed_at": 1792558249
+            }
+          ],
+          "delivery_approvals": [],
+          "workspace_grants": [],
+          "transfers": [],
+          "files": [],
+          "result_sha256": "6450e3c99592fffdd6fb61fa00e8934fd6fb645abe862668756384895de0f696"
+        },
+        {
+          "member": "trader",
+          "host": "VM-0-8-ubuntu",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "trader",
+            "recipients": [
+              "owner"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "runs": [
+            {
+              "id": "d03f01fe-0905-46f0-aa3a-9065e8afe8a1",
+              "state": "failed",
+              "session_id": null,
+              "resumed_session_id": null,
+              "workdir": "/home/ubuntu/projects/crypto_playground",
+              "sandbox": "read-only",
+              "codex_version": null,
+              "error_code": "authorization_changed",
+              "reads": 1,
+              "submissions": 0,
+              "revision": 1,
+              "phase": "discover"
+            },
+            {
+              "id": "fc443e60-df3f-4338-8a9b-8aa5c7923c0b",
+              "state": "succeeded",
+              "session_id": "01a15ccc-a5cd-7821-b990-1ba86dde4803",
+              "resumed_session_id": null,
+              "workdir": "/home/ubuntu/projects/crypto_playground",
+              "sandbox": "read-only",
+              "codex_version": "codex-cli 0.162.1",
+              "error_code": null,
+              "reads": 2,
+              "submissions": 1,
+              "revision": 2,
+              "phase": "discover"
+            },
+            {
+              "id": "144523a6-0988-4c63-b8d5-604c0e26c2d4",
+              "state": "succeeded",
+              "session_id": "01a15ccd-88b4-7bc3-8194-4799b5025782",
+              "resumed_session_id": null,
+              "workdir": "/home/ubuntu/.local/share/xxassxx/client/member.task-materials/0a293b62-f809-57ab-a0bf-2443caacc13d",
+              "sandbox": "read-only",
+              "codex_version": "codex-cli 0.162.1",
+              "error_code": null,
+              "reads": 2,
+              "submissions": 1,
+              "revision": 2,
+              "phase": "analyze"
+            }
+          ],
+          "stops": [
+            {
+              "id": "73119df4-861c-5e00-93f8-be917bcb3908",
+              "revision": 1,
+              "executor": "trader",
+              "state": "stopped",
+              "created_at": 1792558120,
+              "confirmed_at": 1792558247
+            }
+          ],
+          "delivery_approvals": [],
+          "workspace_grants": [],
+          "transfers": [],
+          "files": [],
+          "result_sha256": "6450e3c99592fffdd6fb61fa00e8934fd6fb645abe862668756384895de0f696"
+        }
+      ]
+    },
+    {
+      "label": "T3b",
+      "task_id": "f0cab497-0e33-5951-ac9f-e471f4b31381",
+      "execution_source_by_revision": {
+        "2": "6453041"
+      },
+      "members": [
+        {
+          "member": "owner",
+          "host": "Mac-mini.local",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "test",
+            "recipients": [
+              "owner"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "runs": [],
+          "stops": [],
+          "delivery_approvals": [],
+          "workspace_grants": [],
+          "transfers": [],
+          "files": [],
+          "result_sha256": "5a1e39a97869626d2d5f2b1d636a4412aa97678bff03f2c7fc9294736aa87b67"
+        },
+        {
+          "member": "test",
+          "host": "lakota.mines.edu",
+          "revision": 2,
+          "state": "completed",
+          "roles": {
+            "protocol": 1,
+            "executor": "test",
+            "recipients": [
+              "owner"
+            ],
+            "others": [],
+            "delivery_generation": 1
+          },
+          "runs": [
+            {
+              "id": "dfe0809e-e547-44be-90c7-fe66508f91b7",
+              "state": "succeeded",
+              "session_id": "01a15ceb-fd59-7522-83b4-c1aa2403e432",
+              "resumed_session_id": null,
+              "workdir": "/rcp/rcp42/home/shenyaojin/Documents/bakken_mariner",
+              "sandbox": "read-only",
+              "codex_version": "codex-cli 0.162.1",
+              "error_code": null,
+              "reads": 2,
+              "submissions": 1,
+              "revision": 2,
+              "phase": "discover"
+            },
+            {
+              "id": "4e3db9be-b667-48fb-a98a-c1111da49b6d",
+              "state": "succeeded",
+              "session_id": "01a15cec-8f6d-70a0-8958-4c1fdf4ffdf4",
+              "resumed_session_id": null,
+              "workdir": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/client/member.task-materials/72ce17a8-368f-53ba-964d-69aa1db89b8e",
+              "sandbox": "read-only",
+              "codex_version": "codex-cli 0.162.1",
+              "error_code": null,
+              "reads": 2,
+              "submissions": 1,
+              "revision": 2,
+              "phase": "analyze"
+            }
+          ],
+          "stops": [],
+          "delivery_approvals": [],
+          "workspace_grants": [],
+          "transfers": [],
+          "files": [],
+          "result_sha256": "5a1e39a97869626d2d5f2b1d636a4412aa97678bff03f2c7fc9294736aa87b67"
+        }
+      ]
+    }
+  ],
+  "final_source_commit": "6453041be9f2413949a906f15b68cfc7e59a6538",
+  "ci": {
+    "run": 39548364020,
+    "url": "https://github.com/shenyaojin/xXASSXx/actions/runs/39548364020",
+    "conclusion": "success",
+    "jobs": {
+      "build (ubuntu-22.04, x86_64-unknown-linux-musl)": {
+        "job_id": 119051617264,
+        "passed": 217,
+        "failed": 0,
+        "ignored": 3,
+        "suites": 30
+      },
+      "build (macos-15, aarch64-apple-darwin)": {
+        "job_id": 119051617774,
+        "passed": 216,
+        "failed": 0,
+        "ignored": 3,
+        "suites": 30
+      }
+    },
+    "release": "skipped"
+  },
+  "installations": [
+    {
+      "host": "Mac-mini.local",
+      "role": "client",
+      "source_commit": "6453041be9f2413949a906f15b68cfc7e59a6538",
+      "ci_run": 39548364020,
+      "new_sha256": "058e2e84ceea4a26a3e9327e46a24b7a052368e52989e6d6576584147408734e",
+      "schema_after": 14,
+      "config_preserved": true,
+      "backup": "/Users/shenyaojin/.local/share/xxassxx/backups/deploy-090-20261020-final-client",
+      "completed_at": 1792560137.088771,
+      "installed_version": "xxassxx 0.9.0-alpha"
+    },
+    {
+      "host": "lakota.mines.edu",
+      "role": "client",
+      "source_commit": "6453041be9f2413949a906f15b68cfc7e59a6538",
+      "ci_run": 39548364020,
+      "new_sha256": "fed87c6850c94268f7601e8ff074b8b2c8cf82e61f775f3af6febfa5fc341ba3",
+      "schema_after": 14,
+      "config_preserved": true,
+      "backup": "/rcp/rcp42/home/shenyaojin/.local/share/xxassxx/backups/deploy-090-20261020-final-client",
+      "completed_at": 1792560209.2505097,
+      "installed_version": "xxassxx 0.9.0-alpha"
+    },
+    {
+      "host": "VM-0-8-ubuntu",
+      "role": "client",
+      "source_commit": "6453041be9f2413949a906f15b68cfc7e59a6538",
+      "ci_run": 39548364020,
+      "new_sha256": "fed87c6850c94268f7601e8ff074b8b2c8cf82e61f775f3af6febfa5fc341ba3",
+      "schema_after": 14,
+      "config_preserved": true,
+      "backup": "/home/ubuntu/.local/share/xxassxx/backups/deploy-090-20261020-final-client",
+      "completed_at": 1792560287.3358402,
+      "installed_version": "xxassxx 0.9.0-alpha"
+    },
+    {
+      "host": "VM-0-8-ubuntu",
+      "role": "server",
+      "source_commit": "6453041be9f2413949a906f15b68cfc7e59a6538",
+      "ci_run": 39548364020,
+      "new_sha256": "fed87c6850c94268f7601e8ff074b8b2c8cf82e61f775f3af6febfa5fc341ba3",
+      "schema_after": 4,
+      "config_preserved": true,
+      "backup": "/home/ubuntu/.local/share/xxassxx/backups/deploy-090-20261020-final-server",
+      "completed_at": 1792560301.7432442,
+      "installed_version": "xxassxx 0.9.0-alpha"
+    }
+  ],
+  "contracts": [
+    {
+      "host": "Mac-mini.local",
+      "original_tasks": 21,
+      "changes_to_original_task_columns": [],
+      "access_mode": [],
+      "new_runs": [
+        [
+          "read-only",
+          1
+        ],
+        [
+          "task-full-access",
+          1
+        ]
+      ]
+    },
+    {
+      "host": "lakota.mines.edu",
+      "original_tasks": 23,
+      "changes_to_original_task_columns": [],
+      "access_mode": [
+        {
+          "key": "access_mode",
+          "value": "full_access"
+        }
+      ],
+      "new_runs": [
+        [
+          "read-only",
+          9
+        ]
+      ]
+    },
+    {
+      "host": "VM-0-8-ubuntu",
+      "original_tasks": 3,
+      "changes_to_original_task_columns": [],
+      "access_mode": [
+        {
+          "key": "access_mode",
+          "value": "full_access"
+        }
+      ],
+      "new_runs": [
+        [
+          "read-only",
+          3
+        ]
+      ]
+    }
+  ],
+  "recipient_visibility": [
+    {
+      "member": "test",
+      "tasks": {
+        "T1": {
+          "task_rows": 1,
+          "runs": 4,
+          "incoming_task_protocol_messages": 6
+        },
+        "T2": {
+          "task_rows": 1,
+          "runs": 1,
+          "incoming_task_protocol_messages": 3
+        },
+        "T3": {
+          "task_rows": 1,
+          "runs": 2,
+          "incoming_task_protocol_messages": 3
+        },
+        "T4": {
+          "task_rows": 0,
+          "runs": 0,
+          "incoming_task_protocol_messages": 0
+        },
+        "T5": {
+          "task_rows": 0,
+          "runs": 0,
+          "incoming_task_protocol_messages": 0
+        },
+        "T6": {
+          "task_rows": 0,
+          "runs": 0,
+          "incoming_task_protocol_messages": 0
+        },
+        "T3b": {
+          "task_rows": 1,
+          "runs": 2,
+          "incoming_task_protocol_messages": 3
+        }
+      }
+    },
+    {
+      "member": "trader",
+      "tasks": {
+        "T1": {
+          "task_rows": 0,
+          "runs": 0,
+          "incoming_task_protocol_messages": 0
+        },
+        "T2": {
+          "task_rows": 0,
+          "runs": 0,
+          "incoming_task_protocol_messages": 0
+        },
+        "T3": {
+          "task_rows": 0,
+          "runs": 0,
+          "incoming_task_protocol_messages": 0
+        },
+        "T4": {
+          "task_rows": 0,
+          "runs": 0,
+          "incoming_task_protocol_messages": 0
+        },
+        "T5": {
+          "task_rows": 0,
+          "runs": 0,
+          "incoming_task_protocol_messages": 0
+        },
+        "T6": {
+          "task_rows": 1,
+          "runs": 3,
+          "incoming_task_protocol_messages": 5
+        },
+        "T3b": {
+          "task_rows": 0,
+          "runs": 0,
+          "incoming_task_protocol_messages": 0
+        }
+      }
+    }
+  ],
+  "received_files": [
+    {
+      "task": "6fce014b-e82c-56e8-8670-27e2fc12e047",
+      "visible_task": 0,
+      "id": "5b3f343c-4139-5624-ab59-c2fad9181818",
+      "state": "received",
+      "sender": "owner",
+      "recipient": "test",
+      "files": [
+        {
+          "name": "final-ci.csv",
+          "sha256": "42a73bedfba4aa9edf3a07f6c45a47d19b6c6d0239ccbe8208bfebc20d25dd7b",
+          "bytes": 184
+        },
+        {
+          "name": "说明.txt",
+          "sha256": "cb2df6a9a5b35a4a7afd1d2ccce67e487ca80485c6161e62a2ca7954eb8b0711",
+          "bytes": 1099
+        }
+      ]
+    },
+    {
+      "task": "2874fe62-397b-502f-b2c2-3f6d8a4a4561",
+      "visible_task": 0,
+      "id": "9d039903-e3a1-5728-ab1b-744a087be01b",
+      "state": "received",
+      "sender": "owner",
+      "recipient": "trader",
+      "files": [
+        {
+          "name": "verified-packages.json",
+          "sha256": "55daf561445b333c383b466e169f53fbafcd6a28dcf612899c60729315d3f3ef",
+          "bytes": 799
+        }
+      ]
+    }
+  ],
+  "manual_verification": {
+    "T1": "First retrieval missed the final record; r2 key numbers verified after clarification. One before_k_refit label was incorrectly called C refit; retained as a wording limitation.",
+    "T2": "Owner and executor terminal final checked; original PNG bytes/hash match.",
+    "T3": "Initial business answer valid, but false pending-stop text failed UI acceptance.",
+    "T3b": "Final CI binaries on all devices; both terminal final answers say prior assignment was unconfirmed and undispatched. Trader has zero task rows, runs, incoming task protocol messages.",
+    "T4": "Owner terminal grant, one official Codex run; recipient file hashes match and recipient has no task execution.",
+    "T5": "Same revision, delivery generation changed, old unsent transfer revoked; one read-only selection, recipient bytes match.",
+    "T6": "Old read-only run stopped and checked via terminal handoff; revised answer rejects unsupported real-order and multi-year equivalence."
+  },
+  "final_health": {
+    "checked_at_unix": 1792560798,
+    "clients": [
+      {
+        "member": "owner",
+        "host": "Mac-mini.local",
+        "service": {
+          "alive": true,
+          "pid": 90000,
+          "state": "running",
+          "updated_at": 1792560753,
+          "version": "0.9.0-alpha"
+        },
+        "inflight": {
+          "running_runs": 0,
+          "pending_commands": 0,
+          "runnable_jobs": 0,
+          "active_transfers": 0
+        },
+        "integrity": "ok",
+        "foreign_key_errors": 0,
+        "installed_binary_hashes_match_final_ci": true,
+        "original_task_columns_unchanged": true
+      },
+      {
+        "member": "test",
+        "host": "lakota.mines.edu",
+        "service": {
+          "alive": true,
+          "pid": 554395,
+          "state": "running",
+          "updated_at": 1792560754,
+          "version": "0.9.0-alpha"
+        },
+        "inflight": {
+          "running_runs": 0,
+          "pending_commands": 0,
+          "runnable_jobs": 0,
+          "active_transfers": 0
+        },
+        "integrity": "ok",
+        "foreign_key_errors": 0,
+        "installed_binary_hashes_match_final_ci": true,
+        "original_task_columns_unchanged": true
+      },
+      {
+        "member": "trader",
+        "host": "VM-0-8-ubuntu",
+        "service": {
+          "alive": true,
+          "pid": 2700233,
+          "state": "running",
+          "updated_at": 1792560755,
+          "version": "0.9.0-alpha"
+        },
+        "inflight": {
+          "running_runs": 0,
+          "pending_commands": 0,
+          "runnable_jobs": 0,
+          "active_transfers": 0
+        },
+        "integrity": "ok",
+        "foreign_key_errors": 0,
+        "installed_binary_hashes_match_final_ci": true,
+        "original_task_columns_unchanged": true
+      }
+    ],
+    "trader_mailbox_service": {
+      "MainPID": "2700073",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    "test_terminals_closed": true
+  }
+}

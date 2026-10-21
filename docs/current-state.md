@@ -1,6 +1,14 @@
 # 项目理念与接续摘要
 
-更新日期：2026-10-16（America/Denver；稳定性第二阶段候选已完成 A–H 真实验收，Linux/ARM Mac CI 专项修复已通过；日常部署记录沿用 10 月 14 日验收）。`0.8.0-alpha` 已公开发布，支持 M 系 Mac 与 Linux x86_64 musl，包含白名单读取与 Codex 能力交接。`owner` 与 `mba` 两台 Mac 均已从 GitHub 发布包手动升级到 0.8.0，保留各自数据、配置与 Ask for approval；owner 原库已是 schema 10，MBA 此前由 schema 9 迁到 10。其他机器本轮未修改：据此前部署记录，Lakota `test` 与 Trader `trader` 日常端为 0.7.2，Trader 为 Full access、Lakota 为 Ask；Trader 独立信箱为 0.7.0、schema 2。
+更新日期：2026-10-20（America/Denver；三端日常环境已升级，六项真实任务及改派修复重验已完成）。本机 `owner`、Lakota `test`、Trader `trader` 与 Trader 独立信箱均已安装 `0.9.0-alpha`，运行源码 `6453041`。个人库 schema 14，信箱 schema 4；原记录和配置经备份、逐表核对保留。本轮实测原有访问模式为 owner Ask、test Full、trader Full，未替用户切换模式。MBA 与其他成员未升级。公开发布仍为 `0.8.0-alpha`，本轮没有打标签或发布。此前摘要中的 Lakota/Trader 版本与模式是历史记录：本轮部署前实际两台 Linux 客户端均为 0.8.0，Lakota 已设 Full access。
+
+## 三端日常部署与实际任务（2026-10-20）
+
+按用户本轮明确部署授权，owner、test、trader 与独立信箱均使用源码 `6453041` 的已验证 CI 产物。[本次 CI](https://github.com/shenyaojin/xXASSXx/actions/runs/39548364020)：Linux 217 项、ARM Mac 216 项通过，均 0 失败、3 项既有忽略；构建、打包和隔离安装通过，release 跳过。本机未构建 Rust target，完整 Linux 回归在 Lakota 完成。各机有完整数据与旧二进制备份；原有 47 项任务的原列无变化，原待批准任务未自动恢复，后台服务继续运行。
+
+六项真实业务通过实际信箱、三端 PTY、真实模型及官方 Codex 验证：模糊进展经补充索引找到最终记录；改错日期后原图哈希一致地交付；未确认时纠正执行机器；本机生成 CI 汇总后仅送对方；仅改收件人不重跑；纠正错误前提并停止、核对旧只读运行后接续。首次模糊检索遗漏和一次术语偏差如实保留，不能宣称所有模糊提示都能一次命中。未确认改派的首轮终端错误声称等待停止，修复后独立 T3b 重验通过，旧成员零任务执行。
+
+实测修复了后台每轮展开完整历史导致 Lakota 心跳超时的问题（同库核对约 2.55 秒降至 26–37 毫秒），以及未确认分配被误写成待停止的问题；没有改变停止授权门槛。运行构建按场景分别记录，不声称所有旧结果都由最终版本重新执行。详见 [部署与六项任务记录](deployment-real-tasks-20261020.md)、[精简证据](deployment-real-tasks-20261020-evidence.json)。
 
 ## 稳定性第二阶段：执行分配与成果接收（2026-10-16，候选已完成 A–H 实机验收）
 
