@@ -360,8 +360,18 @@ pub fn reconcile(store: &mut Store) -> Result<()> {
             Some(&m.message_id),
         )?;
     }
-    for t in tasks::list(store, None)? {
-        let id = t["id"].as_str().unwrap();
+    // Background reconciliation only needs the artifact fields and legacy
+    // workflow link. Loading the UI's full history for every task on every poll
+    // can keep the shared async worker busy past the presence request deadline.
+    let tasks = {
+        let mut q = store.conn.prepare("SELECT json_object('id',t.id,'session_id',t.session_id,'title',t.title,'state',t.state,'protocol',t.protocol,'revision',t.revision,'workflow_id',CASE WHEN t.protocol=2 THEN NULL ELSE t.workflow_id END,'project',p.path,'peer',CASE WHEN t.protocol=2 THEN NULL ELSE t.peer END,'result',json(t.result)) FROM app_tasks t JOIN app_projects p ON p.id=t.project_id WHERE t.workflow_id IS NOT NULL OR t.state='completed' ORDER BY t.created_at,t.id")?;
+        q.query_map([], |r| r.get::<_, String>(0))?
+            .map(|r| Ok(serde_json::from_str::<Value>(&r?)?))
+            .collect::<Result<Vec<_>>>()?
+    };
+    for mut t in tasks {
+        let id_owned = t["id"].as_str().unwrap().to_owned();
+        let id = id_owned.as_str();
         if store.conn.query_row(
             "SELECT EXISTS(SELECT 1 FROM legacy_holds WHERE kind='app' AND id=?1)",
             [id],
@@ -410,9 +420,10 @@ pub fn reconcile(store: &mut Store) -> Result<()> {
                     None,
                     None,
                 )?;
+                t["state"] = json!(wf.state);
+                t["result"] = wf.result.unwrap_or(Value::Null);
             }
         }
-        let t = tasks::get(store, id)?;
         if t["state"] == "completed" {
             let artifact_id = if t["protocol"] == 2 {
                 format!("app-{id}-r{}", t["revision"])

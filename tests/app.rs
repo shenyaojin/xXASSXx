@@ -59,6 +59,41 @@ fn count(t: &Team, m: &str, sql: &str) -> i64 {
         .unwrap()
 }
 #[test]
+fn reconciliation_preserves_versioned_results_and_rejects_artifact_changes() {
+    let t = Team::new();
+    let mut i = instruction(&t, "a", "a", "保留每版结果");
+    i.action = "create_task".into();
+    submit(&t, "a", &i);
+    let id = task(&t, "a", &i)["id"].as_str().unwrap().to_owned();
+    let db = rusqlite::Connection::open(t.db("a")).unwrap();
+    let mut paths = Vec::new();
+    for revision in [1, 2] {
+        let result = json!({"body":format!("result {revision}"),"sources":[]});
+        db.execute(
+            "UPDATE app_tasks SET state='completed',revision=?2,result=?3 WHERE id=?1",
+            rusqlite::params![id, revision, result.to_string()],
+        )
+        .unwrap();
+        app::bridge::reconcile(&mut t.store("a")).unwrap();
+        let card = app::tasks::get(&t.store("a"), &id).unwrap();
+        let path = std::path::PathBuf::from(card["artifact"].as_str().unwrap());
+        let expected = json!({"task_id":id,"title":card["title"],"project":card["project"],"peer":card["peer"],"result":result});
+        let bytes = std::fs::read(&path).unwrap();
+        assert_eq!(bytes, serde_json::to_vec_pretty(&expected).unwrap());
+        app::bridge::reconcile(&mut t.store("a")).unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        paths.push((path, bytes));
+    }
+    assert_eq!(std::fs::read(&paths[0].0).unwrap(), paths[0].1);
+    std::fs::write(&paths[1].0, "unexpected replacement").unwrap();
+    assert!(app::bridge::reconcile(&mut t.store("a")).is_err());
+    assert_eq!(
+        app::tasks::get(&t.store("a"), &id).unwrap()["result"]["body"],
+        "result 2"
+    );
+}
+
+#[test]
 fn new_chat_has_bounded_owner_history_for_project_routing() {
     let team = Team::new();
     let db = rusqlite::Connection::open(team.db("a")).unwrap();
