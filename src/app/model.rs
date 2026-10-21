@@ -86,7 +86,7 @@ pub fn tools_for_instruction(store: &Store, i: &Instruction) -> Result<Vec<Value
     };
     let legacy_state = selected
         .as_ref()
-        .filter(|(protocol, _)| *protocol == 1)
+        .filter(|(protocol, _)| *protocol == 0)
         .map(|(_, state)| state.as_str());
     let mut available = tools();
     available.retain(
