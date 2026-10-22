@@ -1,1 +1,1 @@
-TeamRelay（暂定名）——面向小团队的 AI 任务协作平台。
+ColleagueLink ——面向小团队的 AI 任务协作平台。
