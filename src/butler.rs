@@ -440,7 +440,7 @@ async fn model_loop(
                 }
                 Err(_) => json!({"ok":false,"error":"invalid_or_disallowed_tool_arguments"}),
             };
-            store.conn.execute("INSERT INTO model_steps(run_id,sequence,tool_call_id,tool_name,arguments,result) VALUES(?1,?2,?3,?4,?5,?6)",params![run,tool_count,id,name,serde_json::to_string(&args.unwrap_or(Value::Null))?,result.to_string()])?;
+            store.conn.execute("INSERT INTO model_steps(run_id,sequence,tool_call_id,tool_name,arguments,result,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7)",params![run,tool_count,id,name,serde_json::to_string(&args.unwrap_or(Value::Null))?,result.to_string(),crate::store::now()])?;
             messages.push(json!({"role":"tool","tool_call_id":id,"content":result.to_string()}));
         }
     }

@@ -6,6 +6,10 @@ pub(super) struct Command {
 
 pub(super) const COMMANDS: &[Command] = &[
     Command {
+        name: "/export",
+        description: "导出当前对话及关联任务的完整 TXT 记录",
+    },
+    Command {
         name: "/answer",
         description: "选择并回答当前任务的问题",
     },

@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-23",
+  "source_inputs": 156,
+  "source_mismatches": [],
+  "binary_sha256": "8823c1a2a54ad464cd60e35af85eb3db3bcb3b0fa58a0ada58a48009191936b7",
+  "real_terminal": {
+    "method": "interactive PTY + pyte, real DeepSeek, local file tools",
+    "session_id": "43e00baa-0ea7-5fb6-ac6c-f844f41a1f7c",
+    "timeline_records": 10,
+    "schema": 15,
+    "integrity": "ok",
+    "foreign_key_errors": 0,
+    "message_count": 4,
+    "model_runs": 2,
+    "file_reads": 2,
+    "export_model_commands": 0,
+    "model": "DeepSeek, live configured model; no mock model",
+    "provenance": "First read/reply used candidate 6f23dce58d45bc9359175059c02ac71e79e8e45a973e8e54e4b60fb459b08603. After reply-label/static-policy display corrections, final binary 8823c1a2a54ad464cd60e35af85eb3db3bcb3b0fa58a0ada58a48009191936b7 reopened the same session, actually reread the file, produced the second reply, and exported both histories. Earlier records were not rewritten.",
+    "scope": "Local read-only conversation, interactive PTY and actual native local file tools; no new real cross-machine, Codex execution or scientific computation."
+  },
+  "output": {
+    "name": "2026-10-23_155600_自己的localagent_42528db315ee482eb73e0b56d09de0b4.txt",
+    "sha256": "e8177fae20b606d4dc082a3c0e905a8fe965edc85c1902ed5fd4daf4c26288ac",
+    "bytes": 7582,
+    "mode": "0600",
+    "previous_export_retained": true,
+    "original_values_sha256": "83dfe144cc5ac86f10189b9db8402ebe602078bf28b678e3dc3c85dba4aa1ac1",
+    "all_message_bodies_present": true,
+    "tool_receipts_timestamped": true,
+    "no_export_model_command": true
+  },
+  "automated": {
+    "platform": "Linux x86_64 musl on Lakota",
+    "passed": 251,
+    "failed": 0,
+    "ignored": 3,
+    "new_export_tests": 6,
+    "clippy": "passed; existing libc::time_t deprecation warning",
+    "format_check": "passed",
+    "workspace_diff_check": "passed",
+    "build": "debug/test, used by interactive PTY",
+    "mac_build": "not run; no push or GitHub Actions dispatch"
+  },
+  "cleanup": {
+    "test_terminals_closed": true,
+    "isolated_services_stopped": true,
+    "daily_clients_unchanged": true,
+    "local_rust_target_created": false,
+    "commit_push_release": false
+  },
+  "evidence": {
+    "raw_archive": "smoke-output/conversation-export-20261023/evidence.tar.gz",
+    "raw_archive_sha256": "179989abc0efea87d29d666fab97e95f10748f7e2993bd72a5653ccbbe1190f6",
+    "source_manifest_sha256": "a2efd9cad47c94812f400c4f7bce28a6da0f4b49ad640bfaeb434ab5c64e1cd3",
+    "example": "smoke-output/conversation-export-20261023/example.txt",
+    "remote_root": "~/xxassxx-tests/conversation-export-20261023"
+  },
+  "early_findings": [
+    "Fixed test-buffer wide-character extraction; this was an assertion helper issue.",
+    "Schema 11/13 simulation fixtures now also remove schema 15 columns before downgrading their version marker; old data and authorization assertions remain.",
+    "An overlong control-harness input hit the outer PTY input limit; restarted the real UI in the original conversation, without editing its business records."
+  ]
+}

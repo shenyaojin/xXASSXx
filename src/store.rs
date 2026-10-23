@@ -9,7 +9,7 @@ use std::{
 };
 use uuid::Uuid;
 
-pub const SCHEMA_VERSION: u32 = 14;
+pub const SCHEMA_VERSION: u32 = 15;
 
 pub fn now() -> i64 {
     SystemTime::now()
@@ -154,6 +154,9 @@ impl Store {
         }
         if version < 14 {
             conn.execute_batch(include_str!("schema_v14.sql"))?;
+        }
+        if version < 15 {
+            conn.execute_batch(include_str!("schema_v15.sql"))?;
         }
         Ok(())
     }
@@ -420,8 +423,8 @@ impl Store {
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         Self::authorize(&tx, &lease.task_id, &lease.run_id, &lease.token, false)?;
         tx.execute(
-            "INSERT INTO events(run_id,event) VALUES(?1,?2)",
-            params![lease.run_id, event.to_string()],
+            "INSERT INTO events(run_id,event,created_at) VALUES(?1,?2,?3)",
+            params![lease.run_id, event.to_string(), now()],
         )?;
         if event["type"] == "thread.started" {
             let session = event["thread_id"]

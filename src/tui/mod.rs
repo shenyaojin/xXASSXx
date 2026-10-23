@@ -4,6 +4,7 @@ mod attachments;
 mod codex_entry;
 mod commands;
 pub mod editor;
+mod export;
 mod inbox;
 mod presentation;
 mod recovery;
@@ -157,6 +158,7 @@ pub struct Ui {
     inbox: inbox::InboxUi,
     activity: activity::ActivityUi,
     codex: codex_entry::CodexEntry,
+    export: export::ExportUi,
 }
 impl Ui {
     fn open_recovery(&mut self) -> Result<()> {
@@ -315,6 +317,7 @@ impl Ui {
             inbox: inbox::InboxUi::default(),
             activity: activity::ActivityUi::default(),
             codex: codex_entry::CodexEntry::default(),
+            export: export::ExportUi::default(),
         })
     }
     pub fn recipient(&self, store: &Store) -> Result<String> {
@@ -420,6 +423,7 @@ impl Ui {
         self.candidate = 0;
         self.scroll = 0;
         match name {
+            "/export" => self.export.open(store, &self.session)?,
             "/inbox" => self.inbox.open(store)?,
             "/activity" => self.activity.open(store)?,
             "/codex" => self.codex.open(
@@ -1012,6 +1016,10 @@ impl Ui {
         }
         if self.codex.active {
             self.codex.key(store, key)?;
+            return Ok(false);
+        }
+        if self.export.active {
+            self.export.key(store, key);
             return Ok(false);
         }
         if self.activity.active {
@@ -1773,6 +1781,10 @@ impl Ui {
         Ok(false)
     }
     pub fn render(&self, f: &mut ratatui::Frame, store: &Store) {
+        if self.export.active {
+            self.export.render(f);
+            return;
+        }
         if self.codex.active {
             self.codex.render(f);
             return;
@@ -3146,7 +3158,7 @@ fn draw_lines(
         .collect::<Vec<_>>();
     draw_rich(f, area, title, &lines, scroll, bottom);
 }
-const HELP: &str = "输入 / 查看命令；↑↓ 选择，Enter 打开，Tab 补全。\n\n对话：Enter 发送 · CtrlJ / AltEnter 换行 · @成员 选择参与人\n任务：CtrlT 查看 · Tab 分类 · a 归档或恢复 · A 归档已结束任务\n团队动态：/activity · 查看全员共享的任务进展和结果\n收件箱：/inbox · n 留言 · r 回复 · m 标为已查看\n附件：CtrlF · n 发送 · Enter 查看\n历史对话：CtrlO · n 新对话\n手动 Codex：/codex · 选目录进入，退出后回到本会话\n工作目录：CtrlP · 可读取目录：CtrlR / /roots\n访问模式：/access · 手动重连：/reconnect\n\n任务确认：CtrlS · 修改：CtrlE · 回答问题：CtrlB\n执行授权：CtrlG · 详情和记录：CtrlD\n停止任务：CtrlX / /stop · 处理卡住的任务：CtrlY / /recover\n补充纠正：/supplement · 回答指定问题：/answer\n处理页面可查看具体原因、补充纠正、有限续接或停止。\n补充默认仅保存；可续接时按 Tab 明确选择保存并续接。\n\n停止：填写原因，选择停止并归档或仅停止。\n归档只整理本机列表，保留历史，不会重新启动任务。\nAsk for approval 下，写入运行须执行方批准；Full access 按本机预授权自动执行。\n退出：CtrlQ（后台继续工作）";
+const HELP: &str = "输入 / 查看命令；↑↓ 选择，Enter 打开，Tab 补全。\n\n对话：Enter 发送 · CtrlJ / AltEnter 换行 · @成员 选择参与人\n任务：CtrlT 查看 · Tab 分类 · a 归档或恢复 · A 归档已结束任务\n团队动态：/activity · 查看全员共享的任务进展和结果\n收件箱：/inbox · n 留言 · r 回复 · m 标为已查看\n附件：CtrlF · n 发送 · Enter 查看\n历史对话：CtrlO · n 新对话\n导出对话：/export · 完整 TXT 时间线及成果记录\n手动 Codex：/codex · 选目录进入，退出后回到本会话\n工作目录：CtrlP · 可读取目录：CtrlR / /roots\n访问模式：/access · 手动重连：/reconnect\n\n任务确认：CtrlS · 修改：CtrlE · 回答问题：CtrlB\n执行授权：CtrlG · 详情和记录：CtrlD\n停止任务：CtrlX / /stop · 处理卡住的任务：CtrlY / /recover\n补充纠正：/supplement · 回答指定问题：/answer\n处理页面可查看具体原因、补充纠正、有限续接或停止。\n补充默认仅保存；可续接时按 Tab 明确选择保存并续接。\n\n停止：填写原因，选择停止并归档或仅停止。\n归档只整理本机列表，保留历史，不会重新启动任务。\nAsk for approval 下，写入运行须执行方批准；Full access 按本机预授权自动执行。\n退出：CtrlQ（后台继续工作）";
 
 pub async fn open(args: OpenArgs) -> Result<()> {
     let default_directory = args.directory.is_none();
@@ -3335,6 +3347,10 @@ pub async fn open(args: OpenArgs) -> Result<()> {
                     }
                 },
                 Event::Paste(text) => {
+                    if ui.export.active {
+                        ui.export.paste(&text);
+                        continue;
+                    }
                     if ui.codex.active {
                         ui.codex.paste(&text);
                         continue;

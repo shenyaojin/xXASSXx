@@ -403,6 +403,7 @@ fn schema_thirteen_upgrade_preserves_legacy_multi_executor_contract_and_grants()
     for table in ["task_role_changes", "task_stops", "task_delivery_approvals"] {
         c.execute(&format!("DROP TABLE {table}"), []).unwrap();
     }
+    c.execute_batch("ALTER TABLE events DROP COLUMN created_at; ALTER TABLE model_steps DROP COLUMN created_at;").unwrap();
     c.pragma_update(None, "user_version", 13).unwrap();
     drop(c);
     drop(a);

@@ -517,7 +517,7 @@ async fn cycle(store: &mut Store, i: &Instruction, id: &str, cfg: ModelConfig) -
                     json!({"ok":false,"error":e.to_string()})
                 }
             };
-            trace.push(json!({"tool_call_id":key,"name":name,"arguments":serde_json::from_str::<Value>(raw).unwrap_or(Value::Null),"result":result}));
+            trace.push(json!({"created_at":now(),"tool_call_id":key,"name":name,"arguments":serde_json::from_str::<Value>(raw).unwrap_or(Value::Null),"result":result}));
             store.conn.execute(
                 "UPDATE app_model_runs SET trace=?2 WHERE id=?1",
                 params![id, serde_json::to_string(&trace)?],

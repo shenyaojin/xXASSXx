@@ -137,7 +137,7 @@ async fn cycle(store: &mut Store, id: &str, run: &str, cfg: ModelConfig) -> Resu
                 }
                 _ => json!({"ok":false,"error":"invalid_tool_or_inspect_required"}),
             };
-            trace.push(json!({"tool_call_id":key,"name":name,"result":result}));
+            trace.push(json!({"created_at":crate::store::now(),"tool_call_id":key,"name":name,"result":result}));
             store.conn.execute(
                 "UPDATE workflow_models SET trace=?2 WHERE id=?1",
                 params![run, serde_json::to_string(&trace)?],
